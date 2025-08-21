@@ -13,7 +13,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000', 
   'http://127.0.0.1:3000',
-  'https://rummikub-frontend.netlify.app', // Your Netlify app URL (update with actual URL)
+  'https://jkube.netlify.app', // Your actual Netlify app URL
   'https://*.netlify.app' // Allow any Netlify subdomain
 ];
 
