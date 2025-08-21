@@ -1,0 +1,21 @@
+{
+  "name": "j_kube",
+  "version": "1.0.0",
+  "description": "A multiplayer online Rummikub game with real-time chat for playing with friends across the globe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["rummikub", "multiplayer", "game", "tiles", "socket.io", "chat"],
+  "author": "Fates",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "socket.io": "^4.8.1"
+  }
+}
