@@ -157,16 +157,20 @@ class RummikubGame {
       this.dealDebugHand();
     } else {
       console.log(`🎲 Normal mode: dealing random tiles`);
+      console.log(`🚨🚨🚨 DEBUGGING HANDS ISSUE - PLAYERS COUNT: ${this.players.length} 🚨🚨🚨`);
       // Normal mode: Deal 14 tiles to each player
       for (const player of this.players) {
+        console.log(`🚨 DEALING TO: ${player.name} (${player.id.slice(-4)})`);
         for (let i = 0; i < 14; i++) {
           if (this.deck.length > 0) {
             player.hand.push(this.deck.pop());
           }
         }
-        console.log(`🃏 Player ${player.name} (${player.id.slice(-4)}) dealt ${player.hand.length} tiles:`, 
+        console.log(`🚨 FINAL HAND FOR ${player.name}: ${player.hand.length} tiles`);
+        console.log(`🚨 ${player.name} tiles:`, 
           player.hand.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
       }
+      console.log(`🚨🚨🚨 ALL HANDS DEALT! 🚨🚨🚨`);
     }
     
     this.started = true;
@@ -632,10 +636,14 @@ class RummikubGame {
   }
 
   getGameState(playerId) {
+    console.log(`🚨🚨🚨 getGameState called for player: ${playerId.slice(-6)} 🚨🚨🚨`);
     const player = this.players.find(p => p.id === playerId);
     console.log(`🎯 getGameState for player ${playerId}: found player = ${player ? player.name : 'NOT FOUND'}`);
     if (player) {
       console.log(`🃏 Player ${player.name} hand has ${player.hand.length} tiles:`, player.hand.slice(0, 3).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+    } else {
+      console.log(`🚨 ERROR: Could not find player with ID ${playerId.slice(-6)}`);
+      console.log(`🚨 Available players:`, this.players.map(p => `${p.name}(${p.id.slice(-6)})`));
     }
     return {
       id: this.id,
