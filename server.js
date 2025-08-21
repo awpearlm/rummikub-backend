@@ -1240,4 +1240,5 @@ io.on('connection', (socket) => {
   server.listen(PORT, () => {
     console.log(`🎮 Rummikub game server running on port ${PORT}`);
     console.log(`🌐 Open your browser to http://localhost:${PORT}`);
+    console.log(`🚨🚨🚨 SERVER VERSION: ${new Date().toISOString()} - DEBUGGING ENABLED 🚨🚨🚨`);
   });
