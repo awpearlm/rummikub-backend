@@ -121,9 +121,11 @@ class RummikubClient {
         });
 
         this.socket.on('gameStarted', (data) => {
+            console.log(`🚨 RECEIVED gameStarted event! Socket ID: ${this.socket.id.slice(-6)}`);
             this.gameState = data.gameState;
             console.log(`🃏 DEBUG: Received playerHand with ${this.gameState.playerHand?.length || 0} tiles:`, 
                 this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+            console.log(`🎯 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
             this.updateGameState();
             this.showNotification('Game started!', 'success');
             document.getElementById('startGameBtn').classList.add('hidden');

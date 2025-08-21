@@ -960,10 +960,14 @@ io.on('connection', (socket) => {
       if (!game) return;
 
       if (game.startGame()) {
+        console.log(`🚨 SENDING GAME STARTED TO ${game.players.length} PLAYERS:`);
         // Send personalized game state to each player
         game.players.forEach(player => {
+          console.log(`📤 Sending gameStarted to ${player.name} (${player.id.slice(-6)})`);
+          const gameState = game.getGameState(player.id);
+          console.log(`📋 ${player.name}'s hand preview:`, gameState.playerHand.slice(0, 3).map(t => `${t.isJoker ? 'J' : t.number + t.color[0]}`));
           io.to(player.id).emit('gameStarted', {
-            gameState: game.getGameState(player.id)
+            gameState: gameState
           });
         });
         
