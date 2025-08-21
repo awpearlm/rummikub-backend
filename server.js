@@ -364,23 +364,71 @@ class RummikubGame {
       // Group: same number, different colors
       if (nonJokerTiles.length > 0) {
         const groupNumber = nonJokerTiles[0].number;
-        totalValue = groupNumber * tiles.length; // Each tile worth the group number
+        // All tiles (including jokers) are worth the group number
+        totalValue = groupNumber * tiles.length;
       }
     } else if (this.isValidRun(tiles)) {
       // Run: consecutive numbers, same color
-      // For simplicity, calculate based on actual tile values
-      // Jokers in runs would need more complex logic
-      totalValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0);
-      // Add estimated value for jokers (this is simplified)
-      if (jokerCount > 0 && nonJokerTiles.length > 0) {
-        const avgValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0) / nonJokerTiles.length;
-        totalValue += jokerCount * Math.round(avgValue);
-      }
+      // Need to determine what number each joker represents
+      totalValue = this.calculateRunValueWithJokers(tiles);
     }
     
     return totalValue;
   }
 
+  calculateRunValueWithJokers(tiles) {
+    const nonJokers = tiles.filter(t => !t.isJoker);
+    const jokerCount = tiles.filter(t => t.isJoker).length;
+    
+    if (jokerCount === 0) {
+      // Simple case: just sum the tile values
+      return nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+    }
+    
+    // Find the valid sequence that these tiles represent
+    const sortedNumbers = nonJokers.map(t => t.number).sort((a, b) => a - b);
+    const minNumber = sortedNumbers[0];
+    const totalTiles = tiles.length;
+    
+    // Try different starting positions to find the valid sequence
+    for (let start = Math.max(1, minNumber - jokerCount); start <= minNumber; start++) {
+      const end = start + totalTiles - 1;
+      if (end > 13) continue;
+      
+      // Check if this sequence works with our tiles
+      let jokersUsed = 0;
+      let realTileIndex = 0;
+      let valid = true;
+      let sequenceValue = 0;
+      
+      for (let pos = start; pos <= end; pos++) {
+        sequenceValue += pos; // Add this number to total value
+        
+        if (realTileIndex < sortedNumbers.length && sortedNumbers[realTileIndex] === pos) {
+          realTileIndex++;
+        } else {
+          jokersUsed++;
+          if (jokersUsed > jokerCount) {
+            valid = false;
+            break;
+          }
+        }
+      }
+      
+      if (valid && realTileIndex === sortedNumbers.length && jokersUsed === jokerCount) {
+        return sequenceValue;
+      }
+    }
+    
+    // Fallback: shouldn't happen if isValidRun worked correctly
+    console.warn('Could not determine joker values in run, using fallback calculation');
+    let fallbackValue = nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+    if (nonJokers.length > 0) {
+      const avgValue = fallbackValue / nonJokers.length;
+      fallbackValue += jokerCount * Math.round(avgValue);
+    }
+    return fallbackValue;
+  }
   playSet(playerId, tileIds, setIndex = null) {
     const player = this.players.find(p => p.id === playerId);
     if (!player || player.id !== this.getCurrentPlayer().id) return false;
