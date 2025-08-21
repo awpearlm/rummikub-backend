@@ -164,6 +164,8 @@ class RummikubGame {
             player.hand.push(this.deck.pop());
           }
         }
+        console.log(`🃏 Player ${player.name} (${player.id.slice(-4)}) dealt ${player.hand.length} tiles:`, 
+          player.hand.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
       }
     }
     
@@ -631,6 +633,10 @@ class RummikubGame {
 
   getGameState(playerId) {
     const player = this.players.find(p => p.id === playerId);
+    console.log(`🎯 getGameState for player ${playerId}: found player = ${player ? player.name : 'NOT FOUND'}`);
+    if (player) {
+      console.log(`🃏 Player ${player.name} hand has ${player.hand.length} tiles:`, player.hand.slice(0, 3).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+    }
     return {
       id: this.id,
       players: this.players.map(p => ({

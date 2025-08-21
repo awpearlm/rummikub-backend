@@ -122,6 +122,8 @@ class RummikubClient {
 
         this.socket.on('gameStarted', (data) => {
             this.gameState = data.gameState;
+            console.log(`🃏 DEBUG: Received playerHand with ${this.gameState.playerHand?.length || 0} tiles:`, 
+                this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
             this.updateGameState();
             this.showNotification('Game started!', 'success');
             document.getElementById('startGameBtn').classList.add('hidden');
