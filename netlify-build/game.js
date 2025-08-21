@@ -34,6 +34,10 @@ class RummikubClient {
         this.hasAutoSorted = false; // Track if auto-sort has been done
         this.hasPlayedTilesThisTurn = false; // Track if tiles have been played this turn
         
+        // UI State tracking for drag-and-drop
+        this.pendingMoves = []; // Track moves that haven't been confirmed by server
+        this.originalGameState = null; // Backup of game state before any pending moves
+        
         this.initializeEventListeners();
         this.initializeSocketListeners();
     }
@@ -634,6 +638,114 @@ class RummikubClient {
     getCurrentPlayer() {
         // Get the player object for the current user (me)
         return this.gameState?.players?.find(p => p.id === this.socket.id) || null;
+    }
+
+    // Optimistic update methods for drag-and-drop
+    startOptimisticMove() {
+        // Save the current game state as backup
+        if (!this.originalGameState) {
+            this.originalGameState = JSON.parse(JSON.stringify(this.gameState));
+        }
+    }
+
+    applyOptimisticMove(moveType, moveData) {
+        this.startOptimisticMove();
+        
+        const currentPlayer = this.getCurrentPlayer();
+        if (!currentPlayer) return;
+
+        const move = {
+            type: moveType,
+            data: moveData,
+            timestamp: Date.now()
+        };
+
+        if (moveType === 'hand-to-board') {
+            // Remove tile from hand and add to board
+            const tileIndex = currentPlayer.hand.findIndex(t => t.id === moveData.tileId);
+            if (tileIndex !== -1) {
+                const tile = currentPlayer.hand.splice(tileIndex, 1)[0];
+                
+                if (moveData.targetSetIndex === -1) {
+                    // Create new set
+                    this.gameState.board.push([tile]);
+                    move.data.newSetIndex = this.gameState.board.length - 1;
+                } else {
+                    // Add to existing set
+                    this.gameState.board[moveData.targetSetIndex].push(tile);
+                }
+            }
+        } else if (moveType === 'board-to-board') {
+            // Move tile between board sets
+            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
+            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
+                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
+                
+                // Remove empty sets
+                if (sourceSet.length === 0) {
+                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
+                    // Adjust target index if necessary
+                    if (moveData.targetSetIndex > moveData.sourceSetIndex) {
+                        moveData.targetSetIndex--;
+                    }
+                }
+                
+                if (moveData.targetSetIndex === -1) {
+                    // Create new set
+                    this.gameState.board.push([tile]);
+                    move.data.newSetIndex = this.gameState.board.length - 1;
+                } else {
+                    // Add to existing set
+                    this.gameState.board[moveData.targetSetIndex].push(tile);
+                }
+            }
+        } else if (moveType === 'board-to-hand') {
+            // Move tile from board back to hand
+            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
+            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
+                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
+                currentPlayer.hand.push(tile);
+                
+                // Remove empty sets
+                if (sourceSet.length === 0) {
+                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
+                }
+            }
+        }
+
+        this.pendingMoves.push(move);
+        
+        // Update the UI
+        this.updateGameState();
+    }
+
+    confirmOptimisticMoves() {
+        // Server confirmed the moves, clear pending moves and backup
+        this.pendingMoves = [];
+        this.originalGameState = null;
+    }
+
+    revertOptimisticMoves() {
+        // Server rejected the moves, restore original state
+        if (this.originalGameState) {
+            this.gameState = this.originalGameState;
+            this.originalGameState = null;
+            this.pendingMoves = [];
+            this.updateGameState();
+        }
+    }
+
+    undoLastOptimisticMove() {
+        if (this.pendingMoves.length === 0) return;
+        
+        // Revert all moves and replay all but the last one
+        const movesToReplay = this.pendingMoves.slice(0, -1);
+        this.revertOptimisticMoves();
+        
+        // Replay the remaining moves
+        movesToReplay.forEach(move => {
+            this.applyOptimisticMove(move.type, move.data);
+        });
     }
 
     showWelcomeScreen() {

@@ -34,6 +34,10 @@ class RummikubClient {
         this.hasAutoSorted = false; // Track if auto-sort has been done
         this.hasPlayedTilesThisTurn = false; // Track if tiles have been played this turn
         
+        // UI State tracking for drag-and-drop
+        this.pendingMoves = []; // Track moves that haven't been confirmed by server
+        this.originalGameState = null; // Backup of game state before any pending moves
+        
         this.initializeEventListeners();
         this.initializeSocketListeners();
     }
@@ -333,6 +337,14 @@ class RummikubClient {
             return;
         }
         
+        // Check if there are any pending optimistic moves to undo
+        if (this.pendingMoves.length > 0) {
+            this.undoLastOptimisticMove();
+            this.showNotification("Last move undone", 'success');
+            return;
+        }
+        
+        // Fallback to old undo system if no optimistic moves
         if (!this.hasBoardStateChanged()) {
             this.showNotification("Nothing to undo!", 'error');
             return;
@@ -636,6 +648,114 @@ class RummikubClient {
         return this.gameState?.players?.find(p => p.id === this.socket.id) || null;
     }
 
+    // Optimistic update methods for drag-and-drop
+    startOptimisticMove() {
+        // Save the current game state as backup
+        if (!this.originalGameState) {
+            this.originalGameState = JSON.parse(JSON.stringify(this.gameState));
+        }
+    }
+
+    applyOptimisticMove(moveType, moveData) {
+        this.startOptimisticMove();
+        
+        const currentPlayer = this.getCurrentPlayer();
+        if (!currentPlayer) return;
+
+        const move = {
+            type: moveType,
+            data: moveData,
+            timestamp: Date.now()
+        };
+
+        if (moveType === 'hand-to-board') {
+            // Remove tile from hand and add to board
+            const tileIndex = currentPlayer.hand.findIndex(t => t.id === moveData.tileId);
+            if (tileIndex !== -1) {
+                const tile = currentPlayer.hand.splice(tileIndex, 1)[0];
+                
+                if (moveData.targetSetIndex === -1) {
+                    // Create new set
+                    this.gameState.board.push([tile]);
+                    move.data.newSetIndex = this.gameState.board.length - 1;
+                } else {
+                    // Add to existing set
+                    this.gameState.board[moveData.targetSetIndex].push(tile);
+                }
+            }
+        } else if (moveType === 'board-to-board') {
+            // Move tile between board sets
+            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
+            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
+                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
+                
+                // Remove empty sets
+                if (sourceSet.length === 0) {
+                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
+                    // Adjust target index if necessary
+                    if (moveData.targetSetIndex > moveData.sourceSetIndex) {
+                        moveData.targetSetIndex--;
+                    }
+                }
+                
+                if (moveData.targetSetIndex === -1) {
+                    // Create new set
+                    this.gameState.board.push([tile]);
+                    move.data.newSetIndex = this.gameState.board.length - 1;
+                } else {
+                    // Add to existing set
+                    this.gameState.board[moveData.targetSetIndex].push(tile);
+                }
+            }
+        } else if (moveType === 'board-to-hand') {
+            // Move tile from board back to hand
+            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
+            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
+                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
+                currentPlayer.hand.push(tile);
+                
+                // Remove empty sets
+                if (sourceSet.length === 0) {
+                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
+                }
+            }
+        }
+
+        this.pendingMoves.push(move);
+        
+        // Update the UI
+        this.updateGameState();
+    }
+
+    confirmOptimisticMoves() {
+        // Server confirmed the moves, clear pending moves and backup
+        this.pendingMoves = [];
+        this.originalGameState = null;
+    }
+
+    revertOptimisticMoves() {
+        // Server rejected the moves, restore original state
+        if (this.originalGameState) {
+            this.gameState = this.originalGameState;
+            this.originalGameState = null;
+            this.pendingMoves = [];
+            this.updateGameState();
+        }
+    }
+
+    undoLastOptimisticMove() {
+        if (this.pendingMoves.length === 0) return;
+        
+        // Revert all moves and replay all but the last one
+        const movesToReplay = this.pendingMoves.slice(0, -1);
+        this.revertOptimisticMoves();
+        
+        // Replay the remaining moves
+        movesToReplay.forEach(move => {
+            this.applyOptimisticMove(move.type, move.data);
+        });
+    }
+
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
@@ -888,6 +1008,9 @@ class RummikubClient {
                 }
             }
         }
+        
+        // Set up the hand as a drop zone for tiles from the board
+        this.setupHandDropZone();
     }
 
     initializeGridLayout(maxSlots = null) {
@@ -921,6 +1044,56 @@ class RummikubClient {
     syncGridLayoutToGameState() {
         // Update gameState.playerHand to match the current grid layout
         this.gameState.playerHand = this.tileGridLayout.filter(tile => tile !== null);
+    }
+
+    setupHandDropZone() {
+        const handElement = document.getElementById('playerHand');
+        
+        handElement.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            
+            // Only allow board tiles to be dropped back to hand
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'board-tile') {
+                    handElement.classList.add('drag-over');
+                } else {
+                    e.dataTransfer.dropEffect = 'none';
+                }
+            } catch (error) {
+                // If we can't parse, don't allow drop
+                e.dataTransfer.dropEffect = 'none';
+            }
+        });
+        
+        handElement.addEventListener('dragleave', (e) => {
+            // Only remove drag-over if we're really leaving the hand area
+            if (!handElement.contains(e.relatedTarget)) {
+                handElement.classList.remove('drag-over');
+            }
+        });
+        
+        handElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            handElement.classList.remove('drag-over');
+            
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'board-tile') {
+                    // Move tile from board back to hand
+                    this.applyOptimisticMove('board-to-hand', {
+                        sourceSetIndex: dragData.sourceSetIndex,
+                        sourceTileIndex: dragData.sourceTileIndex
+                    });
+                    
+                    // Send to server for validation
+                    const newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+                    this.updateBoard(newBoard);
+                }
+            } catch (error) {
+                console.error('Error handling hand drop:', error);
+            }
+        });
     }
 
     addDragAndDropToTile(tileElement, tile, index) {
@@ -1585,54 +1758,29 @@ class RummikubClient {
             return;
         }
 
-        // Create a copy of the current board for manipulation
-        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
-
         if (dragData.type === 'hand-tile') {
-            // Tile from hand - add to existing set or create new set
-            if (targetSetIndex === -1) {
-                // Create new set
-                newBoard.push([dragData.tile]);
-            } else {
-                // Add to existing set
-                newBoard[targetSetIndex].push(dragData.tile);
-            }
+            // Apply optimistic update for hand to board move
+            this.applyOptimisticMove('hand-to-board', {
+                tileId: dragData.tile.id,
+                targetSetIndex: targetSetIndex
+            });
             
-            // Remove tile from hand (this will be handled by server validation)
+            // Send to server for validation (using existing board update mechanism)
+            const newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+            this.updateBoard(newBoard);
             
         } else if (dragData.type === 'board-tile') {
-            // Moving tile between sets on board
-            const sourceSetIndex = dragData.sourceSetIndex;
-            const sourceTileIndex = dragData.sourceTileIndex;
+            // Apply optimistic update for board to board move
+            this.applyOptimisticMove('board-to-board', {
+                sourceSetIndex: dragData.sourceSetIndex,
+                sourceTileIndex: dragData.sourceTileIndex,
+                targetSetIndex: targetSetIndex
+            });
             
-            // Remove tile from source set
-            const movedTile = newBoard[sourceSetIndex].splice(sourceTileIndex, 1)[0];
-            
-            // Remove empty sets
-            if (newBoard[sourceSetIndex].length === 0) {
-                newBoard.splice(sourceSetIndex, 1);
-                // Adjust target index if necessary
-                if (targetSetIndex > sourceSetIndex) {
-                    targetSetIndex--;
-                }
-            }
-            
-            if (targetSetIndex === -1) {
-                // Create new set
-                newBoard.push([movedTile]);
-            } else {
-                // Add to existing set
-                if (targetSetIndex < newBoard.length) {
-                    newBoard[targetSetIndex].push(movedTile);
-                } else {
-                    // Target set was removed, create new set
-                    newBoard.push([movedTile]);
-                }
-            }
+            // Send to server for validation (using existing board update mechanism)
+            const newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+            this.updateBoard(newBoard);
         }
-
-        // Send board update to server
-        this.updateBoard(newBoard);
     }
 
     updateBoard(newBoard) {
