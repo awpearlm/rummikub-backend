@@ -121,15 +121,15 @@ class RummikubClient {
             console.log('🎮 My Socket ID:', this.socket.id);
             
             // Check if I'm getting the right player data
-            const myPlayerData = data.gameState.players.find(p => p.socketId === this.socket.id);
+            const myPlayerData = data.gameState.players.find(p => p.id === this.socket.id);
             if (myPlayerData) {
-                console.log('✅ Found my player data:', myPlayerData.name, 'Hand size:', myPlayerData.hand.length);
+                console.log('✅ Found my player data:', myPlayerData.name, 'Hand size:', myPlayerData.handSize);
             } else {
                 console.log('🚨 NO PLAYER DATA FOUND for socket:', this.socket.id);
                 console.log('🔍 Available players:', data.gameState.players.map(p => ({
                     name: p.name,
-                    socketId: p.socketId,
-                    handSize: p.hand.length
+                    id: p.id,
+                    handSize: p.handSize
                 })));
             }
             this.gameState = data.gameState;
