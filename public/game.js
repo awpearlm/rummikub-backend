@@ -1360,6 +1360,7 @@ class RummikubClient {
         }
         
         this.updatePlayButton();
+        this.updateActionButtons(); // Update button states when selection changes
     }
 
     updatePlayButton() {
@@ -1403,12 +1404,14 @@ class RummikubClient {
             }
         }
         
-        // Play Set button
+        // Play Set button - disabled if not player's turn OR no tiles selected
         const playBtn = document.getElementById('playSetBtn');
         if (playBtn) {
-            playBtn.style.opacity = canAct ? '1' : '0.5';
-            playBtn.disabled = !canAct;
-            if (canAct) {
+            const hasSelectedTiles = this.selectedTiles.length > 0;
+            const canPlay = canAct && hasSelectedTiles;
+            playBtn.style.opacity = canPlay ? '1' : '0.5';
+            playBtn.disabled = !canPlay;
+            if (canPlay) {
                 playBtn.removeAttribute('disabled');
             } else {
                 playBtn.setAttribute('disabled', 'disabled');

@@ -279,56 +279,85 @@ class RummikubGame {
   }
 
   isValidRun(tiles) {
-    if (tiles.length < 3) return false;
+    console.log(`🔍 isValidRun checking ${tiles.length} tiles:`, tiles.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+    
+    if (tiles.length < 3) {
+      console.log(`❌ Run too short: ${tiles.length} < 3`);
+      return false;
+    }
     
     // All tiles must be same color (except jokers)
     const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
-    if (new Set(colors).size > 1) return false;
+    if (new Set(colors).size > 1) {
+      console.log(`❌ Mixed colors in run:`, colors);
+      return false;
+    }
     
     // Get non-joker tiles and sort by number
     const nonJokerTiles = tiles.filter(t => !t.isJoker);
     const jokerCount = tiles.filter(t => t.isJoker).length;
     
+    console.log(`🔍 Non-joker tiles: ${nonJokerTiles.length}, Jokers: ${jokerCount}`);
+    
     if (nonJokerTiles.length === 0) {
       // All jokers - not valid (need at least one real tile to determine color/sequence)
+      console.log(`❌ All jokers - not valid`);
       return false;
     }
     
     // Sort non-joker tiles by number
     const sortedNumbers = nonJokerTiles.map(t => t.number).sort((a, b) => a - b);
+    console.log(`🔍 Sorted numbers:`, sortedNumbers);
     
-    // Check if we can form a consecutive run with the available jokers
-    const totalLength = tiles.length;
-    const minNumber = sortedNumbers[0];
-    const maxNumber = sortedNumbers[sortedNumbers.length - 1];
-    
-    // The run should span from minNumber to (minNumber + totalLength - 1)
-    // OR we need to check if jokers can fill the gaps
-    const expectedRange = maxNumber - minNumber + 1;
-    const actualNonJokers = sortedNumbers.length;
-    const gapsToFill = expectedRange - actualNonJokers;
-    
-    // Check if we have enough jokers to fill the gaps and make it exactly totalLength
-    if (expectedRange === totalLength && gapsToFill === jokerCount) {
-      // Perfect fit - jokers exactly fill the gaps
-      return true;
-    }
-    
-    // Alternative: check if jokers can extend the sequence at either end
-    if (actualNonJokers + jokerCount === totalLength) {
-      // Check for consecutive numbers in non-joker tiles
-      for (let i = 1; i < sortedNumbers.length; i++) {
-        const gap = sortedNumbers[i] - sortedNumbers[i-1] - 1;
-        if (gap < 0) return false; // Duplicate numbers
+    // Check for duplicate numbers (invalid for runs)
+    for (let i = 1; i < sortedNumbers.length; i++) {
+      if (sortedNumbers[i] === sortedNumbers[i-1]) {
+        console.log(`❌ Duplicate numbers in run: ${sortedNumbers[i]}`);
+        return false;
       }
-      return true;
     }
     
+    // Try to fit the tiles into a consecutive sequence
+    // We need to check if jokers can fill gaps and extend the sequence
+    const totalLength = tiles.length;
+    
+    // Calculate minimum possible range (if all tiles were consecutive)
+    const minPossibleStart = Math.max(1, sortedNumbers[0] - jokerCount);
+    const maxPossibleEnd = Math.min(13, sortedNumbers[sortedNumbers.length - 1] + jokerCount);
+    
+    // Try each possible starting position for the run
+    for (let start = minPossibleStart; start <= maxPossibleEnd - totalLength + 1; start++) {
+      const end = start + totalLength - 1;
+      if (end > 13) continue; // Can't go beyond 13
+      
+      // Check if this range works with our tiles
+      let jokersNeeded = 0;
+      let nonJokerIndex = 0;
+      let valid = true;
+      
+      for (let pos = start; pos <= end; pos++) {
+        if (nonJokerIndex < sortedNumbers.length && sortedNumbers[nonJokerIndex] === pos) {
+          // We have a real tile for this position
+          nonJokerIndex++;
+        } else {
+          // We need a joker for this position
+          jokersNeeded++;
+        }
+      }
+      
+      // Check if we used all non-joker tiles and have enough jokers
+      if (nonJokerIndex === sortedNumbers.length && jokersNeeded === jokerCount) {
+        console.log(`✅ Valid run found: ${start}-${end} (jokers fill ${jokersNeeded} positions)`);
+        return true;
+      }
+    }
+    
+    console.log(`❌ No valid run configuration found`);
     return false;
   }
 
   isValidGroup(tiles) {
-    console.log(`🔍 isValidGroup checking ${tiles.length} tiles`);
+    console.log(`🔍 isValidGroup checking ${tiles.length} tiles:`, tiles.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
     
     if (tiles.length < 3 || tiles.length > 4) {
       console.log(`❌ Invalid group length: ${tiles.length} (must be 3-4)`);
