@@ -1006,8 +1006,18 @@ class RummikubClient {
         handElement.addEventListener('drop', (e) => {
             e.preventDefault();
             handElement.classList.remove('drag-over');
-        });
-    }
+            
+            // Handle dropping board tiles back to hand
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                
+                if (dragData.type === 'board-tile') {
+                    this.handleBoardTileToHand(dragData);
+                }
+            } catch (error) {
+                console.log('No drag data or non-board tile dropped on hand');
+            }
+        });    }
 
     addDropFunctionalityToSlot(slotElement, slotIndex) {
         slotElement.addEventListener('dragover', (e) => {
@@ -1596,12 +1606,19 @@ class RummikubClient {
             return;
         }
 
-        // RULE ENFORCEMENT: Prevent single tile drops from hand to board
+        // RULE ENFORCEMENT: Allow table manipulation after initial play
         if (dragData.type === 'hand-tile') {
-            this.showNotification('Cannot drop single tiles to board! Select multiple tiles and use "Play Selected" button.', 'error');
-            return;
+            const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+            const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+            
+            if (needsInitialPlay) {
+                this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
+                return;
+            }
+            
+            // After initial play, allow table manipulation
+            console.log('🎯 Table manipulation: Adding single tile to board');
         }
-
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
 
@@ -1652,6 +1669,37 @@ class RummikubClient {
         this.updateBoard(newBoard);
     }
 
+    handleBoardTileToHand(dragData) {
+        if (!this.isMyTurn()) {
+            this.showNotification('Not your turn!', 'error');
+            return;
+        }
+
+        console.log('🔄 Moving tile from board back to hand:', dragData.tile);
+
+        // Remove tile from board
+        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+        if (newBoard[dragData.sourceSetIndex]) {
+            newBoard[dragData.sourceSetIndex].splice(dragData.sourceTileIndex, 1);
+            
+            // Remove empty sets
+            newBoard = newBoard.filter(set => set.length > 0);
+        }
+
+        // Add tile back to hand
+        const newHand = [...this.gameState.players.find(p => p.id === this.socket.id).hand, dragData.tile];
+
+        // Send update to server
+        this.socket.emit('moveFromBoardToHand', {
+            tile: dragData.tile,
+            sourceSetIndex: dragData.sourceSetIndex,
+            sourceTileIndex: dragData.sourceTileIndex,
+            newBoard: newBoard,
+            newHand: newHand
+        });
+
+        this.showNotification('Moved tile back to hand', 'success');
+    }
     updateBoard(newBoard) {
         this.socket.emit('updateBoard', { board: newBoard });
     }
