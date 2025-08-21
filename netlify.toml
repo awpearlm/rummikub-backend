@@ -1,0 +1,50 @@
+[build]
+  # Since the files are already built in netlify-build folder, no build command needed
+  # Just tell Netlify which folder to publish
+  publish = "netlify-build"
+  
+  # No build command needed since files are pre-built
+  command = ""
+
+[build.environment]
+  # Node version for any potential build processes
+  NODE_VERSION = "18"
+
+# Redirect rules for SPA (Single Page Application)
+# This ensures that all routes go to index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets for 1 year
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache CSS and JS files for 1 month
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# Don't cache HTML files
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
