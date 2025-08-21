@@ -13,7 +13,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5000', 
   'http://127.0.0.1:3000',
-  'https://your-netlify-app.netlify.app' // We'll update this with your actual Netlify URL
+  'https://rummikub-frontend.netlify.app', // Your Netlify app URL (update with actual URL)
+  'https://*.netlify.app' // Allow any Netlify subdomain
 ];
 
 const io = socketIo(server, {
