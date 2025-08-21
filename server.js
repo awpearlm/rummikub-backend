@@ -150,11 +150,18 @@ class RummikubGame {
     console.log(`🚀 Starting game ${this.id} with ${this.players.length} players`);
     console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}"`);
     
-    // Deal tiles based on bot difficulty
+    // Check if any player has debug name for multiplayer debug mode
+    const debugPlayer = this.players.find(p => p.name.toLowerCase() === 'dbug');
+
+    // Deal tiles based on bot difficulty or debug player
     if (this.isBotGame && this.botDifficulty === 'debug') {
       console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
       // Debug mode: Give human player a preset hand for testing
       this.dealDebugHand();
+    } else if (debugPlayer) {
+      console.log(`🔧 MULTIPLAYER DEBUG MODE DETECTED! Player "${debugPlayer.name}" gets winning hand...`);
+      // Multiplayer debug mode: Give debug player a winning hand
+      this.dealMultiplayerDebugHand(debugPlayer);
     } else {
       console.log(`🎲 Normal mode: dealing random tiles`);
       // Normal mode: Deal 14 tiles to each player
@@ -797,7 +804,68 @@ class RummikubGame {
       }
     }, delay);
   }
-}
+
+  dealMultiplayerDebugHand(debugPlayer) {
+    console.log(`🔧 dealMultiplayerDebugHand called for player: ${debugPlayer.name}`);
+    
+    // Create a winning hand: 4 complete sets + 1 final set with joker for testing
+    const debugTiles = [
+      // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
+      { id: 'red_13_0', color: 'red', number: 13, isJoker: false },
+      { id: 'blue_13_0', color: 'blue', number: 13, isJoker: false },
+      { id: 'yellow_13_0', color: 'yellow', number: 13, isJoker: false },
+      
+      // Second set: Run in blue (1-2-3)
+      { id: 'blue_1_0', color: 'blue', number: 1, isJoker: false },
+      { id: 'blue_2_0', color: 'blue', number: 2, isJoker: false },
+      { id: 'blue_3_0', color: 'blue', number: 3, isJoker: false },
+      
+      // Third set: Three 4s in different colors
+      { id: 'red_4_0', color: 'red', number: 4, isJoker: false },
+      { id: 'blue_4_0', color: 'blue', number: 4, isJoker: false },
+      { id: 'yellow_4_0', color: 'yellow', number: 4, isJoker: false },
+      
+      // Fourth set: Run in green (5-6-7)
+      { id: 'green_5_0', color: 'green', number: 5, isJoker: false },
+      { id: 'green_6_0', color: 'green', number: 6, isJoker: false },
+      { id: 'green_7_0', color: 'green', number: 7, isJoker: false },
+      
+      // Final set for testing joker bug: Red 11, Red 12, and Joker (joker as Red 13)
+      { id: 'red_11_0', color: 'red', number: 11, isJoker: false },
+      { id: 'red_12_0', color: 'red', number: 12, isJoker: false },
+      { id: 'joker_1', color: null, number: null, isJoker: true },
+    ];
+    
+    console.log(`🔧 Created multiplayer debug tiles: ${debugTiles.length} tiles`);
+    console.log(`🔧 Final set for testing: Red 11, Red 12, Joker (should be Red 13)`);
+    
+    // Remove these specific tiles from deck to avoid duplicates
+    debugTiles.forEach(debugTile => {
+      const index = this.deck.findIndex(tile => tile.id === debugTile.id);
+      if (index !== -1) {
+        this.deck.splice(index, 1);
+        console.log(`🔧 Removed ${debugTile.id} from deck`);
+      }
+    });
+    
+    // Give debug tiles to the debug player (exactly 15 tiles)
+    debugPlayer.hand = [...debugTiles];
+    console.log(`🔧 Gave debug tiles to ${debugPlayer.name}: ${debugPlayer.hand.length} tiles`);
+    
+    // Give other players normal random hands
+    for (const player of this.players) {
+      if (player.id !== debugPlayer.id) {
+        for (let i = 0; i < 14; i++) {
+          if (this.deck.length > 0) {
+            player.hand.push(this.deck.pop());
+          }
+        }
+        console.log(`🔧 Gave ${player.name} normal hand: ${player.hand.length} tiles`);
+      }
+    }
+    
+    console.log(`🔧 Multiplayer debug mode: ${debugPlayer.name} given winning hand with joker test case`);
+  }}
 
 // Socket.IO event handlers
 io.on('connection', (socket) => {
