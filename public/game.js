@@ -1496,11 +1496,12 @@ class RummikubClient {
             // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                if (dragData.type === 'hand-tile' && needsInitialPlay) {
                     setElement.classList.add('drag-rejected');
                     return;
-                }
-            } catch (error) {
+                }            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1533,11 +1534,12 @@ class RummikubClient {
             // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                if (dragData.type === 'hand-tile' && needsInitialPlay) {
                     newSetZone.classList.add('drag-rejected');
                     return;
-                }
-            } catch (error) {
+                }            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1570,11 +1572,12 @@ class RummikubClient {
             // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                if (dragData.type === 'hand-tile' && needsInitialPlay) {
                     placeholderElement.classList.add('drag-rejected');
                     return;
-                }
-            } catch (error) {
+                }            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1607,7 +1610,11 @@ class RummikubClient {
         }
 
         // RULE ENFORCEMENT: Allow table manipulation after initial play
+        // Create a copy of the current board for manipulation
+        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+
         if (dragData.type === 'hand-tile') {
+            // Check if player needs initial play
             const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
             const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
             
@@ -1616,14 +1623,7 @@ class RummikubClient {
                 return;
             }
             
-            // After initial play, allow table manipulation
-            console.log('🎯 Table manipulation: Adding single tile to board');
-        }
-        // Create a copy of the current board for manipulation
-        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
-
-        if (dragData.type === 'hand-tile') {
-            // Tile from hand - add to existing set or create new set
+            console.log('🎯 Table manipulation: Adding single tile to board');            // Tile from hand - add to existing set or create new set
             if (targetSetIndex === -1) {
                 // Create new set
                 newBoard.push([dragData.tile]);
