@@ -539,6 +539,7 @@ body {
     justify-content: center;
     height: 200px;
     color: #a0aec0;
+    position: relative;
 }
 
 .board-placeholder i {
@@ -556,6 +557,18 @@ body {
     flex-wrap: wrap;
     border: 1px solid #e5e7eb;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.new-set-drop-zone {
+    position: relative;
+    padding: 20px;
+    margin: 10px 0;
+    border: 2px dashed #cbd5e0;
+    border-radius: 10px;
+    text-align: center;
+    color: #a0aec0;
+    transition: all 0.3s ease;
 }
 
 /* Chat Panel */
@@ -800,6 +813,62 @@ body {
 .player-hand.drag-over {
     border-color: #667eea;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Drag rejection styles for board drop zones */
+.board-set.drag-rejected,
+.new-set-drop-zone.drag-rejected,
+.board-placeholder.drag-rejected {
+    background: linear-gradient(135deg, #e53e3e 0%, #fc8181 100%) !important;
+    border-color: #e53e3e !important;
+    position: relative;
+}
+
+.board-set.drag-rejected::after,
+.new-set-drop-zone.drag-rejected::after,
+.board-placeholder.drag-rejected::after {
+    content: "❌ Use 'Play Selected' button";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    background: rgba(229, 62, 62, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+/* Drag rejection styles for board drop zones */
+.board-set.drag-rejected,
+.new-set-drop-zone.drag-rejected,
+.board-placeholder.drag-rejected {
+    border-color: #e53e3e !important;
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%) !important;
+    box-shadow: 0 0 20px rgba(229, 62, 62, 0.4) !important;
+}
+
+.board-set.drag-rejected::after,
+.new-set-drop-zone.drag-rejected::after,
+.board-placeholder.drag-rejected::after {
+    content: "❌ Use Play Selected Button";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(229, 62, 62, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
 }
 
 .hand-placeholder {

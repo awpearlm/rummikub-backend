@@ -1454,16 +1454,30 @@ class RummikubClient {
     setupSetDropZone(setElement, setIndex) {
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
+            
+            // Check if it's a hand tile and reject visually
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    setElement.classList.add('drag-rejected');
+                    return;
+                }
+            } catch (error) {
+                // If we can't parse, allow normal behavior
+            }
+            
             setElement.classList.add('drag-over');
         });
         
         setElement.addEventListener('dragleave', () => {
             setElement.classList.remove('drag-over');
+            setElement.classList.remove('drag-rejected');
         });
         
         setElement.addEventListener('drop', (e) => {
             e.preventDefault();
             setElement.classList.remove('drag-over');
+            setElement.classList.remove('drag-rejected');
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -1477,16 +1491,30 @@ class RummikubClient {
     setupNewSetDropZone(newSetZone) {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
+            
+            // Check if it's a hand tile and reject visually
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    newSetZone.classList.add('drag-rejected');
+                    return;
+                }
+            } catch (error) {
+                // If we can't parse, allow normal behavior
+            }
+            
             newSetZone.classList.add('drag-over');
         });
         
         newSetZone.addEventListener('dragleave', () => {
             newSetZone.classList.remove('drag-over');
+            newSetZone.classList.remove('drag-rejected');
         });
         
         newSetZone.addEventListener('drop', (e) => {
             e.preventDefault();
             newSetZone.classList.remove('drag-over');
+            newSetZone.classList.remove('drag-rejected');
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -1500,16 +1528,30 @@ class RummikubClient {
     setupBoardDropZone(placeholderElement) {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
+            
+            // Check if it's a hand tile and reject visually
+            try {
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    placeholderElement.classList.add('drag-rejected');
+                    return;
+                }
+            } catch (error) {
+                // If we can't parse, allow normal behavior
+            }
+            
             placeholderElement.classList.add('drag-over');
         });
         
         placeholderElement.addEventListener('dragleave', () => {
             placeholderElement.classList.remove('drag-over');
+            placeholderElement.classList.remove('drag-rejected');
         });
         
         placeholderElement.addEventListener('drop', (e) => {
             e.preventDefault();
             placeholderElement.classList.remove('drag-over');
+            placeholderElement.classList.remove('drag-rejected');
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -1523,6 +1565,12 @@ class RummikubClient {
     handleTileDrop(dragData, targetSetIndex) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
+            return;
+        }
+
+        // RULE ENFORCEMENT: Prevent single tile drops from hand to board
+        if (dragData.type === 'hand-tile') {
+            this.showNotification('Cannot drop single tiles to board! Select multiple tiles and use "Play Selected" button.', 'error');
             return;
         }
 
