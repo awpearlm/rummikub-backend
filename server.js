@@ -323,13 +323,32 @@ class RummikubGame {
   isValidGroup(tiles) {
     if (tiles.length < 3 || tiles.length > 4) return false;
     
-    // All tiles must be same number (except jokers)
-    const numbers = tiles.filter(t => !t.isJoker).map(t => t.number);
+    const nonJokerTiles = tiles.filter(t => !t.isJoker);
+    const jokerCount = tiles.filter(t => t.isJoker).length;
+    
+    if (nonJokerTiles.length === 0) {
+      // All jokers - not valid (need at least one real tile to determine the number)
+      return false;
+    }
+    
+    // All non-joker tiles must be same number
+    const numbers = nonJokerTiles.map(t => t.number);
     if (new Set(numbers).size > 1) return false;
     
-    // All tiles must be different colors (except jokers)
-    const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
+    // All non-joker tiles must be different colors
+    const colors = nonJokerTiles.map(t => t.color);
     if (new Set(colors).size !== colors.length) return false;
+    
+    // Check that we don't exceed 4 colors total (one per color max)
+    const availableColors = ['red', 'blue', 'orange', 'black'];
+    const usedColors = new Set(colors);
+    const remainingColors = availableColors.filter(color => !usedColors.has(color));
+    
+    // We need enough remaining colors for the jokers
+    if (jokerCount > remainingColors.length) return false;
+    
+    // Total tiles can't exceed 4 (max one per color)
+    if (tiles.length > 4) return false;
     
     return true;
   }
