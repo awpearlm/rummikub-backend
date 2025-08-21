@@ -1069,6 +1069,10 @@ io.on('connection', (socket) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   app.get('/api/games/:gameId', (req, res) => {
     const game = games.get(req.params.gameId);
     if (game) {

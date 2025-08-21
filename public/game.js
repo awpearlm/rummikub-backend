@@ -1,6 +1,30 @@
 class RummikubClient {
     constructor() {
-        this.socket = io();
+        // Determine the backend URL based on environment
+        const backendUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : 'https://rummikub-backend.onrender.com'; // Your deployed backend URL
+        
+        console.log('🌐 Connecting to:', backendUrl);
+        this.socket = io(backendUrl, {
+            timeout: 20000, // 20 second timeout
+            forceNew: true,
+            transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+        });
+        
+        // Add connection debugging
+        this.socket.on('connect', () => {
+            console.log('✅ Connected to server!', this.socket.id);
+        });
+        
+        this.socket.on('connect_error', (error) => {
+            console.error('❌ Connection error:', error);
+        });
+        
+        this.socket.on('disconnect', (reason) => {
+            console.log('🔌 Disconnected:', reason);
+        });
+        
         this.gameState = null;
         this.selectedTiles = [];
         this.playerName = '';
@@ -233,7 +257,27 @@ class RummikubClient {
         
         this.playerName = playerName;
         this.showLoadingScreen();
-        this.socket.emit('createGame', { playerName });
+        
+        // Check if socket is connected
+        if (!this.socket.connected) {
+            console.log('🔌 Socket not connected, waiting...');
+            // Set a timeout for connection
+            const connectionTimeout = setTimeout(() => {
+                console.error('❌ Connection timeout');
+                this.showWelcomeScreen();
+                this.showNotification('Unable to connect to game server. Please try again in a moment.', 'error');
+            }, 15000); // 15 second timeout
+            
+            // Wait for connection
+            this.socket.once('connect', () => {
+                clearTimeout(connectionTimeout);
+                console.log('✅ Connected! Sending createGame...');
+                this.socket.emit('createGame', { playerName });
+            });
+        } else {
+            // Already connected
+            this.socket.emit('createGame', { playerName });
+        }
     }
 
     showJoinForm() {
