@@ -815,10 +815,15 @@ class RummikubClient {
         console.log(`🆔 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
         
         if (!this.gameState.playerHand || this.gameState.playerHand.length === 0) {
-            handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
+            console.log(`⚠️ Skipping render - no tiles to display`);
+            // Don't clear the hand if game has started but we have 0 tiles - this might be a sync issue
+            if (!this.gameState.started) {
+                handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
+            }
             return;
         }
         
+        console.log(`✅ Proceeding with hand render for ${this.gameState.playerHand.length} tiles`);
         handElement.innerHTML = '';
         
         // Dynamic grid sizing based on number of tiles
