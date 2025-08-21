@@ -126,7 +126,20 @@ class RummikubClient {
             console.log(`🃏 DEBUG: Received playerHand with ${this.gameState.playerHand?.length || 0} tiles:`, 
                 this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
             console.log(`🎯 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
+            
+            // Force a complete reset before rendering
+            this.hasAutoSorted = false;
+            this.tileGridLayout = null;
+            this.needsGridExpansion = false;
+            
             this.updateGameState();
+            
+            // Force a second render to ensure tiles are displayed correctly
+            setTimeout(() => {
+                console.log(`🔄 FORCE RE-RENDER: Hand has ${this.gameState.playerHand?.length || 0} tiles`);
+                this.renderPlayerHand();
+            }, 100);
+            
             this.showNotification('Game started!', 'success');
             document.getElementById('startGameBtn').classList.add('hidden');
         });
