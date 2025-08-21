@@ -809,8 +809,11 @@ io.on('connection', (socket) => {
       if (!game) return;
 
       if (game.startGame()) {
-        io.to(playerData.gameId).emit('gameStarted', {
-          gameState: game.getGameState(socket.id)
+        // Send personalized game state to each player
+        game.players.forEach(player => {
+          io.to(player.id).emit('gameStarted', {
+            gameState: game.getGameState(player.id)
+          });
         });
         
         console.log(`Game started: ${playerData.gameId}`);
