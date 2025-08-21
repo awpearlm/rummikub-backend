@@ -4,7 +4,7 @@
   "description": "A multiplayer online Rummikub game with real-time chat for playing with friends across the globe",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node test-server.js",
     "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
