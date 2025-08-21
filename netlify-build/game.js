@@ -34,10 +34,6 @@ class RummikubClient {
         this.hasAutoSorted = false; // Track if auto-sort has been done
         this.hasPlayedTilesThisTurn = false; // Track if tiles have been played this turn
         
-        // UI State tracking for drag-and-drop
-        this.pendingMoves = []; // Track moves that haven't been confirmed by server
-        this.originalGameState = null; // Backup of game state before any pending moves
-        
         this.initializeEventListeners();
         this.initializeSocketListeners();
     }
@@ -121,25 +117,8 @@ class RummikubClient {
         });
 
         this.socket.on('gameStarted', (data) => {
-            console.log(`🚨 RECEIVED gameStarted event! Socket ID: ${this.socket.id.slice(-6)}`);
             this.gameState = data.gameState;
-            console.log(`🃏 DEBUG: Received playerHand with ${this.gameState.playerHand?.length || 0} tiles:`, 
-                this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-            console.log(`🎯 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
-            
-            // Force a complete reset before rendering
-            this.hasAutoSorted = false;
-            this.tileGridLayout = null;
-            this.needsGridExpansion = false;
-            
             this.updateGameState();
-            
-            // Force a second render to ensure tiles are displayed correctly
-            setTimeout(() => {
-                console.log(`🔄 FORCE RE-RENDER: Hand has ${this.gameState.playerHand?.length || 0} tiles`);
-                this.renderPlayerHand();
-            }, 100);
-            
             this.showNotification('Game started!', 'success');
             document.getElementById('startGameBtn').classList.add('hidden');
         });
@@ -652,119 +631,6 @@ class RummikubClient {
         return result;
     }
 
-    getCurrentPlayer() {
-        // Get the player object for the current user (me)
-        return this.gameState?.players?.find(p => p.id === this.socket.id) || null;
-    }
-
-    // Optimistic update methods for drag-and-drop
-    startOptimisticMove() {
-        // Save the current game state as backup
-        if (!this.originalGameState) {
-            this.originalGameState = JSON.parse(JSON.stringify(this.gameState));
-        }
-    }
-
-    applyOptimisticMove(moveType, moveData) {
-        this.startOptimisticMove();
-        
-        const currentPlayer = this.getCurrentPlayer();
-        if (!currentPlayer) return;
-
-        const move = {
-            type: moveType,
-            data: moveData,
-            timestamp: Date.now()
-        };
-
-        if (moveType === 'hand-to-board') {
-            // Remove tile from hand and add to board
-            const tileIndex = currentPlayer.hand.findIndex(t => t.id === moveData.tileId);
-            if (tileIndex !== -1) {
-                const tile = currentPlayer.hand.splice(tileIndex, 1)[0];
-                
-                if (moveData.targetSetIndex === -1) {
-                    // Create new set
-                    this.gameState.board.push([tile]);
-                    move.data.newSetIndex = this.gameState.board.length - 1;
-                } else {
-                    // Add to existing set
-                    this.gameState.board[moveData.targetSetIndex].push(tile);
-                }
-            }
-        } else if (moveType === 'board-to-board') {
-            // Move tile between board sets
-            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
-            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
-                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
-                
-                // Remove empty sets
-                if (sourceSet.length === 0) {
-                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
-                    // Adjust target index if necessary
-                    if (moveData.targetSetIndex > moveData.sourceSetIndex) {
-                        moveData.targetSetIndex--;
-                    }
-                }
-                
-                if (moveData.targetSetIndex === -1) {
-                    // Create new set
-                    this.gameState.board.push([tile]);
-                    move.data.newSetIndex = this.gameState.board.length - 1;
-                } else {
-                    // Add to existing set
-                    this.gameState.board[moveData.targetSetIndex].push(tile);
-                }
-            }
-        } else if (moveType === 'board-to-hand') {
-            // Move tile from board back to hand
-            const sourceSet = this.gameState.board[moveData.sourceSetIndex];
-            if (sourceSet && sourceSet[moveData.sourceTileIndex]) {
-                const tile = sourceSet.splice(moveData.sourceTileIndex, 1)[0];
-                currentPlayer.hand.push(tile);
-                
-                // Remove empty sets
-                if (sourceSet.length === 0) {
-                    this.gameState.board.splice(moveData.sourceSetIndex, 1);
-                }
-            }
-        }
-
-        this.pendingMoves.push(move);
-        
-        // Update the UI
-        this.updateGameState();
-    }
-
-    confirmOptimisticMoves() {
-        // Server confirmed the moves, clear pending moves and backup
-        this.pendingMoves = [];
-        this.originalGameState = null;
-    }
-
-    revertOptimisticMoves() {
-        // Server rejected the moves, restore original state
-        if (this.originalGameState) {
-            this.gameState = this.originalGameState;
-            this.originalGameState = null;
-            this.pendingMoves = [];
-            this.updateGameState();
-        }
-    }
-
-    undoLastOptimisticMove() {
-        if (this.pendingMoves.length === 0) return;
-        
-        // Revert all moves and replay all but the last one
-        const movesToReplay = this.pendingMoves.slice(0, -1);
-        this.revertOptimisticMoves();
-        
-        // Replay the remaining moves
-        movesToReplay.forEach(move => {
-            this.applyOptimisticMove(move.type, move.data);
-        });
-    }
-
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
@@ -944,6 +810,10 @@ class RummikubClient {
     renderPlayerHand() {
         const handElement = document.getElementById('playerHand');
         
+        console.log(`🎯 renderPlayerHand() called with ${this.gameState.playerHand?.length || 0} tiles`);
+        console.log(`🃏 Tiles to render:`, this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+        console.log(`🆔 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
+        
         if (!this.gameState.playerHand || this.gameState.playerHand.length === 0) {
             handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
             return;
@@ -1024,6 +894,8 @@ class RummikubClient {
         const handSize = this.gameState?.playerHand?.length || 0;
         const tilesPerRow = 7;
         
+        console.log(`🔧 initializeGridLayout() called with handSize=${handSize}, maxSlots=${maxSlots}`);
+        
         let gridSize;
         if (maxSlots) {
             gridSize = maxSlots;
@@ -1033,6 +905,8 @@ class RummikubClient {
             // Only expand beyond 21 when we actually have more than 21 tiles
             gridSize = Math.ceil(handSize / tilesPerRow) * tilesPerRow;
         }
+        
+        console.log(`🎯 Creating grid with ${gridSize} slots for ${handSize} tiles`);
         
         // Create a fresh grid and place current hand tiles
         this.tileGridLayout = new Array(gridSize).fill(null);
@@ -1316,7 +1190,6 @@ class RummikubClient {
         }
         
         this.updatePlayButton();
-        this.updateActionButtons(); // Update button states when selection changes
     }
 
     updatePlayButton() {
@@ -1360,14 +1233,12 @@ class RummikubClient {
             }
         }
         
-        // Play Set button - disabled if not player's turn OR no tiles selected
+        // Play Set button
         const playBtn = document.getElementById('playSetBtn');
         if (playBtn) {
-            const hasSelectedTiles = this.selectedTiles.length > 0;
-            const canPlay = canAct && hasSelectedTiles;
-            playBtn.style.opacity = canPlay ? '1' : '0.5';
-            playBtn.disabled = !canPlay;
-            if (canPlay) {
+            playBtn.style.opacity = canAct ? '1' : '0.5';
+            playBtn.disabled = !canAct;
+            if (canAct) {
                 playBtn.removeAttribute('disabled');
             } else {
                 playBtn.setAttribute('disabled', 'disabled');
@@ -1592,10 +1463,10 @@ class RummikubClient {
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and should be rejected
+            // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
+                if (dragData.type === 'hand-tile') {
                     setElement.classList.add('drag-rejected');
                     return;
                 }
@@ -1629,10 +1500,10 @@ class RummikubClient {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and should be rejected
+            // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
+                if (dragData.type === 'hand-tile') {
                     newSetZone.classList.add('drag-rejected');
                     return;
                 }
@@ -1666,10 +1537,10 @@ class RummikubClient {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and should be rejected
+            // Check if it's a hand tile and reject visually
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
+                if (dragData.type === 'hand-tile') {
                     placeholderElement.classList.add('drag-rejected');
                     return;
                 }
@@ -1699,21 +1570,15 @@ class RummikubClient {
         });
     }
 
-    canDragSingleTileToBoard() {
-        // Only allow single tile drag to board AFTER player has made initial 30+ point play
-        const currentPlayer = this.getCurrentPlayer();
-        return currentPlayer && currentPlayer.hasPlayedInitial;
-    }
-
     handleTileDrop(dragData, targetSetIndex) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
             return;
         }
 
-        // RULE ENFORCEMENT: Prevent single tile drops from hand to board UNTIL player has gone out
-        if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
-            this.showNotification('Cannot drop single tiles to board until you make your initial 30+ point play! Use "Play Selected" button.', 'error');
+        // RULE ENFORCEMENT: Prevent single tile drops from hand to board
+        if (dragData.type === 'hand-tile') {
+            this.showNotification('Cannot drop single tiles to board! Select multiple tiles and use "Play Selected" button.', 'error');
             return;
         }
 
