@@ -631,6 +631,11 @@ class RummikubClient {
         return result;
     }
 
+    getCurrentPlayer() {
+        // Get the player object for the current user (me)
+        return this.gameState?.players?.find(p => p.id === this.socket.id) || null;
+    }
+
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
@@ -1455,10 +1460,10 @@ class RummikubClient {
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and should be rejected
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
                     setElement.classList.add('drag-rejected');
                     return;
                 }
@@ -1492,10 +1497,10 @@ class RummikubClient {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and should be rejected
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
                     newSetZone.classList.add('drag-rejected');
                     return;
                 }
@@ -1529,10 +1534,10 @@ class RummikubClient {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and should be rejected
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                if (dragData.type === 'hand-tile') {
+                if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
                     placeholderElement.classList.add('drag-rejected');
                     return;
                 }
@@ -1562,15 +1567,21 @@ class RummikubClient {
         });
     }
 
+    canDragSingleTileToBoard() {
+        // Only allow single tile drag to board AFTER player has made initial 30+ point play
+        const currentPlayer = this.getCurrentPlayer();
+        return currentPlayer && currentPlayer.hasPlayedInitial;
+    }
+
     handleTileDrop(dragData, targetSetIndex) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
             return;
         }
 
-        // RULE ENFORCEMENT: Prevent single tile drops from hand to board
-        if (dragData.type === 'hand-tile') {
-            this.showNotification('Cannot drop single tiles to board! Select multiple tiles and use "Play Selected" button.', 'error');
+        // RULE ENFORCEMENT: Prevent single tile drops from hand to board UNTIL player has gone out
+        if (dragData.type === 'hand-tile' && !this.canDragSingleTileToBoard()) {
+            this.showNotification('Cannot drop single tiles to board until you make your initial 30+ point play! Use "Play Selected" button.', 'error');
             return;
         }
 
