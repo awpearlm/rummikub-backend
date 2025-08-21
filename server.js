@@ -260,14 +260,21 @@ class RummikubGame {
   }
 
   isValidSet(tiles) {
-    if (tiles.length < 3) return false;
+    console.log(`🔍 isValidSet called with ${tiles.length} tiles:`, tiles.map(t => `${t.number}${t.color}${t.isJoker ? ' (joker)' : ''}`));
+    
+    if (tiles.length < 3) {
+      console.log(`❌ Too few tiles: ${tiles.length} < 3`);
+      return false;
+    }
     
     // Check if it's a run (consecutive numbers, same color)
     const isRun = this.isValidRun(tiles);
+    console.log(`🔍 isValidRun result: ${isRun}`);
     if (isRun) return true;
     
     // Check if it's a group (same number, different colors)
     const isGroup = this.isValidGroup(tiles);
+    console.log(`🔍 isValidGroup result: ${isGroup}`);
     return isGroup;
   }
 
@@ -321,35 +328,62 @@ class RummikubGame {
   }
 
   isValidGroup(tiles) {
-    if (tiles.length < 3 || tiles.length > 4) return false;
+    console.log(`🔍 isValidGroup checking ${tiles.length} tiles`);
+    
+    if (tiles.length < 3 || tiles.length > 4) {
+      console.log(`❌ Invalid group length: ${tiles.length} (must be 3-4)`);
+      return false;
+    }
     
     const nonJokerTiles = tiles.filter(t => !t.isJoker);
     const jokerCount = tiles.filter(t => t.isJoker).length;
     
+    console.log(`🔍 Non-joker tiles: ${nonJokerTiles.length}, Jokers: ${jokerCount}`);
+    
     if (nonJokerTiles.length === 0) {
       // All jokers - not valid (need at least one real tile to determine the number)
+      console.log(`❌ All jokers - not valid`);
       return false;
     }
     
     // All non-joker tiles must be same number
     const numbers = nonJokerTiles.map(t => t.number);
-    if (new Set(numbers).size > 1) return false;
+    console.log(`🔍 Numbers in group:`, numbers);
+    
+    if (new Set(numbers).size > 1) {
+      console.log(`❌ Multiple numbers in group:`, numbers);
+      return false;
+    }
     
     // All non-joker tiles must be different colors
     const colors = nonJokerTiles.map(t => t.color);
-    if (new Set(colors).size !== colors.length) return false;
+    console.log(`🔍 Colors in group:`, colors);
+    
+    if (new Set(colors).size !== colors.length) {
+      console.log(`❌ Duplicate colors in group:`, colors);
+      return false;
+    }
     
     // Check that we don't exceed 4 colors total (one per color max)
     const availableColors = ['red', 'blue', 'orange', 'black'];
     const usedColors = new Set(colors);
     const remainingColors = availableColors.filter(color => !usedColors.has(color));
     
+    console.log(`🔍 Used colors: ${Array.from(usedColors)}, Remaining: ${remainingColors}, Jokers needed: ${jokerCount}`);
+    
     // We need enough remaining colors for the jokers
-    if (jokerCount > remainingColors.length) return false;
+    if (jokerCount > remainingColors.length) {
+      console.log(`❌ Not enough colors for jokers: ${jokerCount} jokers, ${remainingColors.length} remaining colors`);
+      return false;
+    }
     
     // Total tiles can't exceed 4 (max one per color)
-    if (tiles.length > 4) return false;
+    if (tiles.length > 4) {
+      console.log(`❌ Too many tiles for group: ${tiles.length} > 4`);
+      return false;
+    }
     
+    console.log(`✅ Valid group!`);
     return true;
   }
 
@@ -387,18 +421,40 @@ class RummikubGame {
   }
 
   playSet(playerId, tileIds, setIndex = null) {
+    console.log(`🎯 playSet called: playerId=${playerId}, tileIds=${JSON.stringify(tileIds)}`);
+    
     const player = this.players.find(p => p.id === playerId);
-    if (!player || player.id !== this.getCurrentPlayer().id) return false;
+    if (!player) {
+      console.log(`❌ Player not found: ${playerId}`);
+      return false;
+    }
+    
+    if (player.id !== this.getCurrentPlayer().id) {
+      console.log(`❌ Not player's turn: ${player.name} vs ${this.getCurrentPlayer().name}`);
+      return false;
+    }
     
     const tiles = tileIds.map(id => player.hand.find(t => t.id === id)).filter(Boolean);
-    if (tiles.length !== tileIds.length) return false;
+    console.log(`🎯 Found ${tiles.length} tiles out of ${tileIds.length} requested`);
     
-    if (!this.isValidSet(tiles)) return false;
+    if (tiles.length !== tileIds.length) {
+      console.log(`❌ Tile count mismatch: expected ${tileIds.length}, found ${tiles.length}`);
+      return false;
+    }
+    
+    console.log(`🎯 Validating set:`, tiles.map(t => `${t.number}${t.color}${t.isJoker ? ' (joker)' : ''}`));
+    
+    if (!this.isValidSet(tiles)) {
+      console.log(`❌ Invalid set validation failed`);
+      return false;
+    }
     
     // Check initial 30-point requirement
     if (!player.hasPlayedInitial) {
       const setValue = this.calculateSetValue(tiles);
+      console.log(`🎯 Initial play check: setValue=${setValue}, required=30`);
       if (setValue < 30) {
+        console.log(`❌ Not enough points for initial play: ${setValue} < 30`);
         return false; // Not enough points for initial play
       }
     }
