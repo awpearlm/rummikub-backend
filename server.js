@@ -278,20 +278,46 @@ class RummikubGame {
     const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
     if (new Set(colors).size > 1) return false;
     
-    // Sort by number and check consecutive
-    const sortedTiles = [...tiles].sort((a, b) => {
-      if (a.isJoker) return -1;
-      if (b.isJoker) return 1;
-      return a.number - b.number;
-    });
+    // Get non-joker tiles and sort by number
+    const nonJokerTiles = tiles.filter(t => !t.isJoker);
+    const jokerCount = tiles.filter(t => t.isJoker).length;
     
-    // For now, simplified validation (can be enhanced with joker logic)
-    const numbers = sortedTiles.filter(t => !t.isJoker).map(t => t.number);
-    for (let i = 1; i < numbers.length; i++) {
-      if (numbers[i] !== numbers[i-1] + 1) return false;
+    if (nonJokerTiles.length === 0) {
+      // All jokers - not valid (need at least one real tile to determine color/sequence)
+      return false;
     }
     
-    return true;
+    // Sort non-joker tiles by number
+    const sortedNumbers = nonJokerTiles.map(t => t.number).sort((a, b) => a - b);
+    
+    // Check if we can form a consecutive run with the available jokers
+    const totalLength = tiles.length;
+    const minNumber = sortedNumbers[0];
+    const maxNumber = sortedNumbers[sortedNumbers.length - 1];
+    
+    // The run should span from minNumber to (minNumber + totalLength - 1)
+    // OR we need to check if jokers can fill the gaps
+    const expectedRange = maxNumber - minNumber + 1;
+    const actualNonJokers = sortedNumbers.length;
+    const gapsToFill = expectedRange - actualNonJokers;
+    
+    // Check if we have enough jokers to fill the gaps and make it exactly totalLength
+    if (expectedRange === totalLength && gapsToFill === jokerCount) {
+      // Perfect fit - jokers exactly fill the gaps
+      return true;
+    }
+    
+    // Alternative: check if jokers can extend the sequence at either end
+    if (actualNonJokers + jokerCount === totalLength) {
+      // Check for consecutive numbers in non-joker tiles
+      for (let i = 1; i < sortedNumbers.length; i++) {
+        const gap = sortedNumbers[i] - sortedNumbers[i-1] - 1;
+        if (gap < 0) return false; // Duplicate numbers
+      }
+      return true;
+    }
+    
+    return false;
   }
 
   isValidGroup(tiles) {
@@ -321,13 +347,20 @@ class RummikubGame {
       }
     } else if (this.isValidRun(tiles)) {
       // Run: consecutive numbers, same color
-      // For simplicity, calculate based on actual tile values
-      // Jokers in runs would need more complex logic
-      totalValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0);
-      // Add estimated value for jokers (this is simplified)
-      if (jokerCount > 0 && nonJokerTiles.length > 0) {
-        const avgValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0) / nonJokerTiles.length;
-        totalValue += jokerCount * Math.round(avgValue);
+      const sortedNumbers = nonJokerTiles.map(t => t.number).sort((a, b) => a - b);
+      
+      if (sortedNumbers.length > 0) {
+        const minNumber = sortedNumbers[0];
+        const maxNumber = sortedNumbers[sortedNumbers.length - 1];
+        const totalLength = tiles.length;
+        
+        // Calculate the complete run value including jokers
+        // The run spans from the lowest to highest number with jokers filling gaps
+        const runStart = minNumber;
+        const runEnd = runStart + totalLength - 1;
+        
+        // Sum the arithmetic sequence: n/2 * (first + last)
+        totalValue = totalLength * (runStart + runEnd) / 2;
       }
     }
     
