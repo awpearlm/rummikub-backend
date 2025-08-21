@@ -157,20 +157,14 @@ class RummikubGame {
       this.dealDebugHand();
     } else {
       console.log(`🎲 Normal mode: dealing random tiles`);
-      console.log(`🚨🚨🚨 DEBUGGING HANDS ISSUE - PLAYERS COUNT: ${this.players.length} 🚨🚨🚨`);
       // Normal mode: Deal 14 tiles to each player
       for (const player of this.players) {
-        console.log(`🚨 DEALING TO: ${player.name} (${player.id.slice(-4)})`);
         for (let i = 0; i < 14; i++) {
           if (this.deck.length > 0) {
             player.hand.push(this.deck.pop());
           }
         }
-        console.log(`🚨 FINAL HAND FOR ${player.name}: ${player.hand.length} tiles`);
-        console.log(`🚨 ${player.name} tiles:`, 
-          player.hand.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
       }
-      console.log(`🚨🚨🚨 ALL HANDS DEALT! 🚨🚨🚨`);
     }
     
     this.started = true;
@@ -266,159 +260,51 @@ class RummikubGame {
   }
 
   isValidSet(tiles) {
-    console.log(`🔍 isValidSet called with ${tiles.length} tiles:`, tiles.map(t => `${t.number}${t.color}${t.isJoker ? ' (joker)' : ''}`));
-    
-    if (tiles.length < 3) {
-      console.log(`❌ Too few tiles: ${tiles.length} < 3`);
-      return false;
-    }
+    if (tiles.length < 3) return false;
     
     // Check if it's a run (consecutive numbers, same color)
     const isRun = this.isValidRun(tiles);
-    console.log(`🔍 isValidRun result: ${isRun}`);
     if (isRun) return true;
     
     // Check if it's a group (same number, different colors)
     const isGroup = this.isValidGroup(tiles);
-    console.log(`🔍 isValidGroup result: ${isGroup}`);
     return isGroup;
   }
 
   isValidRun(tiles) {
-    console.log(`🔍 isValidRun checking ${tiles.length} tiles:`, tiles.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-    
-    if (tiles.length < 3) {
-      console.log(`❌ Run too short: ${tiles.length} < 3`);
-      return false;
-    }
+    if (tiles.length < 3) return false;
     
     // All tiles must be same color (except jokers)
     const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
-    if (new Set(colors).size > 1) {
-      console.log(`❌ Mixed colors in run:`, colors);
-      return false;
+    if (new Set(colors).size > 1) return false;
+    
+    // Sort by number and check consecutive
+    const sortedTiles = [...tiles].sort((a, b) => {
+      if (a.isJoker) return -1;
+      if (b.isJoker) return 1;
+      return a.number - b.number;
+    });
+    
+    // For now, simplified validation (can be enhanced with joker logic)
+    const numbers = sortedTiles.filter(t => !t.isJoker).map(t => t.number);
+    for (let i = 1; i < numbers.length; i++) {
+      if (numbers[i] !== numbers[i-1] + 1) return false;
     }
     
-    // Get non-joker tiles and sort by number
-    const nonJokerTiles = tiles.filter(t => !t.isJoker);
-    const jokerCount = tiles.filter(t => t.isJoker).length;
-    
-    console.log(`🔍 Non-joker tiles: ${nonJokerTiles.length}, Jokers: ${jokerCount}`);
-    
-    if (nonJokerTiles.length === 0) {
-      // All jokers - not valid (need at least one real tile to determine color/sequence)
-      console.log(`❌ All jokers - not valid`);
-      return false;
-    }
-    
-    // Sort non-joker tiles by number
-    const sortedNumbers = nonJokerTiles.map(t => t.number).sort((a, b) => a - b);
-    console.log(`🔍 Sorted numbers:`, sortedNumbers);
-    
-    // Check for duplicate numbers (invalid for runs)
-    for (let i = 1; i < sortedNumbers.length; i++) {
-      if (sortedNumbers[i] === sortedNumbers[i-1]) {
-        console.log(`❌ Duplicate numbers in run: ${sortedNumbers[i]}`);
-        return false;
-      }
-    }
-    
-    // Try to fit the tiles into a consecutive sequence
-    // We need to check if jokers can fill gaps and extend the sequence
-    const totalLength = tiles.length;
-    
-    // Calculate minimum possible range (if all tiles were consecutive)
-    const minPossibleStart = Math.max(1, sortedNumbers[0] - jokerCount);
-    const maxPossibleEnd = Math.min(13, sortedNumbers[sortedNumbers.length - 1] + jokerCount);
-    
-    // Try each possible starting position for the run
-    for (let start = minPossibleStart; start <= maxPossibleEnd - totalLength + 1; start++) {
-      const end = start + totalLength - 1;
-      if (end > 13) continue; // Can't go beyond 13
-      
-      // Check if this range works with our tiles
-      let jokersNeeded = 0;
-      let nonJokerIndex = 0;
-      let valid = true;
-      
-      for (let pos = start; pos <= end; pos++) {
-        if (nonJokerIndex < sortedNumbers.length && sortedNumbers[nonJokerIndex] === pos) {
-          // We have a real tile for this position
-          nonJokerIndex++;
-        } else {
-          // We need a joker for this position
-          jokersNeeded++;
-        }
-      }
-      
-      // Check if we used all non-joker tiles and have enough jokers
-      if (nonJokerIndex === sortedNumbers.length && jokersNeeded === jokerCount) {
-        console.log(`✅ Valid run found: ${start}-${end} (jokers fill ${jokersNeeded} positions)`);
-        return true;
-      }
-    }
-    
-    console.log(`❌ No valid run configuration found`);
-    return false;
+    return true;
   }
 
   isValidGroup(tiles) {
-    console.log(`🔍 isValidGroup checking ${tiles.length} tiles:`, tiles.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+    if (tiles.length < 3 || tiles.length > 4) return false;
     
-    if (tiles.length < 3 || tiles.length > 4) {
-      console.log(`❌ Invalid group length: ${tiles.length} (must be 3-4)`);
-      return false;
-    }
+    // All tiles must be same number (except jokers)
+    const numbers = tiles.filter(t => !t.isJoker).map(t => t.number);
+    if (new Set(numbers).size > 1) return false;
     
-    const nonJokerTiles = tiles.filter(t => !t.isJoker);
-    const jokerCount = tiles.filter(t => t.isJoker).length;
+    // All tiles must be different colors (except jokers)
+    const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
+    if (new Set(colors).size !== colors.length) return false;
     
-    console.log(`🔍 Non-joker tiles: ${nonJokerTiles.length}, Jokers: ${jokerCount}`);
-    
-    if (nonJokerTiles.length === 0) {
-      // All jokers - not valid (need at least one real tile to determine the number)
-      console.log(`❌ All jokers - not valid`);
-      return false;
-    }
-    
-    // All non-joker tiles must be same number
-    const numbers = nonJokerTiles.map(t => t.number);
-    console.log(`🔍 Numbers in group:`, numbers);
-    
-    if (new Set(numbers).size > 1) {
-      console.log(`❌ Multiple numbers in group:`, numbers);
-      return false;
-    }
-    
-    // All non-joker tiles must be different colors
-    const colors = nonJokerTiles.map(t => t.color);
-    console.log(`🔍 Colors in group:`, colors);
-    
-    if (new Set(colors).size !== colors.length) {
-      console.log(`❌ Duplicate colors in group:`, colors);
-      return false;
-    }
-    
-    // Check that we don't exceed 4 colors total (one per color max)
-    const availableColors = ['red', 'blue', 'orange', 'black'];
-    const usedColors = new Set(colors);
-    const remainingColors = availableColors.filter(color => !usedColors.has(color));
-    
-    console.log(`🔍 Used colors: ${Array.from(usedColors)}, Remaining: ${remainingColors}, Jokers needed: ${jokerCount}`);
-    
-    // We need enough remaining colors for the jokers
-    if (jokerCount > remainingColors.length) {
-      console.log(`❌ Not enough colors for jokers: ${jokerCount} jokers, ${remainingColors.length} remaining colors`);
-      return false;
-    }
-    
-    // Total tiles can't exceed 4 (max one per color)
-    if (tiles.length > 4) {
-      console.log(`❌ Too many tiles for group: ${tiles.length} > 4`);
-      return false;
-    }
-    
-    console.log(`✅ Valid group!`);
     return true;
   }
 
@@ -435,20 +321,13 @@ class RummikubGame {
       }
     } else if (this.isValidRun(tiles)) {
       // Run: consecutive numbers, same color
-      const sortedNumbers = nonJokerTiles.map(t => t.number).sort((a, b) => a - b);
-      
-      if (sortedNumbers.length > 0) {
-        const minNumber = sortedNumbers[0];
-        const maxNumber = sortedNumbers[sortedNumbers.length - 1];
-        const totalLength = tiles.length;
-        
-        // Calculate the complete run value including jokers
-        // The run spans from the lowest to highest number with jokers filling gaps
-        const runStart = minNumber;
-        const runEnd = runStart + totalLength - 1;
-        
-        // Sum the arithmetic sequence: n/2 * (first + last)
-        totalValue = totalLength * (runStart + runEnd) / 2;
+      // For simplicity, calculate based on actual tile values
+      // Jokers in runs would need more complex logic
+      totalValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0);
+      // Add estimated value for jokers (this is simplified)
+      if (jokerCount > 0 && nonJokerTiles.length > 0) {
+        const avgValue = nonJokerTiles.reduce((sum, tile) => sum + tile.number, 0) / nonJokerTiles.length;
+        totalValue += jokerCount * Math.round(avgValue);
       }
     }
     
@@ -456,40 +335,18 @@ class RummikubGame {
   }
 
   playSet(playerId, tileIds, setIndex = null) {
-    console.log(`🎯 playSet called: playerId=${playerId}, tileIds=${JSON.stringify(tileIds)}`);
-    
     const player = this.players.find(p => p.id === playerId);
-    if (!player) {
-      console.log(`❌ Player not found: ${playerId}`);
-      return false;
-    }
-    
-    if (player.id !== this.getCurrentPlayer().id) {
-      console.log(`❌ Not player's turn: ${player.name} vs ${this.getCurrentPlayer().name}`);
-      return false;
-    }
+    if (!player || player.id !== this.getCurrentPlayer().id) return false;
     
     const tiles = tileIds.map(id => player.hand.find(t => t.id === id)).filter(Boolean);
-    console.log(`🎯 Found ${tiles.length} tiles out of ${tileIds.length} requested`);
+    if (tiles.length !== tileIds.length) return false;
     
-    if (tiles.length !== tileIds.length) {
-      console.log(`❌ Tile count mismatch: expected ${tileIds.length}, found ${tiles.length}`);
-      return false;
-    }
-    
-    console.log(`🎯 Validating set:`, tiles.map(t => `${t.number}${t.color}${t.isJoker ? ' (joker)' : ''}`));
-    
-    if (!this.isValidSet(tiles)) {
-      console.log(`❌ Invalid set validation failed`);
-      return false;
-    }
+    if (!this.isValidSet(tiles)) return false;
     
     // Check initial 30-point requirement
     if (!player.hasPlayedInitial) {
       const setValue = this.calculateSetValue(tiles);
-      console.log(`🎯 Initial play check: setValue=${setValue}, required=30`);
       if (setValue < 30) {
-        console.log(`❌ Not enough points for initial play: ${setValue} < 30`);
         return false; // Not enough points for initial play
       }
     }
@@ -636,15 +493,7 @@ class RummikubGame {
   }
 
   getGameState(playerId) {
-    console.log(`🚨🚨🚨 getGameState called for player: ${playerId.slice(-6)} 🚨🚨🚨`);
     const player = this.players.find(p => p.id === playerId);
-    console.log(`🎯 getGameState for player ${playerId}: found player = ${player ? player.name : 'NOT FOUND'}`);
-    if (player) {
-      console.log(`🃏 Player ${player.name} hand has ${player.hand.length} tiles:`, player.hand.slice(0, 3).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-    } else {
-      console.log(`🚨 ERROR: Could not find player with ID ${playerId.slice(-6)}`);
-      console.log(`🚨 Available players:`, this.players.map(p => `${p.name}(${p.id.slice(-6)})`));
-    }
     return {
       id: this.id,
       players: this.players.map(p => ({
@@ -960,14 +809,10 @@ io.on('connection', (socket) => {
       if (!game) return;
 
       if (game.startGame()) {
-        console.log(`🚨 SENDING GAME STARTED TO ${game.players.length} PLAYERS:`);
         // Send personalized game state to each player
         game.players.forEach(player => {
-          console.log(`📤 Sending gameStarted to ${player.name} (${player.id.slice(-6)})`);
-          const gameState = game.getGameState(player.id);
-          console.log(`📋 ${player.name}'s hand preview:`, gameState.playerHand.slice(0, 3).map(t => `${t.isJoker ? 'J' : t.number + t.color[0]}`));
           io.to(player.id).emit('gameStarted', {
-            gameState: gameState
+            gameState: game.getGameState(player.id)
           });
         });
         
@@ -1244,5 +1089,4 @@ io.on('connection', (socket) => {
   server.listen(PORT, () => {
     console.log(`🎮 Rummikub game server running on port ${PORT}`);
     console.log(`🌐 Open your browser to http://localhost:${PORT}`);
-    console.log(`🚨🚨🚨 SERVER VERSION: ${new Date().toISOString()} - DEBUGGING ENABLED 🚨🚨🚨`);
   });
