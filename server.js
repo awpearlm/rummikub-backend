@@ -1327,6 +1327,13 @@ io.on('connection', (socket) => {
         return;
       }
       
+      // Check if this is the first board update in the turn and create a snapshot
+      // This ensures we always have a snapshot to compare against for undo
+      if (!game.boardSnapshot) {
+        game.boardSnapshot = JSON.parse(JSON.stringify(game.board));
+        console.log('🎮 Created initial board snapshot for this turn');
+      }
+      
       // Check if joker manipulation is occurring
       const jokerChange = game.checkJokerManipulation(game.board, data.board, currentPlayer);
       
@@ -1346,6 +1353,47 @@ io.on('connection', (socket) => {
         const playerSocket = io.sockets.sockets.get(player.id);
         if (playerSocket) {
           playerSocket.emit('boardUpdated', {
+            gameState: game.getGameState(player.id)
+          });
+        }
+      });
+    });
+    
+    socket.on('updatePlayerHand', (data) => {
+      const playerData = players.get(socket.id);
+      if (!playerData) return;
+
+      const game = games.get(playerData.gameId);
+      if (!game) return;
+
+      // Only allow current player to update their hand
+      const currentPlayer = game.getCurrentPlayer();
+      if (currentPlayer.id !== socket.id) {
+        socket.emit('error', { message: 'Not your turn' });
+        return;
+      }
+      
+      console.log(`🎮 ${currentPlayer.name} updated their hand - now has ${data.newHand.length} tiles`);
+      
+      // Update the player's hand
+      currentPlayer.hand = data.newHand;
+      
+      // If board data is provided, update the board too
+      if (data.board) {
+        game.updateBoard(data.board);
+        
+        // Ensure the board snapshot exists for the first move in a turn
+        if (!game.boardSnapshot) {
+          game.boardSnapshot = JSON.parse(JSON.stringify(game.board));
+          console.log('🎮 Created initial board snapshot for this turn');
+        }
+      }
+      
+      // Send updated game state to all players
+      game.players.forEach(player => {
+        const playerSocket = io.sockets.sockets.get(player.id);
+        if (playerSocket) {
+          playerSocket.emit('gameStateUpdate', {
             gameState: game.getGameState(player.id)
           });
         }

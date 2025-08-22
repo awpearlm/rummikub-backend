@@ -218,6 +218,13 @@ class RummikubClient {
             this.renderGameBoard();
             this.showNotification('Board restored to turn start', 'info');
         });
+
+        // General game state updates
+        this.socket.on('gameStateUpdate', (data) => {
+            console.log('🎮 Game state updated', data);
+            this.gameState = data.gameState;
+            this.updateGameState();
+        });
     }
 
     selectGameMode(mode) {
@@ -1895,7 +1902,29 @@ class RummikubClient {
                 }
             }
             
-            // Remove tile from hand (this will be handled by server validation)
+            // Remove tile from hand
+            // First find the tile in the hand
+            const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
+            if (tileIndex !== -1) {
+                // Create a new hand array without the tile
+                const newHand = [...this.gameState.playerHand];
+                newHand.splice(tileIndex, 1);
+                
+                // Update the player's hand in the server
+                this.socket.emit('updatePlayerHand', { 
+                    newHand: newHand,
+                    board: newBoard 
+                });
+                
+                // Update the local hand immediately for visual feedback
+                this.gameState.playerHand = newHand;
+                this.renderPlayerHand();
+                
+                // Make sure buttons are updated (particularly undo button)
+                this.updateActionButtons();
+                
+                console.log('🎮 Tile removed from hand and board updated');
+            }
         } else if (dragData.type === 'board-tile') {
             // Moving tile between sets on board
             const sourceSetIndex = dragData.sourceSetIndex;
@@ -1958,7 +1987,14 @@ class RummikubClient {
         }
 
         // Add tile back to hand
-        const newHand = [...this.gameState.players.find(p => p.id === this.socket.id).hand, dragData.tile];
+        const newHand = [...this.gameState.playerHand, dragData.tile];
+
+        // Update local state immediately for better UX
+        this.gameState.board = newBoard;
+        this.gameState.playerHand = newHand;
+        this.renderGameBoard();
+        this.renderPlayerHand();
+        this.updateActionButtons();
 
         // Send update to server
         this.socket.emit('moveFromBoardToHand', {
@@ -2109,6 +2145,15 @@ class RummikubClient {
     }
     
     updateBoard(newBoard) {
+        // Store local copy immediately for better UX response
+        if (this.gameState) {
+            this.gameState.board = newBoard;
+            
+            // Update the undo button based on the board state change
+            this.updateActionButtons();
+        }
+        
+        // Send to server
         this.socket.emit('updateBoard', { board: newBoard });
     }
 
