@@ -1358,6 +1358,33 @@ io.on('connection', (socket) => {
         console.log('🎮 Created initial board snapshot for this turn');
       }
       
+      // Before updating the board, find which tiles were added from the player's hand
+      const oldBoardTiles = new Set();
+      game.board.forEach(set => {
+        set.forEach(tile => {
+          oldBoardTiles.add(tile.id);
+        });
+      });
+      
+      // Get all tiles on the new board
+      const newBoardTiles = new Set();
+      data.board.forEach(set => {
+        set.forEach(tile => {
+          newBoardTiles.add(tile.id);
+        });
+      });
+      
+      // Find tiles that were added to the board (in new board but not in old board)
+      const addedTiles = Array.from(newBoardTiles).filter(tileId => !oldBoardTiles.has(tileId));
+      
+      // Check if any of the added tiles are from the player's hand and remove them
+      if (addedTiles.length > 0) {
+        console.log(`Player ${currentPlayer.name} added tiles to board:`, addedTiles);
+        
+        // Remove these tiles from the player's hand
+        currentPlayer.hand = currentPlayer.hand.filter(tile => !addedTiles.includes(tile.id));
+      }
+      
       // Check if joker manipulation is occurring
       const jokerChange = game.checkJokerManipulation(game.board, data.board, currentPlayer);
       

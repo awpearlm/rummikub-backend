@@ -1827,7 +1827,17 @@ class RummikubClient {
                 this.addTileToSetIntelligently(newBoard[targetSetIndex], dragData.tile);
             }
             
-            // Remove tile from hand (this will be handled by server validation)
+            // Remove tile from hand locally for immediate UI feedback
+            const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
+            if (tileIndex !== -1) {
+                // Create a copy of the player's hand and remove the tile
+                const newHand = [...this.gameState.playerHand];
+                newHand.splice(tileIndex, 1);
+                this.gameState.playerHand = newHand;
+                
+                // Render the updated hand
+                this.renderPlayerHand();
+            }
         } else if (dragData.type === 'board-tile') {
             // Moving tile between sets on board
             const sourceSetIndex = dragData.sourceSetIndex;
