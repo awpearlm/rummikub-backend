@@ -117,21 +117,6 @@ class RummikubClient {
         });
 
         this.socket.on('gameStarted', (data) => {
-            console.log('🎲 RAW gameStarted data:', JSON.stringify(data, null, 2));
-            console.log('🎮 My Socket ID:', this.socket.id);
-            
-            // Check if I'm getting the right player data
-            const myPlayerData = data.gameState.players.find(p => p.id === this.socket.id);
-            if (myPlayerData) {
-                console.log('✅ Found my player data:', myPlayerData.name, 'Hand size:', myPlayerData.handSize);
-            } else {
-                console.log('🚨 NO PLAYER DATA FOUND for socket:', this.socket.id);
-                console.log('🔍 Available players:', data.gameState.players.map(p => ({
-                    name: p.name,
-                    id: p.id,
-                    handSize: p.handSize
-                })));
-            }
             this.gameState = data.gameState;
             this.updateGameState();
             this.showNotification('Game started!', 'success');
@@ -270,12 +255,6 @@ class RummikubClient {
             return;
         }
         
-        // Check if debug mode is enabled
-        const isDebugMode = document.getElementById('debugModeCheckbox').checked;
-        if (isDebugMode) {
-            console.log('🔧 Debug mode enabled! Game creator will get debug hand.');
-        }
-        
         this.playerName = playerName;
         this.showLoadingScreen();
         
@@ -293,15 +272,11 @@ class RummikubClient {
             this.socket.once('connect', () => {
                 clearTimeout(connectionTimeout);
                 console.log('✅ Connected! Sending createGame...');
-                const isDebugMode = document.getElementById('debugModeCheckbox').checked;
-                console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-                this.socket.emit('createGame', { playerName, isDebugMode });
+                this.socket.emit('createGame', { playerName });
             });
         } else {
             // Already connected
-            const isDebugMode = document.getElementById('debugModeCheckbox').checked;
-            console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-            this.socket.emit('createGame', { playerName, isDebugMode });
+            this.socket.emit('createGame', { playerName });
         }
     }
 
@@ -400,14 +375,6 @@ class RummikubClient {
             return;
         }
         
-        // Get selected tile objects
-        const selectedTileObjects = this.selectedTiles.map(id => 
-            this.gameState.playerHand.find(tile => tile.id === id)
-        ).filter(Boolean);
-        
-        // Debug the selected set
-        this.validateAndDebugSet(selectedTileObjects);
-        
         // Check if player hasn't played initial yet
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
@@ -427,38 +394,6 @@ class RummikubClient {
         } else {
             // After initial play, only single sets allowed per play action
             this.socket.emit('playSet', { tileIds: this.selectedTiles });
-        }
-    }
-    
-    validateAndDebugSet(tiles) {
-        // Check if this selection is a valid set
-        const isRun = this.isValidRunClient(tiles);
-        const isGroup = this.isValidGroupClient(tiles);
-        const isValid = isRun || isGroup;
-        
-        // Create detailed debug info
-        const tileInfo = tiles.map(t => {
-            if (t.isJoker) return "JOKER";
-            return `${t.number}${t.color[0]}`;
-        }).join(', ');
-        
-        // Show status in toast
-        if (isValid) {
-            if (isRun) {
-                this.showNotification(`Valid run detected: ${tileInfo}`, 'info');
-            } else {
-                this.showNotification(`Valid group detected: ${tileInfo}`, 'info');
-            }
-        } else {
-            this.showNotification(`Invalid set: ${tileInfo}. Please make a valid set (run or group).`, 'error');
-            
-            // Provide detailed error info in console
-            console.log(`🔍 Debug set validation:`, {
-                tiles,
-                isRun,
-                isGroup,
-                tileInfo
-            });
         }
     }
     
@@ -556,62 +491,32 @@ class RummikubClient {
         const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
         if (new Set(colors).size > 1) return false;
         
-        // Count jokers
-        const jokerCount = tiles.filter(t => t.isJoker).length;
-        const nonJokers = tiles.filter(t => !t.isJoker);
+        // Sort by number and check consecutive (simplified - doesn't handle jokers perfectly)
+        const sortedTiles = [...tiles].sort((a, b) => {
+            if (a.isJoker) return -1;
+            if (b.isJoker) return 1;
+            return a.number - b.number;
+        });
         
-        // If all jokers, it's valid
-        if (jokerCount === tiles.length) return true;
-        
-        // Sort non-joker tiles by number
-        nonJokers.sort((a, b) => a.number - b.number);
-        
-        // Check for consecutive numbers with jokers filling in gaps
-        let availableJokers = jokerCount;
-        
-        for (let i = 1; i < nonJokers.length; i++) {
-            const gap = nonJokers[i].number - nonJokers[i-1].number - 1;
-            
-            // If there's a gap, check if we have enough jokers to fill it
-            if (gap > 0) {
-                if (gap > availableJokers) {
-                    // Not enough jokers to fill the gap
-                    console.log(`Run invalid: gap of ${gap} between ${nonJokers[i-1].number} and ${nonJokers[i].number}, but only ${availableJokers} jokers available`);
-                    return false;
-                }
-                availableJokers -= gap;
-            }
+        const numbers = sortedTiles.filter(t => !t.isJoker).map(t => t.number);
+        for (let i = 1; i < numbers.length; i++) {
+            if (numbers[i] !== numbers[i-1] + 1) return false;
         }
         
-        // If we got here, all gaps are filled with available jokers
-        console.log(`Run valid with ${jokerCount} jokers and ${nonJokers.length} regular tiles`);
         return true;
     }
     
     isValidGroupClient(tiles) {
         if (tiles.length < 3 || tiles.length > 4) return false;
         
-        // Count jokers
-        const jokerCount = tiles.filter(t => t.isJoker).length;
-        
-        // If all jokers, it's valid
-        if (jokerCount === tiles.length) return true;
-        
-        // All non-joker tiles must be same number
+        // All tiles must be same number (except jokers)
         const numbers = tiles.filter(t => !t.isJoker).map(t => t.number);
-        if (new Set(numbers).size > 1) {
-            console.log(`Group invalid: numbers not all the same: ${numbers.join(', ')}`);
-            return false;
-        }
+        if (new Set(numbers).size > 1) return false;
         
-        // All non-joker tiles must be different colors
+        // All tiles must be different colors (except jokers)
         const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
-        if (new Set(colors).size !== colors.length) {
-            console.log(`Group invalid: duplicate colors: ${colors.join(', ')}`);
-            return false;
-        }
+        if (new Set(colors).size !== colors.length) return false;
         
-        console.log(`Group valid with ${jokerCount} jokers and ${tiles.length - jokerCount} regular tiles`);
         return true;
     }
 
@@ -1086,18 +991,8 @@ class RummikubClient {
         handElement.addEventListener('drop', (e) => {
             e.preventDefault();
             handElement.classList.remove('drag-over');
-            
-            // Handle dropping board tiles back to hand
-            try {
-                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                
-                if (dragData.type === 'board-tile') {
-                    this.handleBoardTileToHand(dragData);
-                }
-            } catch (error) {
-                console.log('No drag data or non-board tile dropped on hand');
-            }
-        });    }
+        });
+    }
 
     addDropFunctionalityToSlot(slotElement, slotIndex) {
         slotElement.addEventListener('dragover', (e) => {
@@ -1474,49 +1369,14 @@ class RummikubClient {
     }
 
     showNotification(message, type = 'info') {
-        // Create toast container if it doesn't exist
-        const container = document.getElementById('toast-container');
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        notification.classList.add('show');
         
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        // Create icon based on type
-        let icon;
-        switch (type) {
-            case 'success':
-                icon = 'check-circle';
-                break;
-            case 'error':
-                icon = 'exclamation-circle';
-                break;
-            case 'warning':
-                icon = 'exclamation-triangle';
-                break;
-            default: // info
-                icon = 'info-circle';
-        }
-        
-        // Set toast content
-        toast.innerHTML = `
-            <div class="toast-icon"><i class="fas fa-${icon}"></i></div>
-            <div class="toast-content">${message}</div>
-        `;
-        
-        // Add to container
-        container.appendChild(toast);
-        
-        // Auto-remove after animation completes (5 seconds total)
         setTimeout(() => {
-            toast.addEventListener('animationend', () => {
-                if (toast.parentNode === container) {
-                    container.removeChild(toast);
-                }
-            }, { once: true });
-        }, 4500);
-        
-        // Log notification for debugging
-        console.log(`[${type.toUpperCase()}] ${message}`);
+            notification.classList.remove('show');
+        }, 4000);
     }
 
     showVictoryCelebration(winnerName) {
@@ -1608,18 +1468,12 @@ class RummikubClient {
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually only if player needs initial play
+            // Check if it's a hand tile and reject visually
             try {
-                const dragDataString = e.dataTransfer.getData('application/json');
-                if (dragDataString) {
-                    const dragData = JSON.parse(dragDataString);
-                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    
-                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                        setElement.classList.add('drag-rejected');
-                        return;
-                    }
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    setElement.classList.add('drag-rejected');
+                    return;
                 }
             } catch (error) {
                 // If we can't parse, allow normal behavior
@@ -1651,18 +1505,12 @@ class RummikubClient {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually only if player needs initial play
+            // Check if it's a hand tile and reject visually
             try {
-                const dragDataString = e.dataTransfer.getData('application/json');
-                if (dragDataString) {
-                    const dragData = JSON.parse(dragDataString);
-                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    
-                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                        newSetZone.classList.add('drag-rejected');
-                        return;
-                    }
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    newSetZone.classList.add('drag-rejected');
+                    return;
                 }
             } catch (error) {
                 // If we can't parse, allow normal behavior
@@ -1694,18 +1542,12 @@ class RummikubClient {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually only if player needs initial play
+            // Check if it's a hand tile and reject visually
             try {
-                const dragDataString = e.dataTransfer.getData('application/json');
-                if (dragDataString) {
-                    const dragData = JSON.parse(dragDataString);
-                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    
-                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                        placeholderElement.classList.add('drag-rejected');
-                        return;
-                    }
+                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (dragData.type === 'hand-tile') {
+                    placeholderElement.classList.add('drag-rejected');
+                    return;
                 }
             } catch (error) {
                 // If we can't parse, allow normal behavior
@@ -1739,21 +1581,16 @@ class RummikubClient {
             return;
         }
 
-        // Get current player status
-        const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-        const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+        // RULE ENFORCEMENT: Prevent single tile drops from hand to board
+        if (dragData.type === 'hand-tile') {
+            this.showNotification('Cannot drop single tiles to board! Select multiple tiles and use "Play Selected" button.', 'error');
+            return;
+        }
 
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
 
         if (dragData.type === 'hand-tile') {
-            // Only prevent single tile drops from hand to board if player needs initial play
-            if (needsInitialPlay) {
-                this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
-                return;
-            }
-            
-            console.log('🎯 Table manipulation: Adding single tile to board');
             // Tile from hand - add to existing set or create new set
             if (targetSetIndex === -1) {
                 // Create new set
@@ -1764,6 +1601,7 @@ class RummikubClient {
             }
             
             // Remove tile from hand (this will be handled by server validation)
+            
         } else if (dragData.type === 'board-tile') {
             // Moving tile between sets on board
             const sourceSetIndex = dragData.sourceSetIndex;
@@ -1799,37 +1637,6 @@ class RummikubClient {
         this.updateBoard(newBoard);
     }
 
-    handleBoardTileToHand(dragData) {
-        if (!this.isMyTurn()) {
-            this.showNotification('Not your turn!', 'error');
-            return;
-        }
-
-        console.log('🔄 Moving tile from board back to hand:', dragData.tile);
-
-        // Remove tile from board
-        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
-        if (newBoard[dragData.sourceSetIndex]) {
-            newBoard[dragData.sourceSetIndex].splice(dragData.sourceTileIndex, 1);
-            
-            // Remove empty sets
-            newBoard = newBoard.filter(set => set.length > 0);
-        }
-
-        // Add tile back to hand
-        const newHand = [...this.gameState.players.find(p => p.id === this.socket.id).hand, dragData.tile];
-
-        // Send update to server
-        this.socket.emit('moveFromBoardToHand', {
-            tile: dragData.tile,
-            sourceSetIndex: dragData.sourceSetIndex,
-            sourceTileIndex: dragData.sourceTileIndex,
-            newBoard: newBoard,
-            newHand: newHand
-        });
-
-        this.showNotification('Moved tile back to hand', 'success');
-    }
     updateBoard(newBoard) {
         this.socket.emit('updateBoard', { board: newBoard });
     }
