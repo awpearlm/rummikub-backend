@@ -1463,23 +1463,63 @@ io.on('connection', (socket) => {
         return;
       }
       
+      // Track tiles that need to be returned to the player's hand
+      // Compare current board with snapshot to find tiles that were moved from hand to board
+      const currentTileIds = new Set();
+      const snapshotTileIds = new Set();
+      
+      // Collect all tile IDs currently on the board
+      game.board.forEach(set => {
+        set.forEach(tile => {
+          currentTileIds.add(tile.id);
+        });
+      });
+      
+      // Collect all tile IDs that were on the board at the beginning of the turn
+      game.boardSnapshot.forEach(set => {
+        set.forEach(tile => {
+          snapshotTileIds.add(tile.id);
+        });
+      });
+      
+      // Find tiles that are on the board now but weren't in the snapshot
+      // These need to be returned to the player's hand
+      const tilesToReturn = [];
+      currentTileIds.forEach(tileId => {
+        if (!snapshotTileIds.has(tileId)) {
+          // Find the tile in the current board
+          for (const set of game.board) {
+            const tileIndex = set.findIndex(t => t.id === tileId);
+            if (tileIndex !== -1) {
+              tilesToReturn.push(set[tileIndex]);
+              break;
+            }
+          }
+        }
+      });
+      
       // Restore the board to the snapshot taken at the beginning of turn
       game.restoreFromSnapshot();
+      
+      // Return the identified tiles to the player's hand
+      tilesToReturn.forEach(tile => {
+        currentPlayer.hand.push(tile);
+      });
       
       // Reset any turn-specific flags
       currentPlayer.hasManipulatedJoker = false;
       
-      // Send updated board to all players
+      // Send updated game state (including hand and board) to all players
       game.players.forEach(player => {
         const playerSocket = io.sockets.sockets.get(player.id);
         if (playerSocket) {
-          playerSocket.emit('boardUpdated', {
+          playerSocket.emit('gameStateUpdate', {
             gameState: game.getGameState(player.id)
           });
         }
       });
       
-      console.log(`🔄 ${currentPlayer.name} undid their turn`);
+      console.log(`🔄 ${currentPlayer.name} undid their turn, returned ${tilesToReturn.length} tiles to hand`);
     });
     
     socket.on('validateBoard', (data) => {

@@ -222,7 +222,7 @@ class RummikubClient {
 
         this.socket.on('boardRestored', (data) => {
             this.gameState = data.gameState;
-            this.renderGameBoard();
+            this.updateGameState();
             this.showNotification('Board restored to turn start', 'info');
         });
 
@@ -375,19 +375,9 @@ class RummikubClient {
         // Always allow undo during the player's turn, even if board state hasn't changed
         // This is because tiles might have been moved but not yet detected as a change
         
-        // Restore board to the latest snapshot
-        if (this.gameState && this.gameState.boardSnapshot) {
-            const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
-            
-            // Also restore any tiles that may have been removed from hand
-            this.socket.emit('requestUndoTurn');
-            
-            // Update the board UI
-            this.updateBoard(restoredBoard);
-            this.showNotification("Restored board to beginning of turn", 'success');
-        } else {
-            this.showNotification("Nothing to undo!", 'error');
-        }
+        // Request a full undo from the server, which will also return tiles to hand
+        this.socket.emit('requestUndoTurn');
+        this.showNotification("Restored board to beginning of turn", 'success');
     }
 
     hasBoardStateChanged() {
