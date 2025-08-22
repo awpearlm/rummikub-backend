@@ -822,47 +822,43 @@ class RummikubGame {
   dealMultiplayerDebugHand(debugPlayer) {
     console.log(`🔧 dealMultiplayerDebugHand called for player: ${debugPlayer.name}`);
     
-    // Create a winning hand: 4 complete sets + 1 final set with joker for testing
-    const debugTiles = [
-      // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
-      { id: 'red_13_0', color: 'red', number: 13, isJoker: false },
-      { id: 'blue_13_0', color: 'blue', number: 13, isJoker: false },
-      { id: 'yellow_13_0', color: 'yellow', number: 13, isJoker: false },
-      
-      // Second set: Run in blue (1-2-3)
-      { id: 'blue_1_0', color: 'blue', number: 1, isJoker: false },
-      { id: 'blue_2_0', color: 'blue', number: 2, isJoker: false },
-      { id: 'blue_3_0', color: 'blue', number: 3, isJoker: false },
-      
-      // Third set: Three 4s in different colors
-      { id: 'red_4_0', color: 'red', number: 4, isJoker: false },
-      { id: 'blue_4_0', color: 'blue', number: 4, isJoker: false },
-      { id: 'yellow_4_0', color: 'yellow', number: 4, isJoker: false },
-      
-      // Fourth set: Run in black (5-6-7)
-      { id: 'black_5_0', color: 'black', number: 5, isJoker: false },
-      { id: 'black_6_0', color: 'black', number: 6, isJoker: false },
-      { id: 'black_7_0', color: 'black', number: 7, isJoker: false },
-      
-      // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
-      { id: 'red_10_0', color: 'red', number: 10, isJoker: false },
-      { id: 'red_11_0', color: 'red', number: 11, isJoker: false },
-      { id: 'joker_1', color: null, number: null, isJoker: true },
-    ];
+    // Create a fresh debug hand with the exact tiles we need
+    const createDebugHand = () => {
+      return [
+        // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
+        { id: 'debug_red_13', color: 'red', number: 13, isJoker: false },
+        { id: 'debug_blue_13', color: 'blue', number: 13, isJoker: false },
+        { id: 'debug_yellow_13', color: 'yellow', number: 13, isJoker: false },
+        
+        // Second set: Run in blue (1-2-3)
+        { id: 'debug_blue_1', color: 'blue', number: 1, isJoker: false },
+        { id: 'debug_blue_2', color: 'blue', number: 2, isJoker: false },
+        { id: 'debug_blue_3', color: 'blue', number: 3, isJoker: false },
+        
+        // Third set: Three 4s in different colors
+        { id: 'debug_red_4', color: 'red', number: 4, isJoker: false },
+        { id: 'debug_blue_4', color: 'blue', number: 4, isJoker: false },
+        { id: 'debug_yellow_4', color: 'yellow', number: 4, isJoker: false },
+        
+        // Fourth set: Run in black (5-6-7)
+        { id: 'debug_black_5', color: 'black', number: 5, isJoker: false },
+        { id: 'debug_black_6', color: 'black', number: 6, isJoker: false },
+        { id: 'debug_black_7', color: 'black', number: 7, isJoker: false },
+        
+        // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
+        { id: 'debug_red_10', color: 'red', number: 10, isJoker: false },
+        { id: 'debug_red_11', color: 'red', number: 11, isJoker: false },
+        { id: 'debug_joker', color: null, number: null, isJoker: true },
+      ];
+    };
     
-    console.log(`🔧 Created multiplayer debug tiles: ${debugTiles.length} tiles`);
+    // Create completely new debug tiles instead of trying to find them in the deck
+    const debugTiles = createDebugHand();
+    
+    console.log(`🔧 Created fresh multiplayer debug tiles: ${debugTiles.length} tiles`);
     console.log(`🔧 Final set for testing: Red 10, Red 11, Joker (should be Red 12)`);
     
-    // Remove these specific tiles from deck to avoid duplicates
-    debugTiles.forEach(debugTile => {
-      const index = this.deck.findIndex(tile => tile.id === debugTile.id);
-      if (index !== -1) {
-        this.deck.splice(index, 1);
-        console.log(`🔧 Removed ${debugTile.id} from deck`);
-      }
-    });
-    
-    // Give debug tiles to the debug player (exactly 15 tiles)
+    // Give debug tiles to the debug player directly (exactly 15 tiles)
     debugPlayer.hand = [...debugTiles];
     console.log(`🔧 Gave debug tiles to ${debugPlayer.name}: ${debugPlayer.hand.length} tiles`);
     
