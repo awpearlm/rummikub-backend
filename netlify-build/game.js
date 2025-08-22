@@ -115,6 +115,12 @@ class RummikubClient {
             this.updateGameState();
             this.showNotification(`${data.playerName} left the game`, 'info');
         });
+        
+        // Add explicit listener for gameStateUpdate events
+        this.socket.on('gameStateUpdate', (data) => {
+            this.gameState = data.gameState;
+            this.updateGameState();
+        });
 
         this.socket.on('gameStarted', (data) => {
             console.log('🎲 RAW gameStarted data:', JSON.stringify(data, null, 2));
@@ -2002,19 +2008,24 @@ class RummikubClient {
         };
 
         console.log('🔄 Moving tile from board back to hand:', dragData.tile);
+        
+        // Add the tile to the local hand immediately for better visual feedback
+        // This will be overwritten when the server responds with the updated state
+        if (this.gameState && this.gameState.playerHand) {
+            // Create a deep copy to avoid reference issues
+            const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
+            this.gameState.playerHand.push(tileCopy);
+            this.renderPlayerHand();
+        }
 
-        // We'll let the server handle the state update to ensure consistency
-        // We only send the necessary information to identify the tile on the board
+        // We send the request to the server for official state update
         this.socket.emit('moveFromBoardToHand', {
             tile: dragData.tile,
             sourceSetIndex: dragData.sourceSetIndex,
             sourceTileIndex: dragData.sourceTileIndex
         });
         
-        // We don't update the local state immediately anymore
-        // The server will send a gameStateUpdate that will trigger a re-render
-        
-        // However, we can disable the dragged tile temporarily to prevent double-clicks/drags
+        // Disable the dragged tile temporarily to prevent double-clicks/drags
         const tileElement = document.querySelector(`[data-tile-id="${dragData.tile.id}"]`);
         if (tileElement) {
             tileElement.style.opacity = "0.5";

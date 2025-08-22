@@ -1216,8 +1216,10 @@ io.on('connection', (socket) => {
       const game = games.get(playerData.gameId);
       if (!game) return;
 
+      // Check if it's the player's turn using getCurrentPlayer method
+      const currentPlayer = game.getCurrentPlayer();
       const player = game.players.find(p => p.id === socket.id);
-      if (!player || game.currentTurn !== player.id) {
+      if (!player || currentPlayer.id !== player.id) {
         socket.emit('error', { message: 'Not your turn!' });
         return;
       }
@@ -1245,9 +1247,15 @@ io.on('connection', (socket) => {
           const tileCopy = JSON.parse(JSON.stringify(data.tile));
           player.hand.push(tileCopy);
           
-          // Broadcast updated game state
-          const gameState = game.getGameState();
-          io.to(playerData.gameId).emit('gameStateUpdate', gameState);
+          // Broadcast updated game state to each player with their respective game state
+          game.players.forEach(p => {
+            const playerSocket = io.sockets.sockets.get(p.id);
+            if (playerSocket) {
+              playerSocket.emit('gameStateUpdate', {
+                gameState: game.getGameState(p.id)
+              });
+            }
+          });
         } else {
           socket.emit('error', { message: 'Invalid board position!' });
         }
