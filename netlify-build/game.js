@@ -1610,6 +1610,46 @@ class RummikubClient {
     }
 
     setupSetDropZone(setElement, setIndex) {
+        // Add visual indicators for drag over locations
+        const addPositionIndicators = (e) => {
+            // Clear existing indicators
+            setElement.querySelectorAll('.position-indicator').forEach(el => el.remove());
+            
+            // Create position indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'position-indicator';
+            
+            // Determine where to show the indicator
+            const rect = setElement.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const tileWidth = 70; // Approximate tile width
+            const tiles = setElement.querySelectorAll('.tile');
+            let insertPosition = Math.floor(mouseX / tileWidth);
+            
+            // Clamp insert position to valid range
+            insertPosition = Math.min(Math.max(0, insertPosition), tiles.length);
+            
+            // Position indicator at insert position
+            if (insertPosition === 0) {
+                // Before first tile
+                indicator.style.left = '0px';
+                setElement.prepend(indicator);
+            } else if (insertPosition === tiles.length) {
+                // After last tile
+                indicator.style.right = '0px';
+                setElement.appendChild(indicator);
+            } else {
+                // Between tiles
+                const tile = tiles[insertPosition];
+                const tileRect = tile.getBoundingClientRect();
+                indicator.style.left = (tileRect.left - rect.left - 5) + 'px';
+                setElement.appendChild(indicator);
+            }
+            
+            // Store the insert position as data attribute
+            setElement.dataset.insertPosition = insertPosition;
+        };
+    
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
@@ -1631,21 +1671,33 @@ class RummikubClient {
             }
             
             setElement.classList.add('drag-over');
+            addPositionIndicators(e);
         });
         
-        setElement.addEventListener('dragleave', () => {
-            setElement.classList.remove('drag-over');
-            setElement.classList.remove('drag-rejected');
+        setElement.addEventListener('dragleave', (e) => {
+            // Only remove drag-over if leaving the element (not moving within it)
+            if (!setElement.contains(e.relatedTarget)) {
+                setElement.classList.remove('drag-over');
+                setElement.classList.remove('drag-rejected');
+                setElement.querySelectorAll('.position-indicator').forEach(el => el.remove());
+            }
         });
         
         setElement.addEventListener('drop', (e) => {
             e.preventDefault();
             setElement.classList.remove('drag-over');
             setElement.classList.remove('drag-rejected');
+            setElement.querySelectorAll('.position-indicator').forEach(el => el.remove());
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                this.handleTileDrop(dragData, setIndex);
+                
+                // Get the preferred insert position if available
+                const insertPosition = parseInt(setElement.dataset.insertPosition);
+                delete setElement.dataset.insertPosition;
+                
+                // Enhanced drop that respects insert position
+                this.handleEnhancedTileDrop(dragData, setIndex, isNaN(insertPosition) ? null : insertPosition);
             } catch (error) {
                 console.error('Error parsing drag data:', error);
             }
@@ -1764,8 +1816,8 @@ class RummikubClient {
                 // Create new set
                 newBoard.push([dragData.tile]);
             } else {
-                // Add to existing set
-                newBoard[targetSetIndex].push(dragData.tile);
+                // Add to existing set - but intelligently position the tile
+                this.addTileToSetIntelligently(newBoard[targetSetIndex], dragData.tile);
             }
             
             // Remove tile from hand (this will be handled by server validation)
@@ -1790,9 +1842,93 @@ class RummikubClient {
                 // Create new set
                 newBoard.push([movedTile]);
             } else {
-                // Add to existing set
+                // Add to existing set intelligently
                 if (targetSetIndex < newBoard.length) {
-                    newBoard[targetSetIndex].push(movedTile);
+                    this.addTileToSetIntelligently(newBoard[targetSetIndex], movedTile);
+                } else {
+                    // Target set was removed, create new set
+                    newBoard.push([movedTile]);
+                }
+            }
+        }
+
+        // Send board update to server
+        this.updateBoard(newBoard);
+    }
+
+    // Enhanced tile drop handler that respects insert position
+    handleEnhancedTileDrop(dragData, targetSetIndex, insertPosition) {
+        if (!this.isMyTurn()) {
+            this.showNotification('Not your turn!', 'error');
+            return;
+        }
+
+        // Get current player status
+        const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+        const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+
+        // Create a copy of the current board for manipulation
+        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+
+        if (dragData.type === 'hand-tile') {
+            // Only prevent single tile drops from hand to board if player needs initial play
+            if (needsInitialPlay) {
+                this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
+                return;
+            }
+            
+            console.log(`🎯 Table manipulation: Adding hand tile to board at set ${targetSetIndex}, position ${insertPosition}`);
+            
+            // Tile from hand - add to existing set or create new set
+            if (targetSetIndex === -1) {
+                // Create new set
+                newBoard.push([dragData.tile]);
+            } else {
+                // Add to existing set at the specified position
+                if (insertPosition !== null && targetSetIndex < newBoard.length) {
+                    // Insert at specific position
+                    insertPosition = Math.min(insertPosition, newBoard[targetSetIndex].length);
+                    newBoard[targetSetIndex].splice(insertPosition, 0, dragData.tile);
+                } else {
+                    // Use intelligent placement as fallback
+                    this.addTileToSetIntelligently(newBoard[targetSetIndex], dragData.tile);
+                }
+            }
+            
+            // Remove tile from hand (this will be handled by server validation)
+        } else if (dragData.type === 'board-tile') {
+            // Moving tile between sets on board
+            const sourceSetIndex = dragData.sourceSetIndex;
+            const sourceTileIndex = dragData.sourceTileIndex;
+            
+            // Remove tile from source set
+            const movedTile = newBoard[sourceSetIndex].splice(sourceTileIndex, 1)[0];
+            
+            // Remove empty sets
+            if (newBoard[sourceSetIndex].length === 0) {
+                newBoard.splice(sourceSetIndex, 1);
+                // Adjust target index if necessary
+                if (targetSetIndex > sourceSetIndex) {
+                    targetSetIndex--;
+                }
+            }
+            
+            console.log(`🎯 Table manipulation: Moving board tile from set ${sourceSetIndex} to set ${targetSetIndex}, position ${insertPosition}`);
+            
+            if (targetSetIndex === -1) {
+                // Create new set
+                newBoard.push([movedTile]);
+            } else {
+                // Add to existing set at the specified position
+                if (targetSetIndex < newBoard.length) {
+                    if (insertPosition !== null) {
+                        // Insert at specific position
+                        insertPosition = Math.min(insertPosition, newBoard[targetSetIndex].length);
+                        newBoard[targetSetIndex].splice(insertPosition, 0, movedTile);
+                    } else {
+                        // Use intelligent placement
+                        this.addTileToSetIntelligently(newBoard[targetSetIndex], movedTile);
+                    }
                 } else {
                     // Target set was removed, create new set
                     newBoard.push([movedTile]);
@@ -1835,6 +1971,143 @@ class RummikubClient {
 
         this.showNotification('Moved tile back to hand', 'success');
     }
+    // Intelligently add a tile to a set in the appropriate position
+    addTileToSetIntelligently(set, tile) {
+        if (!set || !tile) return;
+        
+        // First, determine if this is a run or a group
+        let isRun = false;
+        let isGroup = false;
+        
+        if (set.length >= 2) {
+            // Check if it's potentially a run (consecutive numbers of same color)
+            const nonJokers = set.filter(t => !t.isJoker);
+            if (nonJokers.length >= 2) {
+                const allSameColor = new Set(nonJokers.map(t => t.color)).size === 1;
+                isRun = allSameColor;
+                
+                // If not a run, must be a group (same number, different colors)
+                if (!isRun) {
+                    const allSameNumber = new Set(nonJokers.map(t => t.number)).size === 1;
+                    isGroup = allSameNumber;
+                }
+            }
+        }
+        
+        // Handle joker - we'll insert it based on the set type
+        if (tile.isJoker) {
+            // For a group, just append the joker
+            if (isGroup || (!isRun && !isGroup)) {
+                set.push(tile);
+                return;
+            }
+            
+            // For a run, determine the best position based on the gaps
+            if (isRun) {
+                const numbers = set.filter(t => !t.isJoker).map(t => t.number).sort((a, b) => a - b);
+                
+                // Determine if joker should go at the beginning, end, or middle
+                if (numbers.length >= 1) {
+                    if (numbers[0] > 1) {
+                        // Insert at the beginning (joker represents numbers[0]-1)
+                        set.unshift(tile);
+                        return;
+                    } else if (numbers[numbers.length - 1] < 13) {
+                        // Insert at the end (joker represents numbers[numbers.length-1]+1)
+                        set.push(tile);
+                        return;
+                    } else {
+                        // Look for gaps in the run
+                        for (let i = 0; i < numbers.length - 1; i++) {
+                            if (numbers[i+1] - numbers[i] > 1) {
+                                // Find the position to insert at
+                                let insertIndex = 0;
+                                for (let j = 0; j < set.length; j++) {
+                                    if (!set[j].isJoker && set[j].number === numbers[i]) {
+                                        insertIndex = j + 1;
+                                        break;
+                                    }
+                                }
+                                set.splice(insertIndex, 0, tile);
+                                return;
+                            }
+                        }
+                        // If we get here, there are no gaps - append to end
+                        set.push(tile);
+                    }
+                } else {
+                    // No non-joker tiles, just append
+                    set.push(tile);
+                }
+                return;
+            }
+        }
+        
+        // Non-joker tiles
+        if (isRun) {
+            // Insert the tile in the correct numerical order
+            const currentColor = set.find(t => !t.isJoker)?.color;
+            
+            // If the color doesn't match and it's a run, this might not be valid
+            // We'll insert it anyway and let end-turn validation catch the issue
+            if (currentColor && tile.color !== currentColor) {
+                set.push(tile);
+                return;
+            }
+            
+            // Insert in numerical order
+            let insertIndex = set.length;
+            for (let i = 0; i < set.length; i++) {
+                const setTile = set[i];
+                if ((setTile.isJoker && i === set.length - 1) || 
+                    (!setTile.isJoker && tile.number < setTile.number)) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+            set.splice(insertIndex, 0, tile);
+            return;
+        }
+        
+        // For groups (same number, different colors)
+        if (isGroup) {
+            const currentNumber = set.find(t => !t.isJoker)?.number;
+            
+            // If the number doesn't match and it's a group, this might not be valid
+            // We'll insert it anyway and let end-turn validation catch the issue
+            if (currentNumber && tile.number !== currentNumber) {
+                set.push(tile);
+                return;
+            }
+            
+            // Check if this color already exists in the group
+            const colors = set.map(t => t.color);
+            if (colors.includes(tile.color)) {
+                // Color already exists, just append (may not be valid)
+                set.push(tile);
+                return;
+            }
+            
+            // Insert based on color order (red, blue, yellow, black)
+            const colorOrder = { 'red': 0, 'blue': 1, 'yellow': 2, 'black': 3 };
+            let insertIndex = set.length;
+            
+            for (let i = 0; i < set.length; i++) {
+                if (set[i].isJoker) continue;
+                if (colorOrder[tile.color] < colorOrder[set[i].color]) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+            
+            set.splice(insertIndex, 0, tile);
+            return;
+        }
+        
+        // If we can't determine the set type (e.g., only one tile), just append
+        set.push(tile);
+    }
+    
     updateBoard(newBoard) {
         this.socket.emit('updateBoard', { board: newBoard });
     }
