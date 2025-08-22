@@ -822,47 +822,65 @@ class RummikubGame {
   dealMultiplayerDebugHand(debugPlayer) {
     console.log(`🔧 dealMultiplayerDebugHand called for player: ${debugPlayer.name}`);
     
-    // Create a fresh debug hand with the exact tiles we need
-    const createDebugHand = () => {
-      return [
-        // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
-        { id: 'debug_red_13', color: 'red', number: 13, isJoker: false },
-        { id: 'debug_blue_13', color: 'blue', number: 13, isJoker: false },
-        { id: 'debug_yellow_13', color: 'yellow', number: 13, isJoker: false },
-        
-        // Second set: Run in blue (1-2-3)
-        { id: 'debug_blue_1', color: 'blue', number: 1, isJoker: false },
-        { id: 'debug_blue_2', color: 'blue', number: 2, isJoker: false },
-        { id: 'debug_blue_3', color: 'blue', number: 3, isJoker: false },
-        
-        // Third set: Three 4s in different colors
-        { id: 'debug_red_4', color: 'red', number: 4, isJoker: false },
-        { id: 'debug_blue_4', color: 'blue', number: 4, isJoker: false },
-        { id: 'debug_yellow_4', color: 'yellow', number: 4, isJoker: false },
-        
-        // Fourth set: Run in black (5-6-7)
-        { id: 'debug_black_5', color: 'black', number: 5, isJoker: false },
-        { id: 'debug_black_6', color: 'black', number: 6, isJoker: false },
-        { id: 'debug_black_7', color: 'black', number: 7, isJoker: false },
-        
-        // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
-        { id: 'debug_red_10', color: 'red', number: 10, isJoker: false },
-        { id: 'debug_red_11', color: 'red', number: 11, isJoker: false },
-        { id: 'debug_joker', color: null, number: null, isJoker: true },
-      ];
+    // Step 1: Find specific tiles from the deck for our debug hand
+    const debugHand = [];
+    
+    // Helper function to find and remove a tile with specific color and number from deck
+    const findAndRemoveTile = (color, number, isJoker = false) => {
+      const tileIndex = this.deck.findIndex(tile => 
+        isJoker ? tile.isJoker : (tile.color === color && tile.number === number)
+      );
+      
+      if (tileIndex !== -1) {
+        const tile = this.deck.splice(tileIndex, 1)[0];
+        console.log(`🔧 Found and removed ${isJoker ? 'joker' : `${color} ${number}`} from deck`);
+        return tile;
+      } else {
+        console.log(`❌ WARNING: Could not find ${isJoker ? 'joker' : `${color} ${number}`} in deck!`);
+        // If we can't find the exact tile, create a substitute with a special ID to avoid validation issues
+        return {
+          id: `substitute_${color || 'joker'}_${number || '0'}_${Date.now()}`,
+          color: color,
+          number: number,
+          isJoker: isJoker,
+          isSubstitute: true // Mark as substitute for debugging
+        };
+      }
     };
     
-    // Create completely new debug tiles instead of trying to find them in the deck
-    const debugTiles = createDebugHand();
+    // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
+    debugHand.push(findAndRemoveTile('red', 13));
+    debugHand.push(findAndRemoveTile('blue', 13));
+    debugHand.push(findAndRemoveTile('yellow', 13));
     
-    console.log(`🔧 Created fresh multiplayer debug tiles: ${debugTiles.length} tiles`);
+    // Second set: Run in blue (1-2-3)
+    debugHand.push(findAndRemoveTile('blue', 1));
+    debugHand.push(findAndRemoveTile('blue', 2));
+    debugHand.push(findAndRemoveTile('blue', 3));
+    
+    // Third set: Three 4s in different colors
+    debugHand.push(findAndRemoveTile('red', 4));
+    debugHand.push(findAndRemoveTile('blue', 4));
+    debugHand.push(findAndRemoveTile('yellow', 4));
+    
+    // Fourth set: Run in black (5-6-7)
+    debugHand.push(findAndRemoveTile('black', 5));
+    debugHand.push(findAndRemoveTile('black', 6));
+    debugHand.push(findAndRemoveTile('black', 7));
+    
+    // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
+    debugHand.push(findAndRemoveTile('red', 10));
+    debugHand.push(findAndRemoveTile('red', 11));
+    debugHand.push(findAndRemoveTile(null, null, true)); // Joker
+    
+    console.log(`🔧 Created debug hand: ${debugHand.length} tiles`);
     console.log(`🔧 Final set for testing: Red 10, Red 11, Joker (should be Red 12)`);
     
-    // Give debug tiles to the debug player directly (exactly 15 tiles)
-    debugPlayer.hand = [...debugTiles];
+    // Step 2: Give debug tiles to the debug player
+    debugPlayer.hand = debugHand;
     console.log(`🔧 Gave debug tiles to ${debugPlayer.name}: ${debugPlayer.hand.length} tiles`);
     
-    // Give other players normal random hands
+    // Step 3: Give other players normal random hands from remaining deck
     for (const player of this.players) {
       if (player.id !== debugPlayer.id) {
         for (let i = 0; i < 14; i++) {
