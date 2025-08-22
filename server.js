@@ -150,30 +150,26 @@ class RummikubGame {
     console.log(`🚀 Starting game ${this.id} with ${this.players.length} players`);
     console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}", isDebugMode=${this.isDebugMode}`);
     
-    // Check if game was created with debug mode flag
+    // Check if debug mode should be enabled (either by flag or player name)
+    let debugPlayer = null;
+    
+    // First, check if the game was created with debug mode flag
     if (this.isDebugMode) {
-      console.log(`🔧 GAME DEBUG MODE ENABLED! Game creator will get debug hand...`);
-      const creatorPlayer = this.players[0]; // First player is the creator
-      console.log(`🔧 Game creator is: ${creatorPlayer.name}`);
-      this.dealMultiplayerDebugHand(creatorPlayer);
-    } else {
-      // Only check for debug name if debug mode flag is not set
-      console.log(`🔧 DEBUG CHECK - All players:`, this.players.map(p => JSON.stringify({
-        id: p.id,
-        name: p.name,
-        nameLowercase: p.name.toLowerCase(),
-        nameType: typeof p.name
-      })));
-      
+      console.log(`🔧 GAME DEBUG MODE ENABLED via checkbox! Game creator will get debug hand...`);
+      debugPlayer = this.players[0]; // First player is the creator
+      console.log(`🔧 Game creator is: ${debugPlayer.name}`);
+    } 
+    
+    // If no debug mode flag, check for debug player names
+    if (!debugPlayer) {
       console.log(`🔧 DEBUG CHECK - Searching for 'dbug' or 'debug' in player names...`);
       
       // Try different debugging approaches
       const debugPatterns = ['dbug', 'debug'];
-      let debugPlayer = null;
       
       for (const pattern of debugPatterns) {
         for (const player of this.players) {
-          const playerNameLower = String(player.name).toLowerCase();
+          const playerNameLower = String(player.name).toLowerCase().trim();
           const isMatch = playerNameLower === pattern;
           console.log(`🔧 Checking player "${player.name}" against "${pattern}": ${isMatch}`);
           
@@ -185,34 +181,26 @@ class RummikubGame {
         }
         if (debugPlayer) break;
       }
-      
-      if (!debugPlayer) {
-        console.log(`🔧 NO DEBUG PLAYER FOUND - trying one more check with trimming whitespace`);
-        debugPlayer = this.players.find(p => 
-          String(p.name).toLowerCase().trim() === 'dbug' || 
-          String(p.name).toLowerCase().trim() === 'debug'
-        );
-      }
+    }
 
-      console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
-      
-      // Deal tiles based on bot difficulty or debug player
-      if (this.isBotGame && this.botDifficulty === 'debug') {
-        console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
-        // Debug mode: Give human player a preset hand for testing
-        this.dealDebugHand();
-      } else if (debugPlayer) {
-        console.log(`🔧 MULTIPLAYER DEBUG MODE DETECTED! Player "${debugPlayer.name}" gets winning hand...`);
-        // Multiplayer debug mode: Give debug player a winning hand
-        this.dealMultiplayerDebugHand(debugPlayer);
-      } else {
-        console.log(`🎲 Normal mode: dealing random tiles`);
-        // Normal mode: Deal 14 tiles to each player
-        for (const player of this.players) {
-          for (let i = 0; i < 14; i++) {
-            if (this.deck.length > 0) {
-              player.hand.push(this.deck.pop());
-            }
+    console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
+    
+    // Deal tiles based on bot difficulty or debug player
+    if (this.isBotGame && this.botDifficulty === 'debug') {
+      console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
+      // Debug mode: Give human player a preset hand for testing
+      this.dealDebugHand();
+    } else if (debugPlayer) {
+      console.log(`🔧 MULTIPLAYER DEBUG MODE DETECTED! Player "${debugPlayer.name}" gets winning hand...`);
+      // Multiplayer debug mode: Give debug player a winning hand
+      this.dealMultiplayerDebugHand(debugPlayer);
+    } else {
+      console.log(`🎲 Normal mode: dealing random tiles`);
+      // Normal mode: Deal 14 tiles to each player
+      for (const player of this.players) {
+        for (let i = 0; i < 14; i++) {
+          if (this.deck.length > 0) {
+            player.hand.push(this.deck.pop());
           }
         }
       }
