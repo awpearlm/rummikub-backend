@@ -668,6 +668,63 @@ class RummikubGame {
     // Update the board with new arrangement
     this.board = newBoard;
   }
+  
+  // Check if a joker was taken and used in a new set
+  checkJokerManipulation(oldBoard, newBoard, player) {
+    let jokersRemoved = [];
+    let jokersAdded = [];
+    
+    // Find jokers removed from old board
+    oldBoard.forEach((set, setIndex) => {
+      set.forEach(tile => {
+        if (tile.isJoker) {
+          // Check if this joker still exists in the new board
+          let found = false;
+          for (const newSet of newBoard) {
+            for (const newTile of newSet) {
+              if (newTile.id === tile.id) {
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          if (!found) {
+            jokersRemoved.push(tile.id);
+          }
+        }
+      });
+    });
+    
+    // Find jokers added to new board
+    newBoard.forEach((set, setIndex) => {
+      set.forEach(tile => {
+        if (tile.isJoker) {
+          // Check if this joker existed in the old board
+          let found = false;
+          for (const oldSet of oldBoard) {
+            for (const oldTile of oldSet) {
+              if (oldTile.id === tile.id) {
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          if (!found) {
+            jokersAdded.push(tile.id);
+          }
+        }
+      });
+    });
+    
+    console.log(`Jokers removed: ${jokersRemoved.length}, Jokers added: ${jokersAdded.length}`);
+    return {
+      removed: jokersRemoved,
+      added: jokersAdded,
+      manipulated: jokersRemoved.length > 0 || jokersAdded.length > 0
+    };
+  }
 
   validateBoardState() {
     // Validate that all sets on the board are legal
@@ -1154,7 +1211,9 @@ io.on('connection', (socket) => {
       // Broadcast updated game state
       const gameState = game.getGameState();
       io.to(playerData.gameId).emit('gameStateUpdate', gameState);
-    });    socket.on('endTurn', () => {
+    });    
+    
+    socket.on('endTurn', () => {
       const playerData = players.get(socket.id);
       if (!playerData) return;
 
@@ -1173,7 +1232,10 @@ io.on('connection', (socket) => {
           });
           return;
         }
-
+        
+        // Reset any turn-specific flags
+        currentPlayer.hasManipulatedJoker = false;
+        
         game.nextTurn();
         
         // Send individual game states to each player
@@ -1244,9 +1306,36 @@ io.on('connection', (socket) => {
         socket.emit('error', { message: 'Not your turn' });
         return;
       }
-
+      
+      // Check if joker manipulation is occurring
+      const jokerChange = game.checkJokerManipulation(game.board, data.board, currentPlayer);
+      
       // Update the board with new arrangement
       game.updateBoard(data.board);
+      
+      // Validate the new board state
+      const validation = game.validateBoardState();
+      if (!validation.valid) {
+        // Board is invalid, revert to snapshot
+        game.restoreFromSnapshot();
+        socket.emit('error', { message: 'Invalid board arrangement. Check your moves.' });
+        
+        // Send updated board (reverted) to all players
+        game.players.forEach(player => {
+          const playerSocket = io.sockets.sockets.get(player.id);
+          if (playerSocket) {
+            playerSocket.emit('boardUpdated', {
+              gameState: game.getGameState(player.id)
+            });
+          }
+        });
+        return;
+      }
+      
+      // Mark that player has manipulated tiles this turn (necessary for end turn validation)
+      if (jokerChange.manipulated) {
+        currentPlayer.hasManipulatedJoker = true;
+      }
       
       // Send updated board to all players
       game.players.forEach(player => {
@@ -1259,6 +1348,39 @@ io.on('connection', (socket) => {
       });
     });
 
+    socket.on('requestUndoTurn', () => {
+      const playerData = players.get(socket.id);
+      if (!playerData) return;
+
+      const game = games.get(playerData.gameId);
+      if (!game) return;
+      
+      // Only allow current player to undo
+      const currentPlayer = game.getCurrentPlayer();
+      if (currentPlayer.id !== socket.id) {
+        socket.emit('error', { message: 'Not your turn' });
+        return;
+      }
+      
+      // Restore the board to the snapshot taken at the beginning of turn
+      game.restoreFromSnapshot();
+      
+      // Reset any turn-specific flags
+      currentPlayer.hasManipulatedJoker = false;
+      
+      // Send updated board to all players
+      game.players.forEach(player => {
+        const playerSocket = io.sockets.sockets.get(player.id);
+        if (playerSocket) {
+          playerSocket.emit('boardUpdated', {
+            gameState: game.getGameState(player.id)
+          });
+        }
+      });
+      
+      console.log(`🔄 ${currentPlayer.name} undid their turn`);
+    });
+    
     socket.on('validateBoard', () => {
       const playerData = players.get(socket.id);
       if (!playerData) return;

@@ -358,16 +358,21 @@ class RummikubClient {
             return;
         }
         
-        if (!this.hasBoardStateChanged()) {
-            this.showNotification("Nothing to undo!", 'error');
-            return;
-        }
+        // Always allow undo during the player's turn, even if board state hasn't changed
+        // This is because tiles might have been moved but not yet detected as a change
         
         // Restore board to the latest snapshot
         if (this.gameState && this.gameState.boardSnapshot) {
             const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
+            
+            // Also restore any tiles that may have been removed from hand
+            this.socket.emit('requestUndoTurn');
+            
+            // Update the board UI
             this.updateBoard(restoredBoard);
-            this.showNotification("Last move undone", 'success');
+            this.showNotification("Restored board to beginning of turn", 'success');
+        } else {
+            this.showNotification("Nothing to undo!", 'error');
         }
     }
 
