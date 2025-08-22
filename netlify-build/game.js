@@ -205,10 +205,18 @@ class RummikubClient {
 
         this.socket.on('disconnect', () => {
             this.showNotification('Connection lost. Reconnecting...', 'error');
+            // Stop any timers when disconnected
+            this.clearTimer();
         });
 
         this.socket.on('reconnect', () => {
-            this.showNotification('Reconnected!', 'success');
+            this.showNotification('Reconnected! Syncing game state...', 'success');
+            
+            // Request the latest game state after reconnection
+            if (this.gameId) {
+                console.log('🔄 Reconnected - requesting latest game state for game:', this.gameId);
+                this.socket.emit('getGameState', { gameId: this.gameId });
+            }
         });
 
         // Bot game events

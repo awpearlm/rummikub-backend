@@ -1096,6 +1096,20 @@ io.on('connection', (socket) => {
         socket.emit('error', { message: 'Game is full or failed to join' });
       }
     });
+    
+    socket.on('getGameState', (data) => {
+      console.log(`Player ${socket.id} requesting game state for game: ${data.gameId}`);
+      const game = games.get(data.gameId);
+      
+      if (!game) {
+        console.log(`Game not found for state request: ${data.gameId}`);
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+      
+      socket.emit('gameStateUpdate', { gameState: game.getGameState(socket.id) });
+      console.log(`Game state sent to player ${socket.id} for game ${data.gameId}`);
+    });
 
     socket.on('startGame', () => {
       const playerData = players.get(socket.id);
