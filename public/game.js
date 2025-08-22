@@ -1493,15 +1493,20 @@ class RummikubClient {
         setElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and reject visually only if player needs initial play
             try {
-                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                    setElement.classList.add('drag-rejected');
-                    return;
-                }            } catch (error) {
+                const dragDataString = e.dataTransfer.getData('application/json');
+                if (dragDataString) {
+                    const dragData = JSON.parse(dragDataString);
+                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                    
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
+                        setElement.classList.add('drag-rejected');
+                        return;
+                    }
+                }
+            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1531,15 +1536,20 @@ class RummikubClient {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and reject visually only if player needs initial play
             try {
-                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                    newSetZone.classList.add('drag-rejected');
-                    return;
-                }            } catch (error) {
+                const dragDataString = e.dataTransfer.getData('application/json');
+                if (dragDataString) {
+                    const dragData = JSON.parse(dragDataString);
+                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                    
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
+                        newSetZone.classList.add('drag-rejected');
+                        return;
+                    }
+                }
+            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1569,15 +1579,20 @@ class RummikubClient {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             
-            // Check if it's a hand tile and reject visually
+            // Check if it's a hand tile and reject visually only if player needs initial play
             try {
-                const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-                const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                if (dragData.type === 'hand-tile' && needsInitialPlay) {
-                    placeholderElement.classList.add('drag-rejected');
-                    return;
-                }            } catch (error) {
+                const dragDataString = e.dataTransfer.getData('application/json');
+                if (dragDataString) {
+                    const dragData = JSON.parse(dragDataString);
+                    const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+                    const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+                    
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
+                        placeholderElement.classList.add('drag-rejected');
+                        return;
+                    }
+                }
+            } catch (error) {
                 // If we can't parse, allow normal behavior
             }
             
@@ -1609,21 +1624,22 @@ class RummikubClient {
             return;
         }
 
-        // RULE ENFORCEMENT: Allow table manipulation after initial play
+        // Get current player status
+        const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+        const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
 
         if (dragData.type === 'hand-tile') {
-            // Check if player needs initial play
-            const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
-            const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-            
+            // Only prevent single tile drops from hand to board if player needs initial play
             if (needsInitialPlay) {
                 this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
                 return;
             }
             
-            console.log('🎯 Table manipulation: Adding single tile to board');            // Tile from hand - add to existing set or create new set
+            console.log('🎯 Table manipulation: Adding single tile to board');
+            // Tile from hand - add to existing set or create new set
             if (targetSetIndex === -1) {
                 // Create new set
                 newBoard.push([dragData.tile]);
@@ -1633,7 +1649,6 @@ class RummikubClient {
             }
             
             // Remove tile from hand (this will be handled by server validation)
-            
         } else if (dragData.type === 'board-tile') {
             // Moving tile between sets on board
             const sourceSetIndex = dragData.sourceSetIndex;
