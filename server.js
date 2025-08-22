@@ -1224,13 +1224,37 @@ io.on('connection', (socket) => {
 
       console.log(`🔄 ${player.name} moving tile from board to hand:`, data.tile);
 
-      // Update board and hand
-      game.board = data.newBoard;
-      player.hand = data.newHand;
+      // Make sure we're working with a valid tile and indices
+      if (!data.tile || data.sourceSetIndex === undefined || data.sourceTileIndex === undefined) {
+        socket.emit('error', { message: 'Invalid tile data!' });
+        return;
+      }
 
-      // Broadcast updated game state
-      const gameState = game.getGameState();
-      io.to(playerData.gameId).emit('gameStateUpdate', gameState);
+      // Properly update the board by removing the tile at the specified position
+      try {
+        if (game.board[data.sourceSetIndex] && 
+            game.board[data.sourceSetIndex][data.sourceTileIndex]) {
+          
+          // Remove tile from specified position
+          game.board[data.sourceSetIndex].splice(data.sourceTileIndex, 1);
+          
+          // Clean up empty sets
+          game.board = game.board.filter(set => set.length > 0);
+          
+          // Add tile to player's hand (safe copy to prevent references)
+          const tileCopy = JSON.parse(JSON.stringify(data.tile));
+          player.hand.push(tileCopy);
+          
+          // Broadcast updated game state
+          const gameState = game.getGameState();
+          io.to(playerData.gameId).emit('gameStateUpdate', gameState);
+        } else {
+          socket.emit('error', { message: 'Invalid board position!' });
+        }
+      } catch (err) {
+        console.error("Error in moveFromBoardToHand:", err);
+        socket.emit('error', { message: 'Error processing move!' });
+      }
     });    
     
     socket.on('endTurn', () => {

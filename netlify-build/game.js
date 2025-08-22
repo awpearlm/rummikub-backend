@@ -1975,38 +1975,51 @@ class RummikubClient {
             return;
         }
 
+        // Prevent excessive processing of the same drag operation
+        if (this._lastDragOperation && 
+            this._lastDragOperation.time > Date.now() - 500 && 
+            this._lastDragOperation.tileId === dragData.tile.id) {
+            console.log('🛑 Preventing duplicate drag operation');
+            return;
+        }
+        
+        // Store this operation to prevent duplicates
+        this._lastDragOperation = {
+            time: Date.now(),
+            tileId: dragData.tile.id
+        };
+
         console.log('🔄 Moving tile from board back to hand:', dragData.tile);
 
-        // Remove tile from board
-        let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
-        if (newBoard[dragData.sourceSetIndex]) {
-            newBoard[dragData.sourceSetIndex].splice(dragData.sourceTileIndex, 1);
-            
-            // Remove empty sets
-            newBoard = newBoard.filter(set => set.length > 0);
-        }
-
-        // Add tile back to hand
-        const newHand = [...this.gameState.playerHand, dragData.tile];
-
-        // Update local state immediately for better UX
-        this.gameState.board = newBoard;
-        this.gameState.playerHand = newHand;
-        this.renderGameBoard();
-        this.renderPlayerHand();
-        this.updateActionButtons();
-
-        // Send update to server
+        // We'll let the server handle the state update to ensure consistency
+        // We only send the necessary information to identify the tile on the board
         this.socket.emit('moveFromBoardToHand', {
             tile: dragData.tile,
             sourceSetIndex: dragData.sourceSetIndex,
-            sourceTileIndex: dragData.sourceTileIndex,
-            newBoard: newBoard,
-            newHand: newHand
+            sourceTileIndex: dragData.sourceTileIndex
         });
-
+        
+        // We don't update the local state immediately anymore
+        // The server will send a gameStateUpdate that will trigger a re-render
+        
+        // However, we can disable the dragged tile temporarily to prevent double-clicks/drags
+        const tileElement = document.querySelector(`[data-tile-id="${dragData.tile.id}"]`);
+        if (tileElement) {
+            tileElement.style.opacity = "0.5";
+            tileElement.style.pointerEvents = "none";
+            
+            // Reset after a short delay
+            setTimeout(() => {
+                if (tileElement && tileElement.parentNode) {
+                    tileElement.style.opacity = "1";
+                    tileElement.style.pointerEvents = "auto";
+                }
+            }, 500);
+        }
+        
         this.showNotification('Moved tile back to hand', 'success');
     }
+
     // Intelligently add a tile to a set in the appropriate position
     addTileToSetIntelligently(set, tile) {
         if (!set || !tile) return;
