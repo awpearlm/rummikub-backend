@@ -151,18 +151,40 @@ class RummikubGame {
     console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}"`);
     
     // Check if any player has debug name for multiplayer debug mode
-    console.log(`🔧 All players (EXACT NAMES):`, this.players.map(p => `"${p.name}" (lowercased: "${p.name.toLowerCase()}")`));
-    const inputName = 'dbug';
-    console.log(`🔧 Looking for debug name: "${inputName}"`);
-    const debugPlayer = this.players.find(p => p.name.toLowerCase() === inputName || p.name.toLowerCase() === 'debug');
-    if (debugPlayer) {
-      console.log(`🔧 DEBUG PLAYER FOUND: "${debugPlayer.name}" matched one of our debug patterns`);
-    } else {
-      console.log(`🔧 EXACT MATCH FAILED - trying strict equality checks on each player:`);
-      this.players.forEach(p => {
-        console.log(`  - Player name: "${p.name}" === "dbug": ${p.name === 'dbug'}`);
-        console.log(`  - Player name.toLowerCase(): "${p.name.toLowerCase()}" === "dbug": ${p.name.toLowerCase() === 'dbug'}`);
-      });
+    console.log(`🔧 DEBUG CHECK - All players:`, this.players.map(p => JSON.stringify({
+      id: p.id,
+      name: p.name,
+      nameLowercase: p.name.toLowerCase(),
+      nameType: typeof p.name
+    })));
+    
+    console.log(`🔧 DEBUG CHECK - Searching for 'dbug' or 'debug' in player names...`);
+    
+    // Try different debugging approaches
+    const debugPatterns = ['dbug', 'debug'];
+    let debugPlayer = null;
+    
+    for (const pattern of debugPatterns) {
+      for (const player of this.players) {
+        const playerNameLower = String(player.name).toLowerCase();
+        const isMatch = playerNameLower === pattern;
+        console.log(`🔧 Checking player "${player.name}" against "${pattern}": ${isMatch}`);
+        
+        if (isMatch) {
+          debugPlayer = player;
+          console.log(`🔧 DEBUG PLAYER FOUND: "${player.name}" matches pattern "${pattern}"`);
+          break;
+        }
+      }
+      if (debugPlayer) break;
+    }
+    
+    if (!debugPlayer) {
+      console.log(`🔧 NO DEBUG PLAYER FOUND - trying one more check with trimming whitespace`);
+      debugPlayer = this.players.find(p => 
+        String(p.name).toLowerCase().trim() === 'dbug' || 
+        String(p.name).toLowerCase().trim() === 'debug'
+      );
     }
 
     console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
@@ -822,67 +844,65 @@ class RummikubGame {
   dealMultiplayerDebugHand(debugPlayer) {
     console.log(`🔧 dealMultiplayerDebugHand called for player: ${debugPlayer.name}`);
     
-    // Step 1: Find specific tiles from the deck for our debug hand
-    const debugHand = [];
+    // FORCE a specific debug hand regardless of the deck
+    const forcedDebugHand = [
+      // First set: Three 13s in different colors (39 points)
+      { id: 'red_13_0', color: 'red', number: 13, isJoker: false },
+      { id: 'blue_13_0', color: 'blue', number: 13, isJoker: false },
+      { id: 'yellow_13_0', color: 'yellow', number: 13, isJoker: false },
+      
+      // Second set: Run in blue (1-2-3)
+      { id: 'blue_1_0', color: 'blue', number: 1, isJoker: false },
+      { id: 'blue_2_0', color: 'blue', number: 2, isJoker: false },
+      { id: 'blue_3_0', color: 'blue', number: 3, isJoker: false },
+      
+      // Third set: Three 4s in different colors
+      { id: 'red_4_0', color: 'red', number: 4, isJoker: false },
+      { id: 'blue_4_0', color: 'blue', number: 4, isJoker: false },
+      { id: 'yellow_4_0', color: 'yellow', number: 4, isJoker: false },
+      
+      // Fourth set: Run in black (5-6-7)
+      { id: 'black_5_0', color: 'black', number: 5, isJoker: false },
+      { id: 'black_6_0', color: 'black', number: 6, isJoker: false },
+      { id: 'black_7_0', color: 'black', number: 7, isJoker: false },
+      
+      // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
+      { id: 'red_10_0', color: 'red', number: 10, isJoker: false },
+      { id: 'red_11_0', color: 'red', number: 11, isJoker: false },
+      { id: 'joker_1', color: null, number: null, isJoker: true }
+    ];
     
-    // Helper function to find and remove a tile with specific color and number from deck
-    const findAndRemoveTile = (color, number, isJoker = false) => {
-      const tileIndex = this.deck.findIndex(tile => 
-        isJoker ? tile.isJoker : (tile.color === color && tile.number === number)
+    console.log(`🔧 Created forced debug hand with ${forcedDebugHand.length} tiles`);
+    
+    // First, reconstruct a fresh deck to make sure we don't have any conflicts
+    this.deck = [];
+    this.initializeDeck();
+    
+    // Remove debug tiles from the deck by ID to prevent duplicates
+    forcedDebugHand.forEach(debugTile => {
+      const index = this.deck.findIndex(tile => 
+        debugTile.isJoker ? tile.isJoker : (tile.color === debugTile.color && tile.number === debugTile.number)
       );
       
-      if (tileIndex !== -1) {
-        const tile = this.deck.splice(tileIndex, 1)[0];
-        console.log(`🔧 Found and removed ${isJoker ? 'joker' : `${color} ${number}`} from deck`);
-        return tile;
-      } else {
-        console.log(`❌ WARNING: Could not find ${isJoker ? 'joker' : `${color} ${number}`} in deck!`);
-        // If we can't find the exact tile, create a substitute with a special ID to avoid validation issues
-        return {
-          id: `substitute_${color || 'joker'}_${number || '0'}_${Date.now()}`,
-          color: color,
-          number: number,
-          isJoker: isJoker,
-          isSubstitute: true // Mark as substitute for debugging
-        };
+      if (index !== -1) {
+        this.deck.splice(index, 1);
+        console.log(`🔧 Removed similar tile from deck: ${debugTile.color || 'joker'} ${debugTile.number || ''}`);
       }
-    };
+    });
     
-    // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
-    debugHand.push(findAndRemoveTile('red', 13));
-    debugHand.push(findAndRemoveTile('blue', 13));
-    debugHand.push(findAndRemoveTile('yellow', 13));
+    // Shuffle remaining deck for other players
+    this.shuffleDeck();
+    console.log(`🔧 Reshuffled deck after removing debug tiles, remaining: ${this.deck.length}`);
     
-    // Second set: Run in blue (1-2-3)
-    debugHand.push(findAndRemoveTile('blue', 1));
-    debugHand.push(findAndRemoveTile('blue', 2));
-    debugHand.push(findAndRemoveTile('blue', 3));
+    // Assign the debug hand to the debug player
+    debugPlayer.hand = forcedDebugHand;
+    console.log(`🔧 Forced debug hand assigned to ${debugPlayer.name}: ${debugPlayer.hand.length} tiles`);
+    console.log(`🔧 Debug hand includes: Red 10, Red 11, Joker (should be Red 12)`);
     
-    // Third set: Three 4s in different colors
-    debugHand.push(findAndRemoveTile('red', 4));
-    debugHand.push(findAndRemoveTile('blue', 4));
-    debugHand.push(findAndRemoveTile('yellow', 4));
-    
-    // Fourth set: Run in black (5-6-7)
-    debugHand.push(findAndRemoveTile('black', 5));
-    debugHand.push(findAndRemoveTile('black', 6));
-    debugHand.push(findAndRemoveTile('black', 7));
-    
-    // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
-    debugHand.push(findAndRemoveTile('red', 10));
-    debugHand.push(findAndRemoveTile('red', 11));
-    debugHand.push(findAndRemoveTile(null, null, true)); // Joker
-    
-    console.log(`🔧 Created debug hand: ${debugHand.length} tiles`);
-    console.log(`🔧 Final set for testing: Red 10, Red 11, Joker (should be Red 12)`);
-    
-    // Step 2: Give debug tiles to the debug player
-    debugPlayer.hand = debugHand;
-    console.log(`🔧 Gave debug tiles to ${debugPlayer.name}: ${debugPlayer.hand.length} tiles`);
-    
-    // Step 3: Give other players normal random hands from remaining deck
+    // Give other players normal random hands from remaining deck
     for (const player of this.players) {
       if (player.id !== debugPlayer.id) {
+        player.hand = [];
         for (let i = 0; i < 14; i++) {
           if (this.deck.length > 0) {
             player.hand.push(this.deck.pop());
