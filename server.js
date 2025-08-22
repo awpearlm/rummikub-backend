@@ -1306,7 +1306,7 @@ io.on('connection', (socket) => {
 
   // Routes
   app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
   });
 
   app.get('/health', (req, res) => {
