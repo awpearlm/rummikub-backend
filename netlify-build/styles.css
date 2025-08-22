@@ -441,8 +441,8 @@ body {
     grid-template-columns: 250px 1fr 300px;
     gap: 20px;
     padding: 30px;
-    height: 500px;
-    max-height: 500px;
+    height: 510px; /* Slightly increased to provide more space */
+    max-height: 510px;
     overflow: hidden;
 }
 
@@ -681,6 +681,7 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    height: 100%; /* Ensure it takes full height */
 }
 
 .chat-panel h3 {
@@ -691,7 +692,7 @@ body {
 
 .chat-messages {
     flex: 1;
-    height: 300px;
+    height: 260px; /* Reduced from 300px to provide more space for the input */
     overflow-y: auto;
     background: white;
     border-radius: 10px;
@@ -737,12 +738,13 @@ body {
 
 .chat-input {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    margin-top: auto; /* Push to bottom of container */
 }
 
 .chat-input input {
     flex: 1;
-    padding: 12px;
+    padding: 10px;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 14px;
