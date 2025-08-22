@@ -2351,10 +2351,23 @@ class RummikubClient {
             if (this.remainingTime <= 0) {
                 this.clearTimer();
                 
-                // If it's my turn, auto-end the turn
+                // If it's my turn, handle timer expiration
                 if (this.isMyTurn()) {
-                    this.showNotification("Time's up! Turn ended automatically.", 'warning');
-                    this.endTurn();
+                    this.showNotification("Time's up! Reverting changes and drawing a tile.", 'warning');
+                    
+                    // First, undo any uncommitted changes to revert the board state
+                    this.socket.emit('requestUndoTurn');
+                    
+                    // After a short delay, draw a tile automatically
+                    setTimeout(() => {
+                        // Draw a tile
+                        this.drawTile();
+                        
+                        // Then end the turn after drawing
+                        setTimeout(() => {
+                            this.endTurn();
+                        }, 500);
+                    }, 500);
                 }
             }
         }, 1000);
