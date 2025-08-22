@@ -151,9 +151,12 @@ class RummikubGame {
     console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}"`);
     
     // Check if any player has debug name for multiplayer debug mode
-    console.log(`🔧 All players:`, this.players.map(p => ({ name: p.name, nameL ower: p.name.toLowerCase() })));    const debugPlayer = this.players.find(p => p.name.toLowerCase() === 'dbug');
+    console.log(`🔧 All players:`, this.players.map(p => ({ name: p.name, nameLower: p.name.toLowerCase() })));
+    const debugPlayer = this.players.find(p => p.name.toLowerCase() === 'dbug');
 
-    console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");    // Deal tiles based on bot difficulty or debug player
+    console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
+    
+    // Deal tiles based on bot difficulty or debug player
     if (this.isBotGame && this.botDifficulty === 'debug') {
       console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
       // Debug mode: Give human player a preset hand for testing
