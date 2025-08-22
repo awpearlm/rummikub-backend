@@ -726,17 +726,37 @@ class RummikubGame {
     };
   }
 
-  validateBoardState() {
+  validateBoardState(isEndTurn = true) {
     // Validate that all sets on the board are legal
     for (let i = 0; i < this.board.length; i++) {
       const set = this.board[i];
-      if (!this.isValidSet(set)) {
-        console.log(`❌ Invalid set found at index ${i}:`, set.map(t => `${t.color}_${t.number}`));
+      
+      // When ending a turn, enforce that sets must have 3+ tiles and be valid
+      // During a turn, allow partial sets with fewer than 3 tiles
+      if ((isEndTurn && set.length < 3) || !this.isValidPartialSet(set, isEndTurn)) {
+        console.log(`❌ Invalid set found at index ${i}:`, set.map(t => `${t.color || 'joker'}_${t.number || 'J'}`));
         return { valid: false, invalidSetIndex: i };
       }
     }
     console.log(`✅ Board state is valid: ${this.board.length} sets`);
     return { valid: true };
+  }
+  
+  // Check if a set is valid or could become valid
+  isValidPartialSet(tiles, isEndTurn = true) {
+    // If ending turn, use the strict validation
+    if (isEndTurn) {
+      return this.isValidSet(tiles);
+    }
+    
+    // During a turn, allow 1-2 tile "partial" sets as long as they could potentially be valid
+    if (tiles.length < 3) {
+      // Allow any combination of 1-2 tiles during a turn
+      return true;
+    }
+    
+    // For 3+ tiles, check if they form a valid set
+    return this.isValidSet(tiles);
   }
 
   // Bot AI Logic
@@ -1223,8 +1243,8 @@ io.on('connection', (socket) => {
       // Only allow human players to manually end their turn
       const currentPlayer = game.getCurrentPlayer();
       if (!currentPlayer.isBot) {
-        // Validate board state before ending turn
-        const validation = game.validateBoardState();
+        // Validate board state before ending turn - strict validation with isEndTurn=true
+        const validation = game.validateBoardState(true);
         if (!validation.valid) {
           socket.emit('error', { 
             message: `Cannot end turn - board has invalid sets. Check set ${validation.invalidSetIndex + 1}.`,
@@ -1313,24 +1333,8 @@ io.on('connection', (socket) => {
       // Update the board with new arrangement
       game.updateBoard(data.board);
       
-      // Validate the new board state
-      const validation = game.validateBoardState();
-      if (!validation.valid) {
-        // Board is invalid, revert to snapshot
-        game.restoreFromSnapshot();
-        socket.emit('error', { message: 'Invalid board arrangement. Check your moves.' });
-        
-        // Send updated board (reverted) to all players
-        game.players.forEach(player => {
-          const playerSocket = io.sockets.sockets.get(player.id);
-          if (playerSocket) {
-            playerSocket.emit('boardUpdated', {
-              gameState: game.getGameState(player.id)
-            });
-          }
-        });
-        return;
-      }
+      // Skip validation during the turn - only validate when ending turn
+      // This allows players to freely organize tiles during their turn
       
       // Mark that player has manipulated tiles this turn (necessary for end turn validation)
       if (jokerChange.manipulated) {
@@ -1381,14 +1385,16 @@ io.on('connection', (socket) => {
       console.log(`🔄 ${currentPlayer.name} undid their turn`);
     });
     
-    socket.on('validateBoard', () => {
+    socket.on('validateBoard', (data) => {
       const playerData = players.get(socket.id);
       if (!playerData) return;
 
       const game = games.get(playerData.gameId);
       if (!game) return;
 
-      const validation = game.validateBoardState();
+      // Use the appropriate validation mode - strict for end turn, relaxed during turn
+      const isEndTurn = data?.isEndTurn || false;
+      const validation = game.validateBoardState(isEndTurn);
       socket.emit('boardValidation', validation);
     });
 
