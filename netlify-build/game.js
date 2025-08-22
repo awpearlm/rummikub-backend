@@ -1809,6 +1809,7 @@ class RummikubClient {
 
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+        let tilesFromHand = [];  // Track tiles moved from hand to board
 
         if (dragData.type === 'hand-tile') {
             // Only prevent single tile drops from hand to board if player needs initial play
@@ -1826,6 +1827,9 @@ class RummikubClient {
                 // Add to existing set - but intelligently position the tile
                 this.addTileToSetIntelligently(newBoard[targetSetIndex], dragData.tile);
             }
+            
+            // Track that this tile was moved from hand to board
+            tilesFromHand.push(dragData.tile.id);
             
             // Remove tile from hand locally for immediate UI feedback
             const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
@@ -1870,7 +1874,7 @@ class RummikubClient {
         }
 
         // Send board update to server
-        this.updateBoard(newBoard);
+        this.updateBoard(newBoard, tilesFromHand);
     }
 
     // Enhanced tile drop handler that respects insert position
@@ -1886,6 +1890,7 @@ class RummikubClient {
 
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
+        let tilesFromHand = [];  // Track tiles moved from hand to board
 
         if (dragData.type === 'hand-tile') {
             // Only prevent single tile drops from hand to board if player needs initial play
@@ -1895,6 +1900,9 @@ class RummikubClient {
             }
             
             console.log(`🎯 Table manipulation: Adding hand tile to board at set ${targetSetIndex}, position ${insertPosition}`);
+            
+            // Track that this tile was moved from hand to board
+            tilesFromHand.push(dragData.tile.id);
             
             // Tile from hand - add to existing set or create new set
             if (targetSetIndex === -1) {
@@ -1919,12 +1927,6 @@ class RummikubClient {
                 // Create a new hand array without the tile
                 const newHand = [...this.gameState.playerHand];
                 newHand.splice(tileIndex, 1);
-                
-                // Update the player's hand in the server
-                this.socket.emit('updatePlayerHand', { 
-                    newHand: newHand,
-                    board: newBoard 
-                });
                 
                 // Update the local hand immediately for visual feedback
                 this.gameState.playerHand = newHand;
@@ -1976,7 +1978,7 @@ class RummikubClient {
         }
 
         // Send board update to server
-        this.updateBoard(newBoard);
+        this.updateBoard(newBoard, tilesFromHand);
     }
 
     handleBoardTileToHand(dragData) {
@@ -2167,7 +2169,7 @@ class RummikubClient {
         set.push(tile);
     }
     
-    updateBoard(newBoard) {
+    updateBoard(newBoard, tilesFromHand = []) {
         // Store local copy immediately for better UX response
         if (this.gameState) {
             this.gameState.board = newBoard;
@@ -2176,8 +2178,11 @@ class RummikubClient {
             this.updateActionButtons();
         }
         
-        // Send to server
-        this.socket.emit('updateBoard', { board: newBoard });
+        // Send to server with explicit list of tiles moved from hand
+        this.socket.emit('updateBoard', { 
+            board: newBoard,
+            tilesFromHand: tilesFromHand
+        });
     }
 
     highlightInvalidSet(setIndex) {
