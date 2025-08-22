@@ -248,6 +248,42 @@ body {
 
 /* Checkbox styles removed - no longer needed */
 
+/* Game options styling */
+.game-options {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.timer-option {
+    display: flex;
+    align-items: center;
+}
+
+.option-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.option-label input[type="checkbox"] {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+}
+
+.option-text {
+    font-size: 14px;
+    color: #4a5568;
+}
+
+.option-text i {
+    margin-right: 5px;
+    color: #667eea;
+}
+
 .difficulty-select {
     width: 100%;
     padding: 12px 15px;
@@ -366,6 +402,39 @@ body {
 .turn-indicator {
     font-size: 1rem;
     opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.turn-timer {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.turn-timer i {
+    margin-right: 5px;
+}
+
+/* Timer color states */
+.timer-warning {
+    background-color: #f6ad55; /* orange */
+}
+
+.timer-danger {
+    background-color: #fc8181; /* red */
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
 
 .game-actions {

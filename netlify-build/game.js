@@ -29,6 +29,11 @@ class RummikubClient {
         this.selectedTiles = [];
         this.playerName = '';
         this.gameId = '';
+        this.timerEnabled = false;
+        this.turnTimeLimit = 120; // 2 minutes in seconds
+        this.timerInterval = null;
+        this.remainingTime = this.turnTimeLimit;
+        this.hasBoardChanged = false;
         this.gameMode = null; // 'multiplayer' or 'bot'
         this.botDifficulty = 'medium';
         this.hasAutoSorted = false; // Track if auto-sort has been done
@@ -310,6 +315,11 @@ class RummikubClient {
             console.log('🔧 Debug mode enabled! Game creator will get debug hand.');
         }
         
+        // Check if timer is enabled
+        const timerEnabled = document.getElementById('enableTimer').checked;
+        this.timerEnabled = timerEnabled;
+        console.log(`🕒 Turn timer: ${timerEnabled ? 'ENABLED' : 'disabled'}`);
+        
         this.playerName = playerName;
         this.showLoadingScreen();
         
@@ -329,13 +339,21 @@ class RummikubClient {
                 console.log('✅ Connected! Sending createGame...');
                 const isDebugMode = playerName.toLowerCase() === 'debug';
                 console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-                this.socket.emit('createGame', { playerName, isDebugMode });
+                this.socket.emit('createGame', { 
+                    playerName, 
+                    isDebugMode,
+                    timerEnabled: this.timerEnabled
+                });
             });
         } else {
             // Already connected
             const isDebugMode = playerName.toLowerCase() === 'debug';
             console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-            this.socket.emit('createGame', { playerName, isDebugMode });
+            this.socket.emit('createGame', { 
+                playerName, 
+                isDebugMode,
+                timerEnabled: this.timerEnabled
+            });
         }
     }
 
@@ -385,6 +403,7 @@ class RummikubClient {
         }
         this.socket.emit('endTurn');
         this.hasBoardChanged = false; // Reset the flag when ending turn
+        this.clearTimer(); // Stop the timer when ending turn
         this.updateActionButtons();
     }
 
@@ -400,6 +419,13 @@ class RummikubClient {
         // Request a full undo from the server, which will also return tiles to hand
         this.socket.emit('requestUndoTurn');
         this.hasBoardChanged = false; // Reset the flag when undoing
+        
+        // Reset the timer when undoing
+        if (this.timerEnabled) {
+            this.clearTimer();
+            this.startTimer();
+        }
+        
         this.updateActionButtons();
         this.showNotification("Restored board to beginning of turn", 'success');
     }
@@ -935,8 +961,32 @@ class RummikubClient {
         if (this.gameState.started && this.gameState.players.length > 0) {
             const currentPlayer = this.gameState.players[this.gameState.currentPlayerIndex];
             turnElement.textContent = currentPlayer ? currentPlayer.name : 'Unknown';
+            
+            // Store the timer option from the game state
+            this.timerEnabled = this.gameState.timerEnabled || false;
+            
+            // Manage timer
+            const timerElement = document.getElementById('turnTimer');
+            if (this.timerEnabled) {
+                timerElement.classList.remove('hidden');
+                
+                // Start the timer if it's my turn
+                if (this.isMyTurn()) {
+                    this.startTimer();
+                }
+            } else {
+                timerElement.classList.add('hidden');
+                this.clearTimer();
+            }
         } else {
             turnElement.textContent = 'Waiting to start';
+            
+            // Hide timer when game not started
+            const timerElement = document.getElementById('turnTimer');
+            if (timerElement) {
+                timerElement.classList.add('hidden');
+            }
+            this.clearTimer();
         }
     }
 
@@ -2259,6 +2309,73 @@ class RummikubClient {
         }
         
         return false;
+    }
+
+    // Timer Methods
+    startTimer() {
+        if (!this.timerEnabled || !this.gameState?.timerEnabled) {
+            return;
+        }
+
+        // Clear any existing timer
+        this.clearTimer();
+        
+        // Reset time
+        this.remainingTime = this.turnTimeLimit;
+        
+        // Show timer
+        const timerElement = document.getElementById('turnTimer');
+        if (timerElement) {
+            timerElement.classList.remove('hidden', 'timer-warning', 'timer-danger');
+        }
+        
+        // Update display
+        this.updateTimerDisplay();
+        
+        // Start interval
+        this.timerInterval = setInterval(() => {
+            this.remainingTime--;
+            
+            // Update display
+            this.updateTimerDisplay();
+            
+            // Add warning classes
+            if (this.remainingTime <= 30 && this.remainingTime > 10) {
+                timerElement.classList.add('timer-warning');
+            } else if (this.remainingTime <= 10) {
+                timerElement.classList.remove('timer-warning');
+                timerElement.classList.add('timer-danger');
+            }
+            
+            // Time's up!
+            if (this.remainingTime <= 0) {
+                this.clearTimer();
+                
+                // If it's my turn, auto-end the turn
+                if (this.isMyTurn()) {
+                    this.showNotification("Time's up! Turn ended automatically.", 'warning');
+                    this.endTurn();
+                }
+            }
+        }, 1000);
+    }
+    
+    clearTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+    
+    updateTimerDisplay() {
+        const minutes = Math.floor(this.remainingTime / 60);
+        const seconds = this.remainingTime % 60;
+        const displayText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        const timerDisplay = document.getElementById('timerDisplay');
+        if (timerDisplay) {
+            timerDisplay.textContent = displayText;
+        }
     }
 }
 

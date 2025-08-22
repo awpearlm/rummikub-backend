@@ -49,6 +49,7 @@ class RummikubGame {
     this.deck = [];
     this.board = [];
     this.boardSnapshot = []; // Store board state at start of each turn
+    this.timerEnabled = false; // Default to timer disabled
     this.started = false;
     this.winner = null;
     this.chatMessages = [];
@@ -647,7 +648,8 @@ class RummikubGame {
       gameLog: this.gameLog,
       playerHand: player ? player.hand : [],
       deckSize: this.deck.length,
-      isBotGame: this.isBotGame
+      isBotGame: this.isBotGame,
+      timerEnabled: this.timerEnabled
     };
   }
 
@@ -998,6 +1000,9 @@ io.on('connection', (socket) => {
       
       // Set debug mode flag if provided
       game.isDebugMode = data.isDebugMode || false;
+      
+      // Set timer option if provided
+      game.timerEnabled = data.timerEnabled || false;
       
       if (game.addPlayer(socket.id, data.playerName)) {
         games.set(gameId, game);
