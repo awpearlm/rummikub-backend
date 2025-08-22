@@ -616,13 +616,32 @@ body {
 
 .board-area {
     min-height: 300px;
-    max-height: 400px;
+    max-height: 500px;
     background: #f8f7f5;
     border-radius: 12px;
     padding: 20px;
     border: 2px solid #d1d5db;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
+}
+
+/* Board columns for layout */
+.board-column {
+    width: 100%;
+}
+
+.left-column {
+    grid-column: 1;
+}
+
+.right-column {
+    grid-column: 2;
+}
+
+#gameBoard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 15px;
 }
 
 .start-game-container {
@@ -650,6 +669,7 @@ body {
     height: 200px;
     color: #a0aec0;
     position: relative;
+    grid-column: 1 / -1; /* Make placeholder span both columns */
 }
 
 .board-placeholder i {
@@ -660,7 +680,7 @@ body {
 .board-set {
     display: flex;
     gap: 5px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     padding: 12px;
     background: rgba(255, 255, 255, 0.5);
     border-radius: 10px;
@@ -668,6 +688,7 @@ body {
     border: 1px solid #e5e7eb;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     position: relative;
+    min-height: 70px;
 }
 
 .new-set-drop-zone {
@@ -675,6 +696,7 @@ body {
     padding: 20px;
     margin: 10px 0;
     border: 2px dashed #cbd5e0;
+    grid-column: 1 / -1; /* Make new set drop zone span both columns */
     border-radius: 10px;
     text-align: center;
     color: #a0aec0;

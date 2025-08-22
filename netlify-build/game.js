@@ -262,7 +262,14 @@ class RummikubClient {
         // General game state updates
         this.socket.on('gameStateUpdate', (data) => {
             console.log('🎮 Game state updated', data);
+            const wasMyTurn = this.isMyTurn();
             this.gameState = data.gameState;
+            
+            // If turn changed from me to someone else, clear any selections
+            if (wasMyTurn && !this.isMyTurn()) {
+                this.selectedTiles = [];
+            }
+            
             this.updateGameState();
         });
     }
@@ -409,6 +416,10 @@ class RummikubClient {
             this.showNotification("It's not your turn!", 'error');
             return;
         }
+        // Clear any selected tiles before ending the turn
+        this.selectedTiles = [];
+        this.renderPlayerHand();
+        
         this.socket.emit('endTurn');
         this.hasBoardChanged = false; // Reset the flag when ending turn
         this.clearTimer(); // Stop the timer when ending turn
@@ -1296,6 +1307,13 @@ class RummikubClient {
         
         boardElement.innerHTML = '';
         
+        // Create a two-column layout by distributing sets evenly
+        const leftColumn = document.createElement('div');
+        leftColumn.className = 'board-column left-column';
+        
+        const rightColumn = document.createElement('div');
+        rightColumn.className = 'board-column right-column';
+        
         this.gameState.board.forEach((set, setIndex) => {
             const setElement = document.createElement('div');
             setElement.className = 'board-set';
@@ -1326,8 +1344,16 @@ class RummikubClient {
                 setElement.appendChild(tileElement);
             });
             
-            boardElement.appendChild(setElement);
+            // Distribute sets evenly between columns
+            if (setIndex % 2 === 0) {
+                leftColumn.appendChild(setElement);
+            } else {
+                rightColumn.appendChild(setElement);
+            }
         });
+        
+        boardElement.appendChild(leftColumn);
+        boardElement.appendChild(rightColumn);
         
         // Add a drop zone for creating new sets
         if (this.isMyTurn()) {
