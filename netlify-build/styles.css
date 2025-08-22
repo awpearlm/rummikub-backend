@@ -410,6 +410,22 @@ body {
     margin-bottom: 5px;
 }
 
+#copyGameIdBtn {
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    vertical-align: middle;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+#copyGameIdBtn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
 .turn-indicator {
     font-size: 1rem;
     opacity: 0.9;

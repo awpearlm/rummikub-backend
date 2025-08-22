@@ -86,6 +86,24 @@ class RummikubClient {
         document.getElementById('gameId').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
+        
+        // Copy game ID to clipboard
+        const copyGameIdBtn = document.getElementById('copyGameIdBtn');
+        if (copyGameIdBtn) {
+            copyGameIdBtn.addEventListener('click', () => {
+                const gameId = document.getElementById('currentGameId').textContent;
+                if (gameId) {
+                    navigator.clipboard.writeText(gameId)
+                        .then(() => {
+                            this.showNotification('Game code copied to clipboard!', 'success');
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy: ', err);
+                            this.showNotification('Failed to copy game code', 'error');
+                        });
+                }
+            });
+        }
     }
 
     initializeSocketListeners() {
