@@ -839,19 +839,19 @@ class RummikubGame {
       { id: 'blue_4_0', color: 'blue', number: 4, isJoker: false },
       { id: 'yellow_4_0', color: 'yellow', number: 4, isJoker: false },
       
-      // Fourth set: Run in green (5-6-7)
-      { id: 'green_5_0', color: 'green', number: 5, isJoker: false },
-      { id: 'green_6_0', color: 'green', number: 6, isJoker: false },
-      { id: 'green_7_0', color: 'green', number: 7, isJoker: false },
+      // Fourth set: Run in black (5-6-7)
+      { id: 'black_5_0', color: 'black', number: 5, isJoker: false },
+      { id: 'black_6_0', color: 'black', number: 6, isJoker: false },
+      { id: 'black_7_0', color: 'black', number: 7, isJoker: false },
       
-      // Final set for testing joker bug: Red 11, Red 12, and Joker (joker as Red 13)
+      // Final set for testing joker bug: Red 10, Red 11, and Joker (joker as Red 12)
+      { id: 'red_10_0', color: 'red', number: 10, isJoker: false },
       { id: 'red_11_0', color: 'red', number: 11, isJoker: false },
-      { id: 'red_12_0', color: 'red', number: 12, isJoker: false },
       { id: 'joker_1', color: null, number: null, isJoker: true },
     ];
     
     console.log(`🔧 Created multiplayer debug tiles: ${debugTiles.length} tiles`);
-    console.log(`🔧 Final set for testing: Red 11, Red 12, Joker (should be Red 13)`);
+    console.log(`🔧 Final set for testing: Red 10, Red 11, Joker (should be Red 12)`);
     
     // Remove these specific tiles from deck to avoid duplicates
     debugTiles.forEach(debugTile => {
