@@ -33,6 +33,7 @@ class RummikubClient {
         this.botDifficulty = 'medium';
         this.hasAutoSorted = false; // Track if auto-sort has been done
         this.hasPlayedTilesThisTurn = false; // Track if tiles have been played this turn
+        this.hasBoardChanged = false; // Track if the board has been changed this turn
         
         this.initializeEventListeners();
         this.initializeSocketListeners();
@@ -161,6 +162,7 @@ class RummikubClient {
         this.socket.on('turnEnded', (data) => {
             this.gameState = data.gameState;
             this.hasPlayedTilesThisTurn = false; // Reset for new turn
+            this.hasBoardChanged = false; // Reset board change flag for new turn
             this.updateGameState();
         });
 
@@ -364,6 +366,8 @@ class RummikubClient {
             return;
         }
         this.socket.emit('endTurn');
+        this.hasBoardChanged = false; // Reset the flag when ending turn
+        this.updateActionButtons();
     }
 
     undoLastMove() {
@@ -377,6 +381,8 @@ class RummikubClient {
         
         // Request a full undo from the server, which will also return tiles to hand
         this.socket.emit('requestUndoTurn');
+        this.hasBoardChanged = false; // Reset the flag when undoing
+        this.updateActionButtons();
         this.showNotification("Restored board to beginning of turn", 'success');
     }
 
@@ -389,7 +395,12 @@ class RummikubClient {
         const currentBoard = JSON.stringify(this.gameState.board);
         const snapshotBoard = JSON.stringify(this.gameState.boardSnapshot);
         
-        return currentBoard !== snapshotBoard;
+        const hasChanged = currentBoard !== snapshotBoard;
+        
+        // Update the board changed flag
+        this.hasBoardChanged = hasChanged;
+        
+        return hasChanged;
     }
 
     leaveGame() {
@@ -1327,6 +1338,9 @@ class RummikubClient {
         const gameStarted = this.gameState && this.gameState.started;
         const canAct = isMyTurn && gameStarted;
         
+        // Always check if board state has changed
+        this.hasBoardStateChanged();
+        
         // Draw Tile button - disable if tiles have been played this turn
         const drawBtn = document.getElementById('drawTileBtn');
         if (drawBtn) {
@@ -1340,12 +1354,13 @@ class RummikubClient {
             }
         }
         
-        // End Turn button  
+        // End Turn button - only enable if board has been changed  
         const endBtn = document.getElementById('endTurnBtn');
         if (endBtn) {
-            endBtn.style.opacity = canAct ? '1' : '0.5';
-            endBtn.disabled = !canAct;
-            if (canAct) {
+            const canEndTurn = canAct && this.hasBoardChanged;
+            endBtn.style.opacity = canEndTurn ? '1' : '0.5';
+            endBtn.disabled = !canEndTurn;
+            if (canEndTurn) {
                 endBtn.removeAttribute('disabled');
             } else {
                 endBtn.setAttribute('disabled', 'disabled');
@@ -1367,7 +1382,7 @@ class RummikubClient {
         // Undo button - only enabled if it's player's turn and board state has changed
         const undoBtn = document.getElementById('undoBtn');
         if (undoBtn) {
-            const canUndo = canAct && this.hasBoardStateChanged();
+            const canUndo = canAct && this.hasBoardChanged;
             undoBtn.style.opacity = canUndo ? '1' : '0.5';
             undoBtn.disabled = !canUndo;
             if (canUndo) {
