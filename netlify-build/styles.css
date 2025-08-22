@@ -618,6 +618,23 @@ body {
     overflow-y: auto;
 }
 
+.start-game-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.start-game-container #startGameBtn {
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.start-game-container #startGameBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 .board-placeholder {
     display: flex;
     flex-direction: column;
