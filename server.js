@@ -151,8 +151,19 @@ class RummikubGame {
     console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}"`);
     
     // Check if any player has debug name for multiplayer debug mode
-    console.log(`🔧 All players:`, this.players.map(p => ({ name: p.name, nameLower: p.name.toLowerCase() })));
-    const debugPlayer = this.players.find(p => p.name.toLowerCase() === 'dbug');
+    console.log(`🔧 All players (EXACT NAMES):`, this.players.map(p => `"${p.name}" (lowercased: "${p.name.toLowerCase()}")`));
+    const inputName = 'dbug';
+    console.log(`🔧 Looking for debug name: "${inputName}"`);
+    const debugPlayer = this.players.find(p => p.name.toLowerCase() === inputName || p.name.toLowerCase() === 'debug');
+    if (debugPlayer) {
+      console.log(`🔧 DEBUG PLAYER FOUND: "${debugPlayer.name}" matched one of our debug patterns`);
+    } else {
+      console.log(`🔧 EXACT MATCH FAILED - trying strict equality checks on each player:`);
+      this.players.forEach(p => {
+        console.log(`  - Player name: "${p.name}" === "dbug": ${p.name === 'dbug'}`);
+        console.log(`  - Player name.toLowerCase(): "${p.name.toLowerCase()}" === "dbug": ${p.name.toLowerCase() === 'dbug'}`);
+      });
+    }
 
     console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
     
