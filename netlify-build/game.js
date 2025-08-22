@@ -207,7 +207,8 @@ class RummikubClient {
         // Board management events
         this.socket.on('boardUpdated', (data) => {
             this.gameState = data.gameState;
-            this.renderGameBoard();
+            // Update the full game state, not just the board
+            this.updateGameState();
         });
 
         this.socket.on('boardValidation', (validation) => {

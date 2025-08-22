@@ -1399,7 +1399,9 @@ io.on('connection', (socket) => {
       game.players.forEach(player => {
         const playerSocket = io.sockets.sockets.get(player.id);
         if (playerSocket) {
-          playerSocket.emit('boardUpdated', {
+          // Send a complete game state update instead of just boardUpdated
+          // This ensures clients have the latest hand and board state
+          playerSocket.emit('gameStateUpdate', {
             gameState: game.getGameState(player.id)
           });
         }
