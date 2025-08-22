@@ -1397,7 +1397,6 @@ io.on('connection', (socket) => {
         }
       });
     });
-    });
     
     socket.on('updatePlayerHand', (data) => {
       const playerData = players.get(socket.id);
@@ -1512,6 +1511,7 @@ io.on('connection', (socket) => {
         }
       });
     });
+});  // End of io.on('connection') handler
 
 // Helper functions
 function generateGameId() {
