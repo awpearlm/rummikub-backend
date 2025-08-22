@@ -148,63 +148,71 @@ class RummikubGame {
     if (this.players.length < 2) return false;
     
     console.log(`🚀 Starting game ${this.id} with ${this.players.length} players`);
-    console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}"`);
+    console.log(`🔧 Debug check: isBotGame=${this.isBotGame}, botDifficulty="${this.botDifficulty}", isDebugMode=${this.isDebugMode}`);
     
-    // Check if any player has debug name for multiplayer debug mode
-    console.log(`🔧 DEBUG CHECK - All players:`, this.players.map(p => JSON.stringify({
-      id: p.id,
-      name: p.name,
-      nameLowercase: p.name.toLowerCase(),
-      nameType: typeof p.name
-    })));
-    
-    console.log(`🔧 DEBUG CHECK - Searching for 'dbug' or 'debug' in player names...`);
-    
-    // Try different debugging approaches
-    const debugPatterns = ['dbug', 'debug'];
-    let debugPlayer = null;
-    
-    for (const pattern of debugPatterns) {
-      for (const player of this.players) {
-        const playerNameLower = String(player.name).toLowerCase();
-        const isMatch = playerNameLower === pattern;
-        console.log(`🔧 Checking player "${player.name}" against "${pattern}": ${isMatch}`);
-        
-        if (isMatch) {
-          debugPlayer = player;
-          console.log(`🔧 DEBUG PLAYER FOUND: "${player.name}" matches pattern "${pattern}"`);
-          break;
-        }
-      }
-      if (debugPlayer) break;
-    }
-    
-    if (!debugPlayer) {
-      console.log(`🔧 NO DEBUG PLAYER FOUND - trying one more check with trimming whitespace`);
-      debugPlayer = this.players.find(p => 
-        String(p.name).toLowerCase().trim() === 'dbug' || 
-        String(p.name).toLowerCase().trim() === 'debug'
-      );
-    }
-
-    console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
-    
-    // Deal tiles based on bot difficulty or debug player
-    if (this.isBotGame && this.botDifficulty === 'debug') {
-      console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
-      // Debug mode: Give human player a preset hand for testing
-      this.dealDebugHand();
-    } else if (debugPlayer) {
-      console.log(`🔧 MULTIPLAYER DEBUG MODE DETECTED! Player "${debugPlayer.name}" gets winning hand...`);
-      // Multiplayer debug mode: Give debug player a winning hand
-      this.dealMultiplayerDebugHand(debugPlayer);
+    // Check if game was created with debug mode flag
+    if (this.isDebugMode) {
+      console.log(`🔧 GAME DEBUG MODE ENABLED! Game creator will get debug hand...`);
+      const creatorPlayer = this.players[0]; // First player is the creator
+      console.log(`🔧 Game creator is: ${creatorPlayer.name}`);
+      this.dealMultiplayerDebugHand(creatorPlayer);
     } else {
-      console.log(`🎲 Normal mode: dealing random tiles`);
-      // Normal mode: Deal 14 tiles to each player
-      for (const player of this.players) {
-        for (let i = 0; i < 14; i++) {
-          if (this.deck.length > 0) {
-            player.hand.push(this.deck.pop());
+      // Only check for debug name if debug mode flag is not set
+      console.log(`🔧 DEBUG CHECK - All players:`, this.players.map(p => JSON.stringify({
+        id: p.id,
+        name: p.name,
+        nameLowercase: p.name.toLowerCase(),
+        nameType: typeof p.name
+      })));
+      
+      console.log(`🔧 DEBUG CHECK - Searching for 'dbug' or 'debug' in player names...`);
+      
+      // Try different debugging approaches
+      const debugPatterns = ['dbug', 'debug'];
+      let debugPlayer = null;
+      
+      for (const pattern of debugPatterns) {
+        for (const player of this.players) {
+          const playerNameLower = String(player.name).toLowerCase();
+          const isMatch = playerNameLower === pattern;
+          console.log(`🔧 Checking player "${player.name}" against "${pattern}": ${isMatch}`);
+          
+          if (isMatch) {
+            debugPlayer = player;
+            console.log(`🔧 DEBUG PLAYER FOUND: "${player.name}" matches pattern "${pattern}"`);
+            break;
+          }
+        }
+        if (debugPlayer) break;
+      }
+      
+      if (!debugPlayer) {
+        console.log(`🔧 NO DEBUG PLAYER FOUND - trying one more check with trimming whitespace`);
+        debugPlayer = this.players.find(p => 
+          String(p.name).toLowerCase().trim() === 'dbug' || 
+          String(p.name).toLowerCase().trim() === 'debug'
+        );
+      }
+
+      console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
+      
+      // Deal tiles based on bot difficulty or debug player
+      if (this.isBotGame && this.botDifficulty === 'debug') {
+        console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
+        // Debug mode: Give human player a preset hand for testing
+        this.dealDebugHand();
+      } else if (debugPlayer) {
+        console.log(`🔧 MULTIPLAYER DEBUG MODE DETECTED! Player "${debugPlayer.name}" gets winning hand...`);
+        // Multiplayer debug mode: Give debug player a winning hand
+        this.dealMultiplayerDebugHand(debugPlayer);
+      } else {
+        console.log(`🎲 Normal mode: dealing random tiles`);
+        // Normal mode: Deal 14 tiles to each player
+        for (const player of this.players) {
+          for (let i = 0; i < 14; i++) {
+            if (this.deck.length > 0) {
+              player.hand.push(this.deck.pop());
+            }
           }
         }
       }
@@ -923,14 +931,21 @@ io.on('connection', (socket) => {
       const gameId = generateGameId();
       const game = new RummikubGame(gameId);
       
+      // Set debug mode flag if provided
+      game.isDebugMode = data.isDebugMode || false;
+      
       if (game.addPlayer(socket.id, data.playerName)) {
         games.set(gameId, game);
-        players.set(socket.id, { gameId, playerName: data.playerName });
+        players.set(socket.id, { 
+          gameId, 
+          playerName: data.playerName,
+          isDebugEnabled: data.isDebugMode || false
+        });
         
         socket.join(gameId);
         socket.emit('gameCreated', { gameId, gameState: game.getGameState(socket.id) });
         
-        console.log(`Game created: ${gameId} by ${data.playerName}`);
+        console.log(`Game created: ${gameId} by ${data.playerName}, debug mode: ${game.isDebugMode}`);
       } else {
         socket.emit('error', { message: 'Failed to create game' });
       }

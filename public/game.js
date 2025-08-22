@@ -270,6 +270,12 @@ class RummikubClient {
             return;
         }
         
+        // Check if debug mode is enabled
+        const isDebugMode = document.getElementById('debugModeCheckbox').checked;
+        if (isDebugMode) {
+            console.log('🔧 Debug mode enabled! Game creator will get debug hand.');
+        }
+        
         this.playerName = playerName;
         this.showLoadingScreen();
         
@@ -287,11 +293,15 @@ class RummikubClient {
             this.socket.once('connect', () => {
                 clearTimeout(connectionTimeout);
                 console.log('✅ Connected! Sending createGame...');
-                this.socket.emit('createGame', { playerName });
+                const isDebugMode = document.getElementById('debugModeCheckbox').checked;
+                console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
+                this.socket.emit('createGame', { playerName, isDebugMode });
             });
         } else {
             // Already connected
-            this.socket.emit('createGame', { playerName });
+            const isDebugMode = document.getElementById('debugModeCheckbox').checked;
+            console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
+            this.socket.emit('createGame', { playerName, isDebugMode });
         }
     }
 
