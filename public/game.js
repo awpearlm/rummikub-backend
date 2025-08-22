@@ -390,6 +390,14 @@ class RummikubClient {
             return;
         }
         
+        // Get selected tile objects
+        const selectedTileObjects = this.selectedTiles.map(id => 
+            this.gameState.playerHand.find(tile => tile.id === id)
+        ).filter(Boolean);
+        
+        // Debug the selected set
+        this.validateAndDebugSet(selectedTileObjects);
+        
         // Check if player hasn't played initial yet
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
@@ -409,6 +417,38 @@ class RummikubClient {
         } else {
             // After initial play, only single sets allowed per play action
             this.socket.emit('playSet', { tileIds: this.selectedTiles });
+        }
+    }
+    
+    validateAndDebugSet(tiles) {
+        // Check if this selection is a valid set
+        const isRun = this.isValidRunClient(tiles);
+        const isGroup = this.isValidGroupClient(tiles);
+        const isValid = isRun || isGroup;
+        
+        // Create detailed debug info
+        const tileInfo = tiles.map(t => {
+            if (t.isJoker) return "JOKER";
+            return `${t.number}${t.color[0]}`;
+        }).join(', ');
+        
+        // Show status in toast
+        if (isValid) {
+            if (isRun) {
+                this.showNotification(`Valid run detected: ${tileInfo}`, 'info');
+            } else {
+                this.showNotification(`Valid group detected: ${tileInfo}`, 'info');
+            }
+        } else {
+            this.showNotification(`Invalid set: ${tileInfo}. Please make a valid set (run or group).`, 'error');
+            
+            // Provide detailed error info in console
+            console.log(`🔍 Debug set validation:`, {
+                tiles,
+                isRun,
+                isGroup,
+                tileInfo
+            });
         }
     }
     
@@ -506,32 +546,62 @@ class RummikubClient {
         const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
         if (new Set(colors).size > 1) return false;
         
-        // Sort by number and check consecutive (simplified - doesn't handle jokers perfectly)
-        const sortedTiles = [...tiles].sort((a, b) => {
-            if (a.isJoker) return -1;
-            if (b.isJoker) return 1;
-            return a.number - b.number;
-        });
+        // Count jokers
+        const jokerCount = tiles.filter(t => t.isJoker).length;
+        const nonJokers = tiles.filter(t => !t.isJoker);
         
-        const numbers = sortedTiles.filter(t => !t.isJoker).map(t => t.number);
-        for (let i = 1; i < numbers.length; i++) {
-            if (numbers[i] !== numbers[i-1] + 1) return false;
+        // If all jokers, it's valid
+        if (jokerCount === tiles.length) return true;
+        
+        // Sort non-joker tiles by number
+        nonJokers.sort((a, b) => a.number - b.number);
+        
+        // Check for consecutive numbers with jokers filling in gaps
+        let availableJokers = jokerCount;
+        
+        for (let i = 1; i < nonJokers.length; i++) {
+            const gap = nonJokers[i].number - nonJokers[i-1].number - 1;
+            
+            // If there's a gap, check if we have enough jokers to fill it
+            if (gap > 0) {
+                if (gap > availableJokers) {
+                    // Not enough jokers to fill the gap
+                    console.log(`Run invalid: gap of ${gap} between ${nonJokers[i-1].number} and ${nonJokers[i].number}, but only ${availableJokers} jokers available`);
+                    return false;
+                }
+                availableJokers -= gap;
+            }
         }
         
+        // If we got here, all gaps are filled with available jokers
+        console.log(`Run valid with ${jokerCount} jokers and ${nonJokers.length} regular tiles`);
         return true;
     }
     
     isValidGroupClient(tiles) {
         if (tiles.length < 3 || tiles.length > 4) return false;
         
-        // All tiles must be same number (except jokers)
+        // Count jokers
+        const jokerCount = tiles.filter(t => t.isJoker).length;
+        
+        // If all jokers, it's valid
+        if (jokerCount === tiles.length) return true;
+        
+        // All non-joker tiles must be same number
         const numbers = tiles.filter(t => !t.isJoker).map(t => t.number);
-        if (new Set(numbers).size > 1) return false;
+        if (new Set(numbers).size > 1) {
+            console.log(`Group invalid: numbers not all the same: ${numbers.join(', ')}`);
+            return false;
+        }
         
-        // All tiles must be different colors (except jokers)
+        // All non-joker tiles must be different colors
         const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
-        if (new Set(colors).size !== colors.length) return false;
+        if (new Set(colors).size !== colors.length) {
+            console.log(`Group invalid: duplicate colors: ${colors.join(', ')}`);
+            return false;
+        }
         
+        console.log(`Group valid with ${jokerCount} jokers and ${tiles.length - jokerCount} regular tiles`);
         return true;
     }
 
@@ -1394,14 +1464,49 @@ class RummikubClient {
     }
 
     showNotification(message, type = 'info') {
-        const notification = document.getElementById('notification');
-        notification.textContent = message;
-        notification.className = `notification ${type}`;
-        notification.classList.add('show');
+        // Create toast container if it doesn't exist
+        const container = document.getElementById('toast-container');
         
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        // Create icon based on type
+        let icon;
+        switch (type) {
+            case 'success':
+                icon = 'check-circle';
+                break;
+            case 'error':
+                icon = 'exclamation-circle';
+                break;
+            case 'warning':
+                icon = 'exclamation-triangle';
+                break;
+            default: // info
+                icon = 'info-circle';
+        }
+        
+        // Set toast content
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fas fa-${icon}"></i></div>
+            <div class="toast-content">${message}</div>
+        `;
+        
+        // Add to container
+        container.appendChild(toast);
+        
+        // Auto-remove after animation completes (5 seconds total)
         setTimeout(() => {
-            notification.classList.remove('show');
-        }, 4000);
+            toast.addEventListener('animationend', () => {
+                if (toast.parentNode === container) {
+                    container.removeChild(toast);
+                }
+            }, { once: true });
+        }, 4500);
+        
+        // Log notification for debugging
+        console.log(`[${type.toUpperCase()}] ${message}`);
     }
 
     showVictoryCelebration(winnerName) {
