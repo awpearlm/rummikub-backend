@@ -1358,31 +1358,19 @@ io.on('connection', (socket) => {
         console.log('🎮 Created initial board snapshot for this turn');
       }
       
-      // Before updating the board, find which tiles were added from the player's hand
-      const oldBoardTiles = new Set();
-      game.board.forEach(set => {
-        set.forEach(tile => {
-          oldBoardTiles.add(tile.id);
-        });
-      });
-      
-      // Get all tiles on the new board
-      const newBoardTiles = new Set();
-      data.board.forEach(set => {
-        set.forEach(tile => {
-          newBoardTiles.add(tile.id);
-        });
-      });
-      
-      // Find tiles that were added to the board (in new board but not in old board)
-      const addedTiles = Array.from(newBoardTiles).filter(tileId => !oldBoardTiles.has(tileId));
-      
-      // Check if any of the added tiles are from the player's hand and remove them
-      if (addedTiles.length > 0) {
-        console.log(`Player ${currentPlayer.name} added tiles to board:`, addedTiles);
+      // Find tiles that were moved from hand to board
+      // Instead of just looking at added tiles, we'll use an explicit approach
+      if (data.tilesFromHand && Array.isArray(data.tilesFromHand) && data.tilesFromHand.length > 0) {
+        console.log(`Player ${currentPlayer.name} moved tiles from hand to board:`, data.tilesFromHand);
         
-        // Remove these tiles from the player's hand
-        currentPlayer.hand = currentPlayer.hand.filter(tile => !addedTiles.includes(tile.id));
+        // Remove these specific tiles from the player's hand
+        data.tilesFromHand.forEach(tileId => {
+          const tileIndex = currentPlayer.hand.findIndex(t => t.id === tileId);
+          if (tileIndex !== -1) {
+            currentPlayer.hand.splice(tileIndex, 1);
+            console.log(`Removed tile ${tileId} from ${currentPlayer.name}'s hand`);
+          }
+        });
       }
       
       // Check if joker manipulation is occurring
@@ -1399,7 +1387,7 @@ io.on('connection', (socket) => {
         currentPlayer.hasManipulatedJoker = true;
       }
       
-      // Send updated board to all players
+      // Send updated game state to all players
       game.players.forEach(player => {
         const playerSocket = io.sockets.sockets.get(player.id);
         if (playerSocket) {
@@ -1408,6 +1396,7 @@ io.on('connection', (socket) => {
           });
         }
       });
+    });
     });
     
     socket.on('updatePlayerHand', (data) => {
@@ -1524,33 +1513,31 @@ io.on('connection', (socket) => {
       });
     });
 
-    // ...existing code...
-  });
+// Helper functions
+function generateGameId() {
+  return Math.random().toString(36).substr(2, 6).toUpperCase();
+}
 
-  function generateGameId() {
-    return Math.random().toString(36).substr(2, 6).toUpperCase();
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/games/:gameId', (req, res) => {
+  const game = games.get(req.params.gameId);
+  if (game) {
+    res.json({ exists: true, playerCount: game.players.length, started: game.started });
+  } else {
+    res.json({ exists: false });
   }
+});
 
-  // Routes
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
-  });
-
-  app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  app.get('/api/games/:gameId', (req, res) => {
-    const game = games.get(req.params.gameId);
-    if (game) {
-      res.json({ exists: true, playerCount: game.players.length, started: game.started });
-    } else {
-      res.json({ exists: false });
-    }
-  });
-
-  const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => {
-    console.log(`🎮 Rummikub game server running on port ${PORT}`);
-    console.log(`🌐 Open your browser to http://localhost:${PORT}`);
-  });
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🎮 Rummikub game server running on port ${PORT}`);
+  console.log(`🌐 Open your browser to http://localhost:${PORT}`);
+});
