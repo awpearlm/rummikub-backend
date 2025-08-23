@@ -1717,10 +1717,10 @@ class RummikubClient {
         // Always check if board state has changed
         this.hasBoardStateChanged();
         
-        // Draw Tile button - disable if tiles have been played this turn
+        // Draw Tile button - disable if tiles have been played this turn or if board state has changed
         const drawBtn = document.getElementById('drawTileBtn');
         if (drawBtn) {
-            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn;
+            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !this.hasBoardChanged;
             drawBtn.style.opacity = canDrawTile ? '1' : '0.5';
             drawBtn.disabled = !canDrawTile;
             if (canDrawTile) {
