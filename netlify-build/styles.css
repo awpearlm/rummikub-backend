@@ -63,7 +63,7 @@ body {
 
 /* Form Styles */
 .form-group {
-    margin-bottom: 25px;
+    margin-bottom: 10px;
 }
 
 .form-group label {
@@ -254,15 +254,17 @@ body {
     padding: 10px;
     background-color: #f8f9fa;
     border-radius: 8px;
+    text-align: center;
 }
 
 .timer-option {
     display: flex;
+    justify-content: center;
     align-items: center;
 }
 
 .option-label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     cursor: pointer;
     user-select: none;
@@ -270,13 +272,24 @@ body {
 
 .option-label input[type="checkbox"] {
     margin-right: 8px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
 }
 
 .option-text {
     font-size: 14px;
     color: #4a5568;
+    display: inline-flex;
+    align-items: center;
+}
+
+.option-text i {
+    margin-right: 5px;
+    position: relative;
+    top: 0;
 }
 
 .option-text i {
@@ -305,7 +318,6 @@ body {
 .button-group {
     display: flex;
     gap: 15px;
-    margin-bottom: 25px;
 }
 
 .button-group .btn {
@@ -696,11 +708,12 @@ body {
     padding: 20px;
     margin: 10px 0;
     border: 2px dashed #cbd5e0;
-    grid-column: 1 / -1; /* Make new set drop zone span both columns */
+    /* Removed grid-column span to fit within a single column */
     border-radius: 10px;
     text-align: center;
     color: #a0aec0;
     transition: all 0.3s ease;
+    min-height: 70px; /* Match the height of board-set for visual consistency */
 }
 
 /* Chat Panel */

@@ -852,14 +852,26 @@ class RummikubClient {
         
         // Initialize grid layout if hand changed
         if (this.gameState.playerHand) {
-            // Auto-sort tiles by number on initial deal only
-            this.autoSortHandByNumber();
+            // Check if we need to add a single new tile (like after drawing)
+            const handSize = this.gameState.playerHand.length;
+            const lastKnownSize = this.lastKnownHandSize || 0;
             
-            // Always refresh grid layout when hand changes to ensure tiles are properly removed/added
-            if (!this.tileGridLayout || this.hasHandChanged() || this.needsGridExpansion) {
-                this.initializeGridLayout();
-                this.needsGridExpansion = false;
+            if (this.tileGridLayout && handSize === lastKnownSize + 1 && lastKnownSize > 0) {
+                // We likely just drew a single tile - preserve the existing layout
+                this.addNewTileToLayout();
+            } else {
+                // Auto-sort tiles by number on initial deal only
+                this.autoSortHandByNumber();
+                
+                // Always refresh grid layout when hand changes to ensure tiles are properly removed/added
+                if (!this.tileGridLayout || this.hasHandChanged() || this.needsGridExpansion) {
+                    this.initializeGridLayout();
+                    this.needsGridExpansion = false;
+                }
             }
+            
+            // Update last known hand size
+            this.lastKnownHandSize = handSize;
         }
         
         // Update player hand
@@ -890,6 +902,7 @@ class RummikubClient {
         if (!this.gameState || !this.gameState.playerHand) return;
         
         // Only auto-sort if this is the initial deal (14 tiles normal, 15 tiles debug) or first time
+        // Never sort when drawing a new tile
         if ((this.gameState.playerHand.length === 14 || this.gameState.playerHand.length === 15) && !this.hasAutoSorted) {
             // Sort by number first, then by color (same logic as manual sort)
             this.gameState.playerHand.sort((a, b) => {
@@ -919,7 +932,7 @@ class RummikubClient {
         
         const currentSize = this.gameState.playerHand.length;
         if (currentSize !== this.lastKnownHandSize) {
-            this.lastKnownHandSize = currentSize;
+            // Don't update the last known size here - we'll do it in updateGameState
             
             // Only trigger grid expansion when we actually exceed the current visible capacity
             const currentGridCapacity = this.tileGridLayout ? this.tileGridLayout.length : 0;
@@ -943,6 +956,37 @@ class RummikubClient {
         }
         
         return false;
+    }
+    
+    // Add a newly drawn tile to the layout without disrupting existing tile positions
+    addNewTileToLayout() {
+        if (!this.tileGridLayout || !this.gameState.playerHand) return;
+        
+        // Find the new tile - it should be the one that's not in our current grid layout
+        const existingTileIds = new Set(this.tileGridLayout.filter(t => t !== null).map(t => t.id));
+        const newTile = this.gameState.playerHand.find(tile => !existingTileIds.has(tile.id));
+        
+        if (!newTile) {
+            console.log('⚠️ No new tile found after draw - falling back to initializeGridLayout');
+            this.initializeGridLayout();
+            return;
+        }
+        
+        console.log('🎲 Adding new tile to layout:', newTile.id);
+        
+        // Find the first empty slot in the grid to place the new tile
+        let emptySlotIndex = this.tileGridLayout.findIndex(slot => slot === null);
+        
+        if (emptySlotIndex === -1) {
+            // No empty slots, expand the grid
+            const oldLength = this.tileGridLayout.length;
+            this.tileGridLayout = [...this.tileGridLayout, ...Array(7).fill(null)];
+            emptySlotIndex = oldLength;
+            this.needsGridExpansion = true;
+        }
+        
+        // Place the new tile in the empty slot
+        this.tileGridLayout[emptySlotIndex] = newTile;
     }
 
     renderPlayersList() {
@@ -1352,17 +1396,23 @@ class RummikubClient {
             }
         });
         
-        boardElement.appendChild(leftColumn);
-        boardElement.appendChild(rightColumn);
-        
-        // Add a drop zone for creating new sets
+        // Add a drop zone for creating new sets in the column with fewer sets
         if (this.isMyTurn()) {
             const newSetZone = document.createElement('div');
             newSetZone.className = 'new-set-drop-zone';
             newSetZone.innerHTML = '<p>Drop tiles here to create a new set</p>';
             this.setupNewSetDropZone(newSetZone);
-            boardElement.appendChild(newSetZone);
+            
+            // Determine which column has fewer sets and add the drop zone there
+            if (leftColumn.childElementCount <= rightColumn.childElementCount) {
+                leftColumn.appendChild(newSetZone);
+            } else {
+                rightColumn.appendChild(newSetZone);
+            }
         }
+        
+        boardElement.appendChild(leftColumn);
+        boardElement.appendChild(rightColumn);
     }
 
     createTileElement(tile, isDraggable = false) {
