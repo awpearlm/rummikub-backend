@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-title" content="Rummikub">
     <meta name="description" content="Play the classic tile-laying game Rummikub with Jillian and have her yell at you when you win!">
     
-        <link rel="stylesheet" href="styles.css?v=43">
+        <link rel="stylesheet" href="styles.css?v=44">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -150,6 +150,11 @@
                 </div>
                 
                 <div class="game-actions">
+                    <div id="startButtonContainer" class="start-game-container">
+                        <button id="startGameBtn" class="btn btn-success hidden">
+                            <i class="fas fa-play"></i> Start Game
+                        </button>
+                    </div>
                     <button id="leaveGameBtn" class="btn btn-danger">
                         <i class="fas fa-sign-out-alt"></i> Leave
                     </button>
@@ -168,11 +173,7 @@
                             <p>Played sets will appear here</p>
                         </div>
                     </div>
-                    <div class="start-game-container">
-                        <button id="startGameBtn" class="btn btn-success hidden">
-                            <i class="fas fa-play"></i> Start Game
-                        </button>
-                    </div>
+                    <!-- Start game button moved to header -->
                 </div>
             </div>
 
@@ -267,6 +268,6 @@
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="safe-events.js?v=1"></script>
-    <script src="game.js?v=50"></script>
+    <script src="game.js?v=51"></script>
 </body>
 </html>

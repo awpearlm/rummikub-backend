@@ -520,6 +520,7 @@ body {
 
 .game-actions {
     display: flex;
+    align-items: center;
     gap: 10px;
 }
 
@@ -617,6 +618,10 @@ body {
 .deck-info i {
     color: #FFF;
     margin-right: 8px;
+}
+
+#deckCount {
+    margin-right: 5px;
 }
 
 /* Game Log */
@@ -737,7 +742,7 @@ body {
 .start-game-container {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin-right: 10px;
 }
 
 .start-game-container #startGameBtn {
@@ -760,6 +765,7 @@ body {
     color: #a0aec0;
     position: relative;
     grid-column: 1 / -1; /* Make placeholder span both columns */
+    text-align: center;
 }
 
 .board-placeholder i {
