@@ -215,6 +215,12 @@ class RummikubGame {
     // Take initial board snapshot (empty board)
     this.takeBoardSnapshot();
     
+    // Start the timer for the first player if timer is enabled
+    if (this.timerEnabled) {
+      console.log(`⏰ Starting timer for first player: ${this.players[this.currentPlayerIndex].name}`);
+      this.startTurnTimer();
+    }
+    
     console.log(`✅ Game ${this.id} started successfully`);
     return true;
   }
@@ -606,6 +612,12 @@ class RummikubGame {
     // Set the turn start time
     this.turnStartTime = Date.now();
     
+    const currentPlayer = this.getCurrentPlayer();
+    console.log(`⏰ Starting timer for ${currentPlayer ? currentPlayer.name : 'unknown'}, ${this.turnTimeLimit}s limit`);
+    
+    // Send initial timer update immediately
+    this.broadcastTimerUpdate(this.turnTimeLimit);
+    
     // Create an interval to broadcast the timer updates
     this.turnTimerInterval = setInterval(() => {
       // Calculate remaining time
@@ -634,6 +646,7 @@ class RummikubGame {
   broadcastTimerUpdate(remainingTime) {
     // Only broadcast if the game is still active
     if (this.started && !this.winner) {
+      console.log(`⏰ Broadcasting timer update: ${remainingTime}s remaining`);
       io.to(this.id).emit('timerUpdate', {
         remainingTime: remainingTime,
         currentPlayerIndex: this.currentPlayerIndex,
@@ -1282,6 +1295,9 @@ io.on('connection', (socket) => {
 
       const tile = game.drawTile(socket.id);
       if (tile) {
+        // Clear the current timer before changing turns
+        game.clearTurnTimer();
+        
         // Always advance turn after drawing a tile (this ends the player's turn)
         game.nextTurn();
         
@@ -1387,6 +1403,9 @@ io.on('connection', (socket) => {
         
         // Reset any turn-specific flags
         currentPlayer.hasManipulatedJoker = false;
+        
+        // Clear the current timer before changing turns
+        game.clearTurnTimer();
         
         game.nextTurn();
         

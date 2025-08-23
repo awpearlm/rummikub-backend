@@ -167,6 +167,8 @@ class RummikubClient {
             // Update remaining time from server
             this.remainingTime = data.remainingTime;
             
+            console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
+            
             // Update timer display
             this.updateTimerDisplay();
             
@@ -2556,15 +2558,32 @@ class RummikubClient {
         }
     }
     
-    updateTimerDisplay() {
-        const minutes = Math.floor(this.remainingTime / 60);
-        const seconds = this.remainingTime % 60;
-        const displayText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
-        const timerDisplay = document.getElementById('timerDisplay');
-        if (timerDisplay) {
-            timerDisplay.textContent = displayText;
+    updateTimerDisplay(remainingTime) {
+        // If specific remaining time was provided (from server), use it
+        if (remainingTime !== undefined) {
+            this.remainingTime = remainingTime;
         }
+        
+        const timerElement = document.getElementById('turnTimer');
+        if (!timerElement) return;
+        
+        if (this.remainingTime <= 0) {
+            timerElement.textContent = '0:00';
+            timerElement.classList.add('timer-warning');
+        } else {
+            const minutes = Math.floor(this.remainingTime / 60);
+            const seconds = this.remainingTime % 60;
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Add warning class when less than 15 seconds remain
+            if (this.remainingTime <= 15) {
+                timerElement.classList.add('timer-warning');
+            } else {
+                timerElement.classList.remove('timer-warning');
+            }
+        }
+        
+        console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
     }
 }
 
