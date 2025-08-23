@@ -39,6 +39,7 @@ class RummikubClient {
         this.soundEnabled = true;
         this.timerInterval = null;
         this.remainingTime = this.turnTimeLimit;
+        this.lastActivePlayerId = null; // Keep track of the last active player for timer resets
         this.hasBoardChanged = false;
         this.gameMode = null; // 'multiplayer' or 'bot'
         this.botDifficulty = 'medium';
@@ -422,18 +423,27 @@ class RummikubClient {
     initializeSounds() {
         if (this.soundsInitialized) return;
         
-        this.sounds = {
-            pickupTile: new Audio('sounds/tile-pickup.mp3'),
-            placeTile: new Audio('sounds/tile-place.mp3')
-        };
-        
-        // Preload sounds
-        Object.values(this.sounds).forEach(sound => {
-            sound.load();
-        });
-        
-        this.soundsInitialized = true;
-        console.log('🔊 Sound effects initialized');
+        try {
+            // Create with absolute URLs to ensure they're found
+            const baseUrl = window.location.origin;
+            const soundPath = `${baseUrl}/sounds/`;
+            
+            this.sounds = {
+                pickupTile: new Audio(`${soundPath}tile-pickup.mp3`),
+                placeTile: new Audio(`${soundPath}tile-place.mp3`)
+            };
+            
+            // Preload sounds
+            Object.values(this.sounds).forEach(sound => {
+                sound.volume = 0.3; // Lower volume to 30%
+                sound.load();
+            });
+            
+            this.soundsInitialized = true;
+            console.log('🔊 Sound effects initialized with base path:', soundPath);
+        } catch (error) {
+            console.error('❌ Error initializing sounds:', error);
+        }
     }
     
     // Play sound effects
@@ -443,10 +453,14 @@ class RummikubClient {
         }
         
         if (this.soundEnabled && this.sounds[sound]) {
-            // Create a new audio element each time for better reliability
-            const audioElement = this.sounds[sound].cloneNode();
-            audioElement.volume = 0.7; // Set volume to 70%
-            audioElement.play().catch(e => console.log('Sound playback prevented:', e));
+            try {
+                // Create a new audio element each time for better reliability
+                const audioElement = this.sounds[sound].cloneNode();
+                audioElement.volume = 0.3; // Set volume to 30%
+                audioElement.play().catch(e => console.log('Sound playback prevented:', e));
+            } catch (error) {
+                console.error('❌ Error playing sound:', error);
+            }
         }
     }
 
@@ -1083,9 +1097,16 @@ class RummikubClient {
             if (this.timerEnabled) {
                 timerElement.classList.remove('hidden');
                 
-                // Always reset the timer to the turn time limit when the current player changes
-                this.remainingTime = this.turnTimeLimit;
-                this.updateTimerDisplay();
+                // Check if the active player has changed
+                const currentPlayerId = currentPlayer ? currentPlayer.id : null;
+                
+                // If the current player has changed, reset timer to full time
+                if (currentPlayerId !== this.lastActivePlayerId) {
+                    this.remainingTime = this.turnTimeLimit;
+                    this.lastActivePlayerId = currentPlayerId;
+                    this.updateTimerDisplay();
+                    console.log('⏰ Timer reset for new turn: ' + currentPlayer.name);
+                }
                 
                 // Start the timer if it's my turn
                 if (this.isMyTurn()) {
@@ -2486,13 +2507,19 @@ class RummikubClient {
         // Clear any existing timer
         this.clearTimer();
         
-        // Reset time
-        this.remainingTime = this.turnTimeLimit;
+        // Don't reset the time here - we maintain the time from updateCurrentTurn
         
         // Show timer
         const timerElement = document.getElementById('turnTimer');
         if (timerElement) {
             timerElement.classList.remove('hidden', 'timer-warning', 'timer-danger');
+            
+            // Add warning classes based on current time
+            if (this.remainingTime <= 30 && this.remainingTime > 10) {
+                timerElement.classList.add('timer-warning');
+            } else if (this.remainingTime <= 10) {
+                timerElement.classList.add('timer-danger');
+            }
         }
         
         // Update display
