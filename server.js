@@ -50,6 +50,9 @@ class RummikubGame {
     this.board = [];
     this.boardSnapshot = []; // Store board state at start of each turn
     this.timerEnabled = false; // Default to timer disabled
+    this.turnTimeLimit = 120; // 2 minutes in seconds
+    this.turnStartTime = null; // When the current turn started
+    this.turnTimerInterval = null; // Server-side timer interval
     this.started = false;
     this.winner = null;
     this.chatMessages = [];
@@ -587,7 +590,85 @@ class RummikubGame {
       
       // Take a snapshot of the board state at the start of the new turn
       this.takeBoardSnapshot();
+      
+      // Start the turn timer if enabled
+      if (this.timerEnabled) {
+        this.startTurnTimer();
+      }
     }
+  }
+  
+  // Start the turn timer on the server
+  startTurnTimer() {
+    // Clear any existing timer
+    this.clearTurnTimer();
+    
+    // Set the turn start time
+    this.turnStartTime = Date.now();
+    
+    // Create an interval to broadcast the timer updates
+    this.turnTimerInterval = setInterval(() => {
+      // Calculate remaining time
+      const elapsedSeconds = Math.floor((Date.now() - this.turnStartTime) / 1000);
+      const remainingTime = Math.max(0, this.turnTimeLimit - elapsedSeconds);
+      
+      // Broadcast timer update to all players
+      this.broadcastTimerUpdate(remainingTime);
+      
+      // If time is up, handle it
+      if (remainingTime <= 0) {
+        this.handleTimeUp();
+      }
+    }, 1000); // Update every second
+  }
+  
+  // Clear the turn timer
+  clearTurnTimer() {
+    if (this.turnTimerInterval) {
+      clearInterval(this.turnTimerInterval);
+      this.turnTimerInterval = null;
+    }
+  }
+  
+  // Broadcast timer update to all players in the game
+  broadcastTimerUpdate(remainingTime) {
+    // Only broadcast if the game is still active
+    if (this.started && !this.winner) {
+      io.to(this.id).emit('timerUpdate', {
+        remainingTime: remainingTime,
+        currentPlayerIndex: this.currentPlayerIndex,
+        currentPlayerId: this.getCurrentPlayer()?.id
+      });
+    }
+  }
+  
+  // Handle time up for current player
+  handleTimeUp() {
+    // Clear the timer
+    this.clearTurnTimer();
+    
+    const currentPlayer = this.getCurrentPlayer();
+    if (!currentPlayer) return;
+    
+    console.log(`⏰ Time's up for ${currentPlayer.name}!`);
+    
+    // Restore board to snapshot (undo any uncommitted moves)
+    this.restoreBoardSnapshot();
+    
+    // Draw a tile for the player
+    this.drawTileForPlayer(currentPlayer.id);
+    
+    // Add to game log
+    this.addGameLogEntry(currentPlayer.id, 'time_up', 'Drew tile automatically');
+    
+    // Move to next player
+    this.nextTurn();
+    
+    // Broadcast updated game state
+    io.to(this.id).emit('turnEnded', {
+      gameState: this.getPublicGameState(),
+      message: `Time's up for ${currentPlayer.name}! Drew a tile and ended turn.`
+    });
   }
 
   addChatMessage(playerId, message) {

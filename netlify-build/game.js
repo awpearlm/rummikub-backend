@@ -161,6 +161,27 @@ class RummikubClient {
             this.gameState = data.gameState;
             this.updateGameState();
         });
+        
+        // Timer synchronization
+        this.socket.on('timerUpdate', (data) => {
+            // Update remaining time from server
+            this.remainingTime = data.remainingTime;
+            
+            // Update timer display
+            this.updateTimerDisplay();
+            
+            // Update timer classes based on time
+            const timerElement = document.getElementById('turnTimer');
+            if (timerElement) {
+                timerElement.classList.remove('timer-warning', 'timer-danger');
+                
+                if (this.remainingTime <= 30 && this.remainingTime > 10) {
+                    timerElement.classList.add('timer-warning');
+                } else if (this.remainingTime <= 10) {
+                    timerElement.classList.add('timer-danger');
+                }
+            }
+        });
 
         this.socket.on('gameStarted', (data) => {
             console.log('🎲 RAW gameStarted data:', JSON.stringify(data, null, 2));
@@ -1105,18 +1126,14 @@ class RummikubClient {
                 // Check if the active player has changed
                 const currentPlayerId = currentPlayer ? currentPlayer.id : null;
                 
-                // If the current player has changed, reset timer to full time
+                // If the current player has changed, note it
                 if (currentPlayerId !== this.lastActivePlayerId) {
-                    this.remainingTime = this.turnTimeLimit;
                     this.lastActivePlayerId = currentPlayerId;
-                    this.updateTimerDisplay();
-                    console.log('⏰ Timer reset for new turn: ' + currentPlayer.name);
+                    console.log('⏰ Turn change detected for: ' + currentPlayer.name);
                 }
                 
-                // Start the timer if it's my turn
-                if (this.isMyTurn()) {
-                    this.startTimer();
-                }
+                // Only show the timer, server will send timer updates
+                this.updateTimerDisplay();
             } else {
                 timerElement.classList.add('hidden');
                 this.clearTimer();
@@ -2512,8 +2529,6 @@ class RummikubClient {
         // Clear any existing timer
         this.clearTimer();
         
-        // Don't reset the time here - we maintain the time from updateCurrentTurn
-        
         // Show timer
         const timerElement = document.getElementById('turnTimer');
         if (timerElement) {
@@ -2530,45 +2545,8 @@ class RummikubClient {
         // Update display
         this.updateTimerDisplay();
         
-        // Start interval
-        this.timerInterval = setInterval(() => {
-            this.remainingTime--;
-            
-            // Update display
-            this.updateTimerDisplay();
-            
-            // Add warning classes
-            if (this.remainingTime <= 30 && this.remainingTime > 10) {
-                timerElement.classList.add('timer-warning');
-            } else if (this.remainingTime <= 10) {
-                timerElement.classList.remove('timer-warning');
-                timerElement.classList.add('timer-danger');
-            }
-            
-            // Time's up!
-            if (this.remainingTime <= 0) {
-                this.clearTimer();
-                
-                // If it's my turn, handle timer expiration
-                if (this.isMyTurn()) {
-                    this.showNotification("Time's up! Reverting changes and drawing a tile.", 'warning');
-                    
-                    // First, undo any uncommitted changes to revert the board state
-                    this.socket.emit('requestUndoTurn');
-                    
-                    // After a short delay, draw a tile automatically
-                    setTimeout(() => {
-                        // Draw a tile
-                        this.drawTile();
-                        
-                        // Then end the turn after drawing
-                        setTimeout(() => {
-                            this.endTurn();
-                        }, 500);
-                    }, 500);
-                }
-            }
-        }, 1000);
+        // We don't need to set up an interval for counting down
+        // as we will receive timer updates from the server via the 'timerUpdate' event
     }
     
     clearTimer() {
