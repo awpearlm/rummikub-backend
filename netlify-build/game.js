@@ -46,6 +46,7 @@ class RummikubClient {
         this.hasAutoSorted = false; // Track if auto-sort has been done
         this.hasPlayedTilesThisTurn = false; // Track if tiles have been played this turn
         this.hasBoardChanged = false; // Track if the board has been changed this turn
+        this.lastPlayedSet = null; // Track the last played set for detailed game log
         
         this.initializeEventListeners();
         this.initializeSocketListeners();
@@ -196,6 +197,13 @@ class RummikubClient {
         });
 
         this.socket.on('setPlayed', (data) => {
+            // Store the last played set for detailed game log
+            if (data.playedTiles && data.playedTiles.length > 0) {
+                this.lastPlayedSet = data.playedTiles;
+            } else if (data.gameState && data.gameState.lastPlayedSet) {
+                this.lastPlayedSet = data.gameState.lastPlayedSet;
+            }
+            
             this.gameState = data.gameState;
             this.hasPlayedTilesThisTurn = true; // Mark that tiles have been played this turn
             this.updateGameState();
@@ -1803,7 +1811,23 @@ class RummikubClient {
             let actionText = '';
             switch (entry.action) {
                 case 'played_set':
-                    actionText = `played ${entry.details}`;
+                    // Enhanced details for played sets
+                    const match = entry.details.match(/(\d+) tiles \((\d+) points\)/);
+                    if (match) {
+                        const [_, tileCount, points] = match;
+                        let tileInfo = '';
+                        
+                        // If this set was played when a player last took their turn, try to describe the tiles
+                        if (this.lastPlayedSet && this.lastPlayedSet.length > 0) {
+                            tileInfo = this.describeTileSet(this.lastPlayedSet);
+                            // Clear after use to avoid incorrect descriptions for future logs
+                            this.lastPlayedSet = null;
+                        }
+                        
+                        actionText = `played a set with ${tileCount} tiles (${points} points)${tileInfo ? ': ' + tileInfo : ''}`;
+                    } else {
+                        actionText = `played ${entry.details}`;
+                    }
                     break;
                 case 'drew_tile':
                     actionText = `drew a tile (${entry.details})`;
@@ -1822,6 +1846,8 @@ class RummikubClient {
                 <span class="log-time">${time}</span>
                 <span class="log-player">${entry.playerName}</span>
                 <span class="log-action"> ${actionText}</span>
+                ${entry.action === 'played_set' && actionText.includes('with') ? 
+                  `<span class="log-tile-details">${this.getLastPlayedSetDescription()}</span>` : ''}
             `;
             
             logElement.appendChild(entryDiv);
@@ -1831,6 +1857,25 @@ class RummikubClient {
         logElement.scrollTop = logElement.scrollHeight;
     }
 
+    // Helper to get a description of the last played set
+    getLastPlayedSetDescription() {
+        // First check if we have direct tile objects
+        if (this.lastPlayedSet && this.lastPlayedSet.length > 0) {
+            return this.describeTileSet(this.lastPlayedSet);
+        }
+        
+        // If we don't have the last played set, try to deduce from the game state
+        if (this.gameState && this.gameState.board && this.gameState.board.length > 0) {
+            // Get the most recently played set (last one on the board)
+            const lastSet = this.gameState.board[this.gameState.board.length - 1];
+            if (lastSet && lastSet.length > 0) {
+                return this.describeTileSet(lastSet);
+            }
+        }
+        
+        return '';
+    }
+    
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -2626,6 +2671,93 @@ class RummikubClient {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
         }
+    }
+    
+    // Helper method to describe a set of tiles in human-readable format
+    describeTileSet(tiles) {
+        if (!tiles || tiles.length === 0) return '';
+        
+        // Check if it's a run (consecutive numbers, same color)
+        const isRun = this.isRunSet(tiles);
+        
+        // Check if it's a group (same number, different colors)
+        const isGroup = this.isGroupSet(tiles);
+        
+        if (isRun) {
+            // Describe a run (e.g., "Red 5-7")
+            const color = tiles[0].color;
+            const numbers = tiles
+                .filter(t => !t.isJoker) // Exclude jokers for number determination
+                .map(t => t.number)
+                .sort((a, b) => a - b);
+            
+            const jokers = tiles.filter(t => t.isJoker).length;
+            const jokerText = jokers > 0 ? ` with ${jokers} joker${jokers > 1 ? 's' : ''}` : '';
+            
+            if (numbers.length === 0) {
+                return `All jokers`;
+            } else if (numbers.length === 1) {
+                return `${color.charAt(0).toUpperCase() + color.slice(1)} ${numbers[0]}${jokerText}`;
+            } else {
+                return `${color.charAt(0).toUpperCase() + color.slice(1)} ${numbers[0]}-${numbers[numbers.length-1]}${jokerText}`;
+            }
+        } else if (isGroup) {
+            // Describe a group (e.g., "Three 8s")
+            const number = tiles.find(t => !t.isJoker)?.number;
+            const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
+            const jokers = tiles.filter(t => t.isJoker).length;
+            
+            if (number === undefined) {
+                return `All jokers`;
+            } else {
+                const colorsList = colors.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ');
+                const jokerText = jokers > 0 ? ` with ${jokers} joker${jokers > 1 ? 's' : ''}` : '';
+                return `${number}s in ${colorsList}${jokerText}`;
+            }
+        } else {
+            // Generic description for invalid sets
+            return `${tiles.length} tiles`;
+        }
+    }
+    
+    // Helper to check if a set is a run
+    isRunSet(tiles) {
+        if (tiles.length < 3) return false;
+        
+        // Check all non-joker tiles are the same color
+        const nonJokers = tiles.filter(t => !t.isJoker);
+        if (nonJokers.length === 0) return true; // All jokers can be anything
+        
+        const firstColor = nonJokers[0].color;
+        if (!nonJokers.every(t => t.color === firstColor)) return false;
+        
+        // Check numbers form a run (considering jokers can fill gaps)
+        const numbers = nonJokers.map(t => t.number).sort((a, b) => a - b);
+        const jokers = tiles.filter(t => t.isJoker).length;
+        
+        let gapsNeeded = 0;
+        for (let i = 1; i < numbers.length; i++) {
+            const gap = numbers[i] - numbers[i-1] - 1;
+            if (gap > 0) gapsNeeded += gap;
+        }
+        
+        return gapsNeeded <= jokers;
+    }
+    
+    // Helper to check if a set is a group
+    isGroupSet(tiles) {
+        if (tiles.length < 3 || tiles.length > 4) return false;
+        
+        // Check all non-joker tiles have the same number
+        const nonJokers = tiles.filter(t => !t.isJoker);
+        if (nonJokers.length === 0) return true; // All jokers can be anything
+        
+        const firstNumber = nonJokers[0].number;
+        if (!nonJokers.every(t => t.number === firstNumber)) return false;
+        
+        // Check all colors are different
+        const colors = nonJokers.map(t => t.color);
+        return new Set(colors).size === colors.length;
     }
     
     updateTimerDisplay(remainingTime) {

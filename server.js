@@ -723,6 +723,27 @@ class RummikubGame {
       this.gameLog.splice(0, this.gameLog.length - 50);
     }
   }
+  
+  // Method to find a tile by ID anywhere in the game (hand or board)
+  getTileById(tileId) {
+    // Look in players' hands
+    for (const player of this.players) {
+      const tile = player.hand.find(t => t.id === tileId);
+      if (tile) return tile;
+    }
+    
+    // Look on the board
+    for (const set of this.board) {
+      const tile = set.find(t => t.id === tileId);
+      if (tile) return tile;
+    }
+    
+    // Look in the deck (though this isn't likely to be found)
+    const tile = this.deck.find(t => t.id === tileId);
+    if (tile) return tile;
+    
+    return null;
+  }
 
   getGameState(playerId) {
     const player = this.players.find(p => p.id === playerId);

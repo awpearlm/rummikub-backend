@@ -610,12 +610,12 @@ body {
 }
 
 .deck-info {
-    color: #4a5568;
+    color: #FFF;
     font-weight: 500;
 }
 
 .deck-info i {
-    color: #667eea;
+    color: #FFF;
     margin-right: 8px;
 }
 
@@ -673,6 +673,15 @@ body {
     color: #a0aec0;
     font-size: 0.75rem;
     float: right;
+}
+
+.log-tile-details {
+    font-style: italic;
+    color: #a0aec0;
+    margin-top: 2px;
+    margin-left: 18px;
+    font-size: 0.75rem;
+    display: block;
 }
 
 /* Game Board */
