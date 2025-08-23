@@ -759,6 +759,7 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr; /* Increased to 4 columns instead of 2 */
     grid-gap: 15px;
+    align-content: center;
 }
 
 .start-game-container {
