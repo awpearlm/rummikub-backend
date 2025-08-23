@@ -15,14 +15,20 @@ class RummikubClient {
         // Add connection debugging
         this.socket.on('connect', () => {
             console.log('✅ Connected to server!', this.socket.id);
+            // Hide refresh button when connection is established
+            this.hideRefreshButton();
         });
         
         this.socket.on('connect_error', (error) => {
             console.error('❌ Connection error:', error);
+            // Show refresh button on connection error
+            this.showRefreshButton();
         });
         
         this.socket.on('disconnect', (reason) => {
             console.log('🔌 Disconnected:', reason);
+            // Show refresh button on disconnect
+            this.showRefreshButton();
         });
         
         this.gameState = null;
@@ -31,6 +37,11 @@ class RummikubClient {
         this.gameId = '';
         this.timerEnabled = false;
         this.turnTimeLimit = 120; // 2 minutes in seconds
+        
+        // Initialize activity tracking
+        this.lastActivityTime = Date.now();
+        this.inactivityTimeout = 60000; // 1 minute in milliseconds
+        this.inactivityCheckInterval = null;
         
         // Sound effects
         this.sounds = {};
@@ -86,6 +97,7 @@ class RummikubClient {
         addSafeEventListener('endTurnBtn', 'click', () => this.endTurn());
         addSafeEventListener('leaveGameBtn', 'click', () => this.leaveGame());
         addSafeEventListener('playSetBtn', 'click', () => this.playSelectedTiles());
+        addSafeEventListener('refreshGameBtn', 'click', () => this.refreshGameState());
         
         // Hand sorting events
         addSafeEventListener('sortByColorBtn', 'click', () => this.sortHandByColor());
@@ -99,6 +111,12 @@ class RummikubClient {
         addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
+        
+        // Track user activity on any interaction
+        document.addEventListener('click', () => this.resetInactivityTimer());
+        document.addEventListener('keydown', () => this.resetInactivityTimer());
+        document.addEventListener('mousemove', () => this.resetInactivityTimer());
+        document.addEventListener('touchstart', () => this.resetInactivityTimer());
         
         // Copy game ID to clipboard
         addSafeEventListener('copyGameIdBtn', 'click', () => {
@@ -123,6 +141,9 @@ class RummikubClient {
             this.showGameScreen();
             this.updateGameState();
             this.showNotification(`Game created! Share code: ${data.gameId}`, 'success');
+            
+            // Start tracking activity
+            this.startInactivityCheck();
         });
 
         this.socket.on('gameJoined', (data) => {
@@ -131,6 +152,9 @@ class RummikubClient {
             this.showGameScreen();
             this.updateGameState();
             this.showNotification('Joined game successfully!', 'success');
+            
+            // Start tracking activity
+            this.startInactivityCheck();
         });
 
         this.socket.on('playerJoined', (data) => {
@@ -149,6 +173,9 @@ class RummikubClient {
         this.socket.on('gameStateUpdate', (data) => {
             this.gameState = data.gameState;
             this.updateGameState();
+            
+            // Reset inactivity timer whenever we get a game state update
+            this.resetInactivityTimer();
         });
         
         // Timer synchronization
@@ -243,6 +270,9 @@ class RummikubClient {
             this.showNotification('Connection lost. Reconnecting...', 'error');
             // Stop any timers when disconnected
             this.clearTimer();
+            
+            // Show the refresh button when disconnected
+            this.showRefreshButton();
         });
 
         this.socket.on('reconnect', () => {
@@ -557,6 +587,8 @@ class RummikubClient {
 
     leaveGame() {
         if (confirm('Are you sure you want to leave the game?')) {
+            // Stop inactivity check
+            this.stopInactivityCheck();
             location.reload();
         }
     }
@@ -975,6 +1007,51 @@ class RummikubClient {
             screen.classList.remove('active');
             console.log('🫥 Removed active class from:', screen.id);
         });
+    }
+    
+    refreshGameState() {
+        if (!this.gameId) {
+            this.showNotification('No active game to refresh', 'error');
+            return;
+        }
+        
+        // Show loading overlay
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.style.position = 'fixed';
+        loadingOverlay.style.top = '0';
+        loadingOverlay.style.left = '0';
+        loadingOverlay.style.width = '100%';
+        loadingOverlay.style.height = '100%';
+        loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        loadingOverlay.style.display = 'flex';
+        loadingOverlay.style.alignItems = 'center';
+        loadingOverlay.style.justifyContent = 'center';
+        loadingOverlay.style.zIndex = '9999';
+        loadingOverlay.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                <div><i class="fas fa-sync fa-spin" style="font-size: 30px; color: #667eea; margin-bottom: 15px;"></i></div>
+                <div style="font-weight: bold;">Refreshing game state...</div>
+                <div style="margin-top: 10px; font-size: 14px; color: #718096;">Please wait...</div>
+            </div>
+        `;
+        document.body.appendChild(loadingOverlay);
+        
+        console.log('🔄 Requesting fresh game state for game:', this.gameId);
+        this.socket.emit('getGameState', { gameId: this.gameId });
+        
+        this.showNotification('Refreshing game state...', 'info');
+        
+        // Hide the refresh button
+        this.hideRefreshButton();
+        
+        // Reset the inactivity timer
+        this.resetInactivityTimer();
+        
+        // Set a timeout to remove the loading overlay after a short delay
+        setTimeout(() => {
+            document.body.removeChild(loadingOverlay);
+            this.showNotification('Game state refreshed!', 'success');
+        }, 2000);
     }
 
     updateGameState() {
@@ -2001,6 +2078,9 @@ class RummikubClient {
         // Reset game state
         this.gameState = null;
         this.selectedTiles = [];
+        
+        // Stop inactivity checker
+        this.stopInactivityCheck();
     }
 
     setupBoardTileDrag(tileElement, tile, setIndex, tileIndex) {
@@ -2797,6 +2877,57 @@ class RummikubClient {
         }
         
         console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
+    }
+    
+    // Methods for handling refresh button and inactivity
+    showRefreshButton() {
+        const refreshBtn = document.getElementById('refreshGameBtn');
+        if (refreshBtn) {
+            refreshBtn.classList.remove('hidden');
+        }
+    }
+    
+    hideRefreshButton() {
+        const refreshBtn = document.getElementById('refreshGameBtn');
+        if (refreshBtn) {
+            refreshBtn.classList.add('hidden');
+        }
+    }
+    
+    startInactivityCheck() {
+        // Stop any existing interval first
+        this.stopInactivityCheck();
+        
+        // Start the inactivity timer
+        this.resetInactivityTimer();
+        
+        // Check for inactivity every 10 seconds
+        this.inactivityCheckInterval = setInterval(() => {
+            const now = Date.now();
+            const inactiveDuration = now - this.lastActivityTime;
+            
+            // If inactive for more than the timeout, show the refresh button
+            if (inactiveDuration > this.inactivityTimeout) {
+                console.log('⚠️ User inactive for too long, showing refresh button');
+                this.showRefreshButton();
+            }
+        }, 10000);
+        
+        console.log('🔄 Inactivity checker started');
+    }
+    
+    stopInactivityCheck() {
+        if (this.inactivityCheckInterval) {
+            clearInterval(this.inactivityCheckInterval);
+            this.inactivityCheckInterval = null;
+            console.log('🛑 Inactivity checker stopped');
+        }
+    }
+    
+    resetInactivityTimer() {
+        this.lastActivityTime = Date.now();
+        // Hide the refresh button if it was shown due to inactivity
+        this.hideRefreshButton();
     }
 }
 
