@@ -710,7 +710,7 @@ body {
 }
 
 .board-area {
-    min-height: 370px;
+    min-height: 450px;
     max-height: 500px;
     background: #f8f7f5;
     border-radius: 12px;
