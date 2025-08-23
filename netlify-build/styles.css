@@ -259,8 +259,6 @@ body {
 
 .timer-option {
     display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .option-label {

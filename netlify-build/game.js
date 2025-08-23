@@ -31,6 +31,13 @@ class RummikubClient {
         this.gameId = '';
         this.timerEnabled = false;
         this.turnTimeLimit = 120; // 2 minutes in seconds
+        
+        // Sound effects
+        this.sounds = {
+            pickupTile: new Audio('sounds/tile-pickup.mp3'),
+            placeTile: new Audio('sounds/tile-place.mp3')
+        };
+        this.soundEnabled = true;
         this.timerInterval = null;
         this.remainingTime = this.turnTimeLimit;
         this.hasBoardChanged = false;
@@ -403,11 +410,20 @@ class RummikubClient {
         this.socket.emit('startGame');
     }
 
+    // Play sound effects
+    playSound(sound) {
+        if (this.soundEnabled && this.sounds[sound]) {
+            this.sounds[sound].currentTime = 0;
+            this.sounds[sound].play().catch(e => console.log('Sound playback prevented:', e));
+        }
+    }
+
     drawTile() {
         if (!this.isMyTurn()) {
             this.showNotification("It's not your turn!", 'error');
             return;
         }
+        this.playSound('pickupTile');
         this.socket.emit('drawTile');
     }
 
@@ -482,6 +498,8 @@ class RummikubClient {
             this.showNotification('Select at least 3 tiles to play a set', 'error');
             return;
         }
+        
+        this.playSound('placeTile');
         
         // Get selected tile objects
         const selectedTileObjects = this.selectedTiles.map(id => 
@@ -1191,6 +1209,9 @@ class RummikubClient {
             }));
             tileElement.classList.add('dragging');
             
+            // Play tile pickup sound when starting to drag
+            this.playSound('pickupTile');
+            
             // Store the original index for reordering
             this.draggedTileIndex = index;
         });
@@ -1198,6 +1219,12 @@ class RummikubClient {
         tileElement.addEventListener('dragend', (e) => {
             tileElement.classList.remove('dragging');
             this.clearDropIndicators();
+            
+            // Play placement sound on drop if not handled elsewhere
+            // (This ensures sound plays even if drop isn't on a valid target)
+            if (!e.dataTransfer.dropEffect || e.dataTransfer.dropEffect === 'none') {
+                this.playSound('placeTile');
+            }
         });
         
         tileElement.addEventListener('dragover', (e) => {
@@ -1244,6 +1271,7 @@ class RummikubClient {
                 
                 if (dragData.type === 'board-tile') {
                     this.handleBoardTileToHand(dragData);
+                    // Note: handleBoardTileToHand already plays the pickupTile sound
                 }
             } catch (error) {
                 console.log('No drag data or non-board tile dropped on hand');
@@ -1271,6 +1299,7 @@ class RummikubClient {
             
             if (draggedIndex !== slotIndex) {
                 this.moveToEmptySlot(draggedIndex, slotIndex);
+                // Note: moveToEmptySlot already plays the placeTile sound
             }
         });
     }
@@ -1285,6 +1314,9 @@ class RummikubClient {
         
         // Sync back to game state
         this.syncGridLayoutToGameState();
+        
+        // Play tile placement sound
+        this.playSound('placeTile');
         
         this.renderPlayerHand();
         this.showNotification('Tile moved', 'info');
@@ -1325,6 +1357,9 @@ class RummikubClient {
         
         // Sync back to game state
         this.syncGridLayoutToGameState();
+        
+        // Play tile placement sound
+        this.playSound('placeTile');
         
         this.renderPlayerHand();
         this.showNotification('Tiles reordered', 'info');
@@ -1466,9 +1501,11 @@ class RummikubClient {
         if (index === -1) {
             this.selectedTiles.push(tileId);
             tileElement.classList.add('selected');
+            this.playSound('pickupTile');
         } else {
             this.selectedTiles.splice(index, 1);
             tileElement.classList.remove('selected');
+            this.playSound('placeTile');
         }
         
         this.updatePlayButton();
@@ -1772,11 +1809,17 @@ class RummikubClient {
                 sourceTileIndex: tileIndex
             }));
             tileElement.classList.add('dragging');
+            
+            // Play tile pickup sound when starting to drag
+            this.playSound('pickupTile');
         });
         
         tileElement.addEventListener('dragend', () => {
             tileElement.style.cursor = 'grab';
             tileElement.classList.remove('dragging');
+            
+            // Play tile placement sound when drag ends
+            this.playSound('placeTile');
         });
     }
 
@@ -2166,6 +2209,9 @@ class RummikubClient {
         };
 
         console.log('🔄 Moving tile from board back to hand:', dragData.tile);
+        
+        // Play tile pickup sound
+        this.playSound('pickupTile');
         
         // Add the tile to the local hand immediately for better visual feedback
         // This will be overwritten when the server responds with the updated state
