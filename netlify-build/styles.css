@@ -155,6 +155,7 @@ body {
     padding: 10px 4px 10px 10px;
     border-radius: 12px;
     min-height: 30px;
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Game Mode Selection */
@@ -529,8 +530,7 @@ body {
     grid-template-columns: 1fr; /* Simplified to a single column without players panel and chat */
     gap: 20px;
     padding: 30px;
-    height: 510px; /* Slightly increased to provide more space */
-    max-height: 510px;
+    height: 550px; /* Slightly increased to provide more space */
     overflow: hidden;
 }
 
