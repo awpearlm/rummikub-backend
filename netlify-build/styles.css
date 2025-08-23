@@ -1324,6 +1324,28 @@ body {
     display: none;
 }
 
+/* Animation for newly added tiles */
+@keyframes newTileAppear {
+    0% {
+        transform: scale(0.1) translateY(-20px);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.15) translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-new-tile {
+    animation: newTileAppear 0.8s ease forwards;
+    z-index: 10;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6) !important; /* Gold glow effect */
+}
+
 .tile.board-tile {
     cursor: default;
 }

@@ -32,6 +32,7 @@ class RummikubClient {
         });
         
         this.gameState = null;
+        this.previousBoardState = null; // Track previous board state for animations
         this.selectedTiles = [];
         this.playerName = '';
         this.gameId = '';
@@ -171,6 +172,11 @@ class RummikubClient {
         
         // Add explicit listener for gameStateUpdate events
         this.socket.on('gameStateUpdate', (data) => {
+            // Store the previous board state before updating
+            if (this.gameState && this.gameState.board) {
+                this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
+            }
+            
             this.gameState = data.gameState;
             this.updateGameState();
             
@@ -1654,6 +1660,12 @@ class RummikubClient {
             column.className = `board-column column-${i+1}`;
         });
         
+        // Check if this is not my turn and we have a previous board state to compare with
+        const shouldAnimateNewTiles = !this.isMyTurn() && this.previousBoardState !== null;
+        
+        // Keep track of new tiles found to play sound effect
+        let newTilesFound = false;
+        
         this.gameState.board.forEach((set, setIndex) => {
             const setElement = document.createElement('div');
             setElement.className = 'board-set';
@@ -1674,6 +1686,15 @@ class RummikubClient {
                 // Check if this tile was already on the board at the start of the turn (committed)
                 if (this.isTileCommitted(tile, setIndex, tileIndex)) {
                     tileElement.classList.add('committed');
+                }
+                
+                // Animate new tiles if we're not on our turn
+                if (shouldAnimateNewTiles) {
+                    const isNewTile = this.isNewlyAddedTile(tile, setIndex, tileIndex);
+                    if (isNewTile) {
+                        tileElement.classList.add('animate-new-tile');
+                        newTilesFound = true;
+                    }
                 }
                 
                 // Make board tiles draggable if it's the player's turn
@@ -1712,6 +1733,11 @@ class RummikubClient {
         columns.forEach(column => {
             boardElement.appendChild(column);
         });
+        
+        // Play a sound for new tiles if any were found
+        if (shouldAnimateNewTiles && newTilesFound) {
+            this.playSound('newTilePlaced');
+        }
     }
 
     createTileElement(tile, isDraggable = false) {
@@ -2706,6 +2732,37 @@ class RummikubClient {
     }
 
     // Check if a tile was already on the board at the start of the current turn
+    // Helper to check if a tile was just added to the board in this update
+    isNewlyAddedTile(tile, setIndex, tileIndex) {
+        if (!this.previousBoardState) {
+            return false;
+        }
+        
+        // Check if this is a new set
+        if (setIndex >= this.previousBoardState.length) {
+            return true;
+        }
+        
+        // Check if this is a new tile in an existing set
+        if (this.previousBoardState[setIndex] && tileIndex >= this.previousBoardState[setIndex].length) {
+            return true;
+        }
+        
+        // Check if this is a different tile at the same position
+        if (this.previousBoardState[setIndex] && this.previousBoardState[setIndex][tileIndex]) {
+            const prevTile = this.previousBoardState[setIndex][tileIndex];
+            // Compare tile properties to see if it's different
+            if (prevTile.id !== tile.id || 
+                prevTile.color !== tile.color || 
+                prevTile.number !== tile.number || 
+                prevTile.isJoker !== tile.isJoker) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
     isTileCommitted(tile, setIndex, tileIndex) {
         if (!this.gameState.boardSnapshot || !tile || !tile.id) {
             return false;
