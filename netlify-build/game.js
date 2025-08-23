@@ -453,8 +453,10 @@ class RummikubClient {
             
             // Use the most reliable sound files
             this.sounds = {
-                pickupTile: new Audio(`${soundPath}new_tile-pickup.mp3`),
-                placeTile: new Audio(`${soundPath}new_tile-place.mp3`)
+                pickupTile: new Audio(`${soundPath}tile-pickup.mp3`),
+                placeTile: new Audio(`${soundPath}tile-place.mp3`),
+                turnStart: new Audio(`${soundPath}turn-notification.mp3`),
+                timeUp: new Audio(`${soundPath}time-up.mp3`)
             };
             
             // Preload sounds
@@ -900,6 +902,62 @@ class RummikubClient {
         
         return result;
     }
+    
+    // Show turn notification when it becomes the player's turn
+    showTurnNotification(playerName) {
+        // Update the player name in the notification
+        const nameElement = document.getElementById('turnNotificationPlayerName');
+        nameElement.textContent = playerName === this.getMyName() ? "Your Turn!" : `${playerName}'s Turn!`;
+        
+        console.log(`🎮 Showing turn notification for: ${playerName}`);
+        
+        // Get the overlay element
+        const overlay = document.getElementById('turnNotificationOverlay');
+        
+        // First make sure it's not hidden
+        overlay.classList.remove('hidden');
+        
+        // Add a slight delay to ensure CSS transition works properly
+        setTimeout(() => {
+            // Show the notification by adding the 'show' class
+            overlay.classList.add('show');
+            
+            // Play a notification sound
+            this.playSound('turnStart');
+            
+            // Hide the notification after the animation completes
+            // Animation duration is 2.5s in the CSS
+            setTimeout(() => {
+                this.hideTurnNotification();
+            }, 2500);
+        }, 50);
+        
+        return new Promise(resolve => {
+            // Resolve the promise after the notification animation completes
+            setTimeout(resolve, 2550);
+        });
+    }
+    
+    // Hide the turn notification overlay
+    hideTurnNotification() {
+        const overlay = document.getElementById('turnNotificationOverlay');
+        overlay.classList.remove('show');
+        
+        // Add a delay before hiding completely to allow exit animation to finish
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 500);
+    }
+    
+    // Get the current player's name
+    getMyName() {
+        if (!this.gameState || !this.gameState.players || !this.socket) {
+            return 'You';
+        }
+        
+        const myPlayer = this.gameState.players.find(p => p.id === this.socket.id);
+        return myPlayer ? myPlayer.name : 'You';
+    }
 
     showWelcomeScreen() {
         this.hideAllScreens();
@@ -1128,10 +1186,19 @@ class RummikubClient {
                 // Check if the active player has changed
                 const currentPlayerId = currentPlayer ? currentPlayer.id : null;
                 
-                // If the current player has changed, note it
+                // If the current player has changed
                 if (currentPlayerId !== this.lastActivePlayerId) {
                     this.lastActivePlayerId = currentPlayerId;
                     console.log('⏰ Turn change detected for: ' + currentPlayer.name);
+                    
+                    // Show turn notification if it's my turn or another player's turn
+                    if (this.isMyTurn() || this.gameState.started) {
+                        // Show the notification and wait for it to complete before starting timer
+                        this.showTurnNotification(currentPlayer.name)
+                            .then(() => {
+                                console.log('⏰ Turn notification complete, server will update timer');
+                            });
+                    }
                 }
                 
                 // Only show the timer, server will send timer updates

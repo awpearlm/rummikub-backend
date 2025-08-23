@@ -615,23 +615,26 @@ class RummikubGame {
     const currentPlayer = this.getCurrentPlayer();
     console.log(`⏰ Starting timer for ${currentPlayer ? currentPlayer.name : 'unknown'}, ${this.turnTimeLimit}s limit`);
     
-    // Send initial timer update immediately
-    this.broadcastTimerUpdate(this.turnTimeLimit);
-    
-    // Create an interval to broadcast the timer updates
-    this.turnTimerInterval = setInterval(() => {
-      // Calculate remaining time
-      const elapsedSeconds = Math.floor((Date.now() - this.turnStartTime) / 1000);
-      const remainingTime = Math.max(0, this.turnTimeLimit - elapsedSeconds);
+    // Delay the initial timer broadcast to allow for the client-side animation (2.5s)
+    setTimeout(() => {
+      // Send initial timer update after the notification animation would be complete
+      this.broadcastTimerUpdate(this.turnTimeLimit);
       
-      // Broadcast timer update to all players
-      this.broadcastTimerUpdate(remainingTime);
-      
-      // If time is up, handle it
-      if (remainingTime <= 0) {
-        this.handleTimeUp();
-      }
-    }, 1000); // Update every second
+      // Create an interval to broadcast the timer updates
+      this.turnTimerInterval = setInterval(() => {
+        // Calculate remaining time
+        const elapsedSeconds = Math.floor((Date.now() - this.turnStartTime - 2500) / 1000); // Account for animation delay
+        const remainingTime = Math.max(0, this.turnTimeLimit - elapsedSeconds);
+        
+        // Broadcast timer update to all players
+        this.broadcastTimerUpdate(remainingTime);
+        
+        // If time is up, handle it
+        if (remainingTime <= 0) {
+          this.handleTimeUp();
+        }
+      }, 1000); // Update every second
+    }, 2500); // Wait for notification animation to complete
   }
   
   // Clear the turn timer

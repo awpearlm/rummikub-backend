@@ -1564,3 +1564,80 @@ body {
     background-color: rgba(244, 67, 54, 0.15) !important;
     border: 2px dashed #f44336 !important;
 }
+
+/* Turn Notification Overlay */
+.turn-notification-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.notification-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.turn-notification-overlay.show .notification-scrim {
+    opacity: 1;
+}
+
+.turn-notification-card {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transform: translateX(-100vw);
+    position: relative;
+    z-index: 1001;
+    min-width: 320px;
+}
+
+.turn-notification-overlay.show .turn-notification-card {
+    animation: slideInOut 2.5s ease forwards;
+}
+
+.notification-icon {
+    font-size: 48px;
+    color: #4CAF50;
+    margin-bottom: 20px;
+}
+
+.turn-notification-card h2 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.turn-notification-card p {
+    font-size: 16px;
+    color: #666;
+}
+
+@keyframes slideInOut {
+    0% {
+        transform: translateX(-100vw);
+    }
+    20% {
+        transform: translateX(0);
+    }
+    80% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(100vw);
+    }
+}
