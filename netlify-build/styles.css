@@ -151,6 +151,12 @@ body {
     min-height: auto;
 }
 
+#copyGameIdBtn{
+    padding: 10px 4px 10px 10px;
+    border-radius: 12px;
+    min-height: 30px;
+}
+
 /* Game Mode Selection */
 .game-mode-selection {
     margin: 30px 0;
@@ -690,7 +696,7 @@ body {
 }
 
 .board-area {
-    min-height: 300px;
+    min-height: 370px;
     max-height: 500px;
     background: #f8f7f5;
     border-radius: 12px;
@@ -768,7 +774,7 @@ body {
 
 .new-set-drop-zone {
     position: relative;
-    padding: 20px;
+    padding: 26px;
     margin: 10px 0;
     border: 2px dashed #cbd5e0;
     /* Removed grid-column span to fit within a single column */
