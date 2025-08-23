@@ -33,10 +33,9 @@ class RummikubClient {
         this.turnTimeLimit = 120; // 2 minutes in seconds
         
         // Sound effects
-        this.sounds = {
-            pickupTile: new Audio('sounds/tile-pickup.mp3'),
-            placeTile: new Audio('sounds/tile-place.mp3')
-        };
+        this.sounds = {};
+        // Initialize sounds only after user interaction
+        this.soundsInitialized = false;
         this.soundEnabled = true;
         this.timerInterval = null;
         this.remainingTime = this.turnTimeLimit;
@@ -68,9 +67,18 @@ class RummikubClient {
         }
         
         // Welcome screen events
-        document.getElementById('createGameBtn').addEventListener('click', () => this.createGame());
-        document.getElementById('joinGameBtn').addEventListener('click', () => this.showJoinForm());
-        document.getElementById('joinGameSubmit').addEventListener('click', () => this.joinGame());
+        document.getElementById('createGameBtn').addEventListener('click', () => {
+            this.initializeSounds(); // Initialize sounds on first user interaction
+            this.createGame();
+        });
+        document.getElementById('joinGameBtn').addEventListener('click', () => {
+            this.initializeSounds(); // Initialize sounds on first user interaction
+            this.showJoinForm();
+        });
+        document.getElementById('joinGameSubmit').addEventListener('click', () => {
+            this.initializeSounds(); // Initialize sounds on first user interaction
+            this.joinGame();
+        });
         
         // Game screen events
         document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
@@ -411,10 +419,34 @@ class RummikubClient {
     }
 
     // Play sound effects
+    initializeSounds() {
+        if (this.soundsInitialized) return;
+        
+        this.sounds = {
+            pickupTile: new Audio('sounds/tile-pickup.mp3'),
+            placeTile: new Audio('sounds/tile-place.mp3')
+        };
+        
+        // Preload sounds
+        Object.values(this.sounds).forEach(sound => {
+            sound.load();
+        });
+        
+        this.soundsInitialized = true;
+        console.log('🔊 Sound effects initialized');
+    }
+    
+    // Play sound effects
     playSound(sound) {
+        if (!this.soundsInitialized) {
+            this.initializeSounds();
+        }
+        
         if (this.soundEnabled && this.sounds[sound]) {
-            this.sounds[sound].currentTime = 0;
-            this.sounds[sound].play().catch(e => console.log('Sound playback prevented:', e));
+            // Create a new audio element each time for better reliability
+            const audioElement = this.sounds[sound].cloneNode();
+            audioElement.volume = 0.7; // Set volume to 70%
+            audioElement.play().catch(e => console.log('Sound playback prevented:', e));
         }
     }
 
@@ -1050,6 +1082,10 @@ class RummikubClient {
             const timerElement = document.getElementById('turnTimer');
             if (this.timerEnabled) {
                 timerElement.classList.remove('hidden');
+                
+                // Always reset the timer to the turn time limit when the current player changes
+                this.remainingTime = this.turnTimeLimit;
+                this.updateTimerDisplay();
                 
                 // Start the timer if it's my turn
                 if (this.isMyTurn()) {
