@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-title" content="Rummikub">
     <meta name="description" content="Play the classic tile-laying game with Jillian and have her yell at you when you win!">
     
-        <link rel="stylesheet" href="styles.css?v=48">
+        <link rel="stylesheet" href="styles.css?v=49">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -183,10 +183,23 @@
 
             <!-- Player Hand -->
             <div class="player-hand-section">
-                <!-- Floating Game Log -->
-                <div class="game-log floating-left">
-                    <h4><i class="fas fa-history"></i> Game Log</h4>
-                    <div id="gameLogMessages" class="game-log-messages"></div>
+                <!-- Game Log Button -->
+                <button id="gameLogBtn" class="game-log-btn">
+                    <i class="fas fa-history"></i>
+                </button>
+                
+                <!-- Game Log Modal -->
+                <div id="gameLogModal" class="game-log-modal">
+                    <div class="game-log-scrim"></div>
+                    <div class="game-log">
+                        <div class="game-log-header">
+                            <h4><i class="fas fa-history"></i> Game Log</h4>
+                            <button id="closeGameLogBtn" class="close-game-log-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="gameLogMessages" class="game-log-messages"></div>
+                    </div>
                 </div>
                 
                 <div class="hand-header">
@@ -274,6 +287,6 @@
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="safe-events.js?v=1"></script>
-    <script src="game.js?v=59"></script>
+    <script src="game.js?v=60"></script>
 </body>
 </html>

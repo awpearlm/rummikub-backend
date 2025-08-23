@@ -969,34 +969,114 @@ body {
     width: 100%;
 }
 
-.game-log.floating-left {
-    position: absolute;
+/* Game Log Modal */
+.game-log-btn {
+    position: fixed;
     left: 20px;
+    top: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667eea;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s ease;
+}
+
+.game-log-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.game-log-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 2000;
+}
+
+.game-log-modal.show {
+    display: block;
+}
+
+.game-log-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.game-log {
+    position: absolute;
     top: 50%;
-    transform: translateY(-50%);
-    margin: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: white;
     border-radius: 10px;
-    padding: 15px;
+    padding: 20px;
     border: 1px solid #e2e8f0;
-    width: 300px;
-    height: 280px;
+    width: 90%;
+    max-width: 500px;
+    height: 400px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 100;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.game-log.floating-left h4 {
+.game-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.game-log h4 {
     color: #4a5568;
-    margin-bottom: 10px;
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: 500;
+    margin: 0;
 }
 
-.game-log.floating-left h4 i {
+.game-log h4 i {
     color: #667eea;
     margin-right: 8px;
+}
+
+.close-game-log-btn {
+    background: transparent;
+    border: none;
+    color: #718096;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-game-log-btn:hover {
+    background: #f7fafc;
+    color: #4a5568;
+}
+
+.game-log-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
 .game-log.floating-left .game-log-messages {

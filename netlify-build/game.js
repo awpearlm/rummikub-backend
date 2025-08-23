@@ -100,6 +100,15 @@ class RummikubClient {
         addSafeEventListener('playSetBtn', 'click', () => this.playSelectedTiles());
         addSafeEventListener('refreshGameBtn', 'click', () => this.refreshGameState());
         
+        // Game log modal events
+        addSafeEventListener('gameLogBtn', 'click', () => this.openGameLogModal());
+        addSafeEventListener('closeGameLogBtn', 'click', () => this.closeGameLogModal());
+        addSafeEventListener('gameLogModal', 'click', (event) => {
+            if (event.target.classList.contains('game-log-scrim')) {
+                this.closeGameLogModal();
+            }
+        });
+        
         // Hand sorting events
         addSafeEventListener('sortByColorBtn', 'click', () => this.sortHandByColor());
         addSafeEventListener('sortByNumberBtn', 'click', () => this.sortHandByNumber());
@@ -3058,6 +3067,29 @@ setInterval(() => {
         console.log(tip);
     }
 }, 30000); // Every 30 seconds
+
+// Game Log Modal methods
+function openGameLogModal() {
+    const modal = document.getElementById('gameLogModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Prevent scrolling of background content when modal is open
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeGameLogModal() {
+    const modal = document.getElementById('gameLogModal');
+    if (modal) {
+        modal.classList.remove('show');
+        // Restore scrolling when modal is closed
+        document.body.style.overflow = '';
+    }
+}
+
+// Add these methods to the RummikubClient prototype
+RummikubClient.prototype.openGameLogModal = openGameLogModal;
+RummikubClient.prototype.closeGameLogModal = closeGameLogModal;
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
