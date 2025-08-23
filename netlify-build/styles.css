@@ -388,48 +388,112 @@ body {
     color: white;
 }
 
-.game-info h2 {
+.game-logo h1 {
     font-size: 1.5rem;
-    margin-bottom: 5px;
+    font-weight: 700;
+    margin: 0;
 }
 
-#copyGameIdBtn {
-    margin-left: 8px;
-    padding: 2px 6px;
-    font-size: 0.8rem;
-    vertical-align: middle;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    transition: all 0.2s ease;
+.game-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
-#copyGameIdBtn:hover {
+.room-code, .turn-info, .timer, .deck-info {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.room-code, .deck-info, .timer {
+    font-weight: 500;
+}
+
+.game-info i {
+    margin-right: 8px;
+}
+
+.turn-info {
+    font-weight: 600;
+}
+
+.players-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.players-header {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.players-header i {
+    margin-right: 6px;
+}
+
+.players-list-horizontal {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    max-width: 500px;
+    padding: 5px;
+}
+
+.players-list-horizontal::-webkit-scrollbar {
+    height: 4px;
+}
+
+.players-list-horizontal::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
+    border-radius: 4px;
 }
 
-.turn-indicator {
-    font-size: 1rem;
-    opacity: 0.9;
+.players-list-horizontal .player-item {
     display: flex;
     align-items: center;
-    gap: 0px;
-}
-
-.turn-timer {
-    display: flex;
-    align-items: center;
-    background-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
     padding: 4px 10px;
     border-radius: 15px;
-    margin-left: 15px;
+    min-width: auto;
+    margin-bottom: 0;
+    box-shadow: none;
+    white-space: nowrap;
+}
+
+.players-list-horizontal .player-item.current-turn {
+    background: rgba(72, 187, 120, 0.4);
+    border-left: 2px solid #48bb78;
+}
+
+.players-list-horizontal .player-avatar {
+    width: 25px;
+    height: 25px;
+    font-size: 10px;
+    margin-right: 8px;
+}
+
+.players-list-horizontal .player-info {
     font-size: 0.9rem;
+}
+
+.players-list-horizontal .player-name {
     color: white;
 }
 
-.turn-timer i {
-    margin-right: 5px;
+.players-list-horizontal .player-stats {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.game-actions {
+    display: flex;
+    gap: 10px;
 }
 
 /* Timer color states */
@@ -455,7 +519,7 @@ body {
 
 .game-layout {
     display: grid;
-    grid-template-columns: 250px 1fr 300px;
+    grid-template-columns: 1fr; /* Simplified to a single column without players panel and chat */
     gap: 20px;
     padding: 30px;
     height: 510px; /* Slightly increased to provide more space */
@@ -610,6 +674,7 @@ body {
     background: #f7fafc;
     border-radius: 15px;
     padding: 20px;
+    width: 100%; /* Take full width now that we've removed other panels */
 }
 
 .board-header {
@@ -650,7 +715,7 @@ body {
 
 #gameBoard {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr; /* Increased to 4 columns instead of 2 */
     grid-gap: 15px;
 }
 

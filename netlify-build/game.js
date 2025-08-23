@@ -1154,13 +1154,13 @@ class RummikubClient {
             const botIcon = isBot ? '<i class="fas fa-robot" style="margin-left: 5px; color: #ed8936;"></i>' : '';
             const playerLabel = isMe ? '(You)' : '';
             
+            // Simplified layout for horizontal player list
             playerDiv.innerHTML = `
                 <div class="player-avatar ${isBot ? 'bot-avatar' : ''}">${player.name.charAt(0).toUpperCase()}</div>
                 <div class="player-info">
                     <div class="player-name">${player.name} ${playerLabel} ${botIcon}</div>
                     <div class="player-stats">
                         ${player.handSize} tiles
-                        ${player.hasPlayedInitial ? '✓ Played initial' : ''}
                     </div>
                 </div>
             `;
@@ -1534,12 +1534,17 @@ class RummikubClient {
         
         boardElement.innerHTML = '';
         
-        // Create a two-column layout by distributing sets evenly
-        const leftColumn = document.createElement('div');
-        leftColumn.className = 'board-column left-column';
+        // Create a four-column layout by distributing sets evenly
+        const columns = [
+            document.createElement('div'),
+            document.createElement('div'),
+            document.createElement('div'),
+            document.createElement('div')
+        ];
         
-        const rightColumn = document.createElement('div');
-        rightColumn.className = 'board-column right-column';
+        columns.forEach((column, i) => {
+            column.className = `board-column column-${i+1}`;
+        });
         
         this.gameState.board.forEach((set, setIndex) => {
             const setElement = document.createElement('div');
@@ -1571,31 +1576,34 @@ class RummikubClient {
                 setElement.appendChild(tileElement);
             });
             
-            // Distribute sets evenly between columns
-            if (setIndex % 2 === 0) {
-                leftColumn.appendChild(setElement);
-            } else {
-                rightColumn.appendChild(setElement);
-            }
+            // Distribute sets evenly between 4 columns (modulo 4)
+            const columnIndex = setIndex % 4;
+            columns[columnIndex].appendChild(setElement);
         });
         
-        // Add a drop zone for creating new sets in the column with fewer sets
+        // Add a drop zone for creating new sets in the column with fewest sets
         if (this.isMyTurn()) {
             const newSetZone = document.createElement('div');
             newSetZone.className = 'new-set-drop-zone';
             newSetZone.innerHTML = '<p>Drop tiles here to create a new set</p>';
             this.setupNewSetDropZone(newSetZone);
             
-            // Determine which column has fewer sets and add the drop zone there
-            if (leftColumn.childElementCount <= rightColumn.childElementCount) {
-                leftColumn.appendChild(newSetZone);
-            } else {
-                rightColumn.appendChild(newSetZone);
+            // Find the column with the fewest sets
+            let minColumnIndex = 0;
+            for (let i = 1; i < columns.length; i++) {
+                if (columns[i].childElementCount < columns[minColumnIndex].childElementCount) {
+                    minColumnIndex = i;
+                }
             }
+            
+            // Add the new set drop zone to the column with fewest sets
+            columns[minColumnIndex].appendChild(newSetZone);
         }
         
-        boardElement.appendChild(leftColumn);
-        boardElement.appendChild(rightColumn);
+        // Add all columns to the board
+        columns.forEach(column => {
+            boardElement.appendChild(column);
+        });
     }
 
     createTileElement(tile, isDraggable = false) {
