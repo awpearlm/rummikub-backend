@@ -317,6 +317,13 @@ class RummikubClient {
             }
             
             this.gameState = data.gameState;
+            
+            // Check if it's now the player's turn and reset hasPlayedTilesThisTurn
+            const isNowMyTurn = this.isMyTurn();
+            if (isNowMyTurn) {
+                this.hasPlayedTilesThisTurn = false;
+            }
+            
             this.updateGameState();
             this.showNotification(`Bot played: ${data.moveDescription}`, 'info');
             
@@ -2845,6 +2852,11 @@ class RummikubClient {
     describeTileSet(tiles) {
         if (!tiles || tiles.length === 0) return '';
         
+        // Ensure all tiles have valid properties
+        if (!tiles.every(tile => tile && typeof tile === 'object')) {
+            return `${tiles.length} tiles`;
+        }
+        
         // Check if it's a run (consecutive numbers, same color)
         const isRun = this.isRunSet(tiles);
         
@@ -2853,13 +2865,14 @@ class RummikubClient {
         
         if (isRun) {
             // Describe a run (e.g., "Red 5-7")
-            const color = tiles[0].color;
+            // Safely access color
+            const color = tiles[0] && tiles[0].color ? tiles[0].color : 'unknown';
             const numbers = tiles
-                .filter(t => !t.isJoker) // Exclude jokers for number determination
+                .filter(t => t && !t.isJoker) // Exclude jokers for number determination
                 .map(t => t.number)
                 .sort((a, b) => a - b);
             
-            const jokers = tiles.filter(t => t.isJoker).length;
+            const jokers = tiles.filter(t => t && t.isJoker).length;
             const jokerText = jokers > 0 ? ` with ${jokers} joker${jokers > 1 ? 's' : ''}` : '';
             
             if (numbers.length === 0) {
@@ -2871,16 +2884,19 @@ class RummikubClient {
             }
         } else if (isGroup) {
             // Describe a group (e.g., "Three 8s")
-            const number = tiles.find(t => !t.isJoker)?.number;
-            const colors = tiles.filter(t => !t.isJoker).map(t => t.color);
-            const jokers = tiles.filter(t => t.isJoker).length;
+            const number = tiles.find(t => t && !t.isJoker)?.number;
+            const colors = tiles.filter(t => t && !t.isJoker).map(t => t.color || 'unknown');
+            const jokers = tiles.filter(t => t && t.isJoker).length;
             
             if (number === undefined) {
                 return `All jokers`;
             } else {
-                const colorsList = colors.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ');
+                const colorsList = colors
+                    .filter(c => c) // Filter out null/undefined colors
+                    .map(c => c.charAt(0).toUpperCase() + c.slice(1))
+                    .join(', ');
                 const jokerText = jokers > 0 ? ` with ${jokers} joker${jokers > 1 ? 's' : ''}` : '';
-                return `${number}s in ${colorsList}${jokerText}`;
+                return `${number}s in ${colorsList || 'unknown colors'}${jokerText}`;
             }
         } else {
             // Generic description for invalid sets
@@ -2890,18 +2906,24 @@ class RummikubClient {
     
     // Helper to check if a set is a run
     isRunSet(tiles) {
-        if (tiles.length < 3) return false;
+        if (!tiles || tiles.length < 3) return false;
+        
+        // Validate tiles have the necessary properties
+        if (!tiles.every(t => t && typeof t === 'object')) return false;
         
         // Check all non-joker tiles are the same color
-        const nonJokers = tiles.filter(t => !t.isJoker);
+        const nonJokers = tiles.filter(t => t && !t.isJoker);
         if (nonJokers.length === 0) return true; // All jokers can be anything
         
+        if (!nonJokers[0] || !nonJokers[0].color) return false;
         const firstColor = nonJokers[0].color;
-        if (!nonJokers.every(t => t.color === firstColor)) return false;
+        if (!nonJokers.every(t => t && t.color === firstColor)) return false;
         
         // Check numbers form a run (considering jokers can fill gaps)
-        const numbers = nonJokers.map(t => t.number).sort((a, b) => a - b);
-        const jokers = tiles.filter(t => t.isJoker).length;
+        const numbers = nonJokers.filter(t => t && t.number != null).map(t => t.number).sort((a, b) => a - b);
+        if (numbers.length === 0) return true; // All valid tiles are jokers
+        
+        const jokers = tiles.filter(t => t && t.isJoker).length;
         
         let gapsNeeded = 0;
         for (let i = 1; i < numbers.length; i++) {
@@ -2914,17 +2936,22 @@ class RummikubClient {
     
     // Helper to check if a set is a group
     isGroupSet(tiles) {
-        if (tiles.length < 3 || tiles.length > 4) return false;
+        if (!tiles || tiles.length < 3 || tiles.length > 4) return false;
+        
+        // Validate tiles have the necessary properties
+        if (!tiles.every(t => t && typeof t === 'object')) return false;
         
         // Check all non-joker tiles have the same number
-        const nonJokers = tiles.filter(t => !t.isJoker);
+        const nonJokers = tiles.filter(t => t && !t.isJoker);
         if (nonJokers.length === 0) return true; // All jokers can be anything
         
+        if (!nonJokers[0] || nonJokers[0].number == null) return false;
         const firstNumber = nonJokers[0].number;
-        if (!nonJokers.every(t => t.number === firstNumber)) return false;
+        if (!nonJokers.every(t => t && t.number === firstNumber)) return false;
         
         // Check all colors are different
-        const colors = nonJokers.map(t => t.color);
+        const colors = nonJokers.filter(t => t && t.color).map(t => t.color);
+        if (colors.length === 0) return true; // All valid tiles are jokers
         return new Set(colors).size === colors.length;
     }
     
