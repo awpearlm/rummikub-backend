@@ -1704,8 +1704,16 @@ class RummikubClient {
         
         if (count === 0) {
             playButton.innerHTML = '<i class="fas fa-play"></i> Play Selected';
+            playButton.style.opacity = '0.5';
+            playButton.setAttribute('disabled', 'disabled');
         } else {
             playButton.innerHTML = `<i class="fas fa-play"></i> Play Selected (${count})`;
+            
+            // Only enable if it's the player's turn and the game has started
+            if (this.isMyTurn() && this.gameState && this.gameState.started) {
+                playButton.style.opacity = '1';
+                playButton.removeAttribute('disabled');
+            }
         }
     }
 
@@ -1746,9 +1754,12 @@ class RummikubClient {
         // Play Set button
         const playBtn = document.getElementById('playSetBtn');
         if (playBtn) {
-            playBtn.style.opacity = canAct ? '1' : '0.5';
-            playBtn.disabled = !canAct;
-            if (canAct) {
+            const hasTilesSelected = this.selectedTiles && this.selectedTiles.length > 0;
+            const canPlaySet = canAct && hasTilesSelected;
+            
+            playBtn.style.opacity = canPlaySet ? '1' : '0.5';
+            playBtn.disabled = !canPlaySet;
+            if (canPlaySet) {
                 playBtn.removeAttribute('disabled');
             } else {
                 playBtn.setAttribute('disabled', 'disabled');
