@@ -428,13 +428,11 @@ class RummikubClient {
             const baseUrl = window.location.origin;
             const soundPath = `${baseUrl}/sounds/`;
             
+            // Use the most reliable sound files
             this.sounds = {
-                pickupTile: new Audio(`${soundPath}new_tile_pickup.mp3`),
-                placeTile: new Audio(`${soundPath}tile-place.mp3`)
+                pickupTile: new Audio(`${soundPath}new_tile-pickup.mp3`),
+                placeTile: new Audio(`${soundPath}new_tile-place.mp3`)
             };
-            
-            // Setup fallback sounds
-            this.sounds.pickupTileFallback = new Audio(`${soundPath}tile-pickup.mp3`);
             
             // Preload sounds
             Object.values(this.sounds).forEach(sound => {
@@ -461,27 +459,9 @@ class RummikubClient {
                 const audioElement = this.sounds[sound].cloneNode();
                 audioElement.volume = 0.3; // Set volume to 30%
                 
-                // Add error handling for audio playback
-                audioElement.onerror = (e) => {
-                    console.error(`Error playing sound ${sound}:`, e);
-                    // Try fallback sound if pickup fails
-                    if (sound === 'pickupTile' && this.sounds.pickupTileFallback) {
-                        console.log('Attempting to play fallback sound for pickup');
-                        const fallback = this.sounds.pickupTileFallback.cloneNode();
-                        fallback.volume = 0.3;
-                        fallback.play().catch(e => console.log('Fallback sound playback prevented:', e));
-                    }
-                };
-                
+                // Simple play with error handling
                 audioElement.play().catch(e => {
-                    console.log('Sound playback prevented:', e);
-                    // Try fallback on catch as well
-                    if (sound === 'pickupTile' && this.sounds.pickupTileFallback) {
-                        console.log('Attempting to play fallback sound after catch');
-                        const fallback = this.sounds.pickupTileFallback.cloneNode();
-                        fallback.volume = 0.3;
-                        fallback.play().catch(e => console.log('Fallback sound playback prevented:', e));
-                    }
+                    console.log(`Sound playback prevented: ${e.message}`);
                 });
             } catch (error) {
                 console.error('❌ Error playing sound:', error);
