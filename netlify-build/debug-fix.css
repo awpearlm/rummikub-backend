@@ -1,0 +1,4 @@
+/* Hide debug info in production */
+.debug-info {
+    display: none !important;
+}
