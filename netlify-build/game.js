@@ -294,6 +294,10 @@ class RummikubClient {
         // Bot game events
         this.socket.on('botGameCreated', (data) => {
             console.log('🎮 botGameCreated event received:', data);
+            
+            // Initialize the previous board state (empty for a new game)
+            this.previousBoardState = [];
+            
             this.gameId = data.gameId;
             this.gameState = data.gameState;
             console.log('📺 Calling showGameScreen()...');
@@ -301,16 +305,32 @@ class RummikubClient {
             console.log('🔄 Calling updateGameState()...');
             this.updateGameState();
             this.showNotification('Bot game started!', 'success');
+            
+            // Start inactivity checking
+            this.startInactivityCheck();
         });
 
         this.socket.on('botMove', (data) => {
+            // Store the previous board state before updating
+            if (this.gameState && this.gameState.board) {
+                this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
+            }
+            
             this.gameState = data.gameState;
             this.updateGameState();
             this.showNotification(`Bot played: ${data.moveDescription}`, 'info');
+            
+            // Reset inactivity timer on bot move
+            this.resetInactivityTimer();
         });
 
         // Board management events
         this.socket.on('boardUpdated', (data) => {
+            // Store the previous board state before updating
+            if (this.gameState && this.gameState.board) {
+                this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
+            }
+            
             this.gameState = data.gameState;
             // Update the full game state, not just the board
             this.updateGameState();
