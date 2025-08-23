@@ -53,72 +53,66 @@ class RummikubClient {
 
     initializeEventListeners() {
         // Game mode selection
-        document.getElementById('playWithBotBtn').addEventListener('click', () => this.selectGameMode('bot'));
-        document.getElementById('playWithFriendsBtn').addEventListener('click', () => this.selectGameMode('multiplayer'));
+        addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
+        addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
         
         // Bot game button - with error handling
-        const startBotBtn = document.getElementById('startBotGameBtn');
-        if (startBotBtn) {
-            startBotBtn.addEventListener('click', () => {
-                console.log('🤖 Start Bot Game button clicked!');
-                this.startBotGame();
-            });
-        } else {
-            console.error('❌ Could not find startBotGameBtn element');
-        }
+        addSafeEventListener('startBotGameBtn', 'click', () => {
+            console.log('🤖 Start Bot Game button clicked!');
+            this.startBotGame();
+        });
         
         // Welcome screen events
-        document.getElementById('createGameBtn').addEventListener('click', () => {
+        addSafeEventListener('createGameBtn', 'click', () => {
             this.initializeSounds(); // Initialize sounds on first user interaction
             this.createGame();
         });
-        document.getElementById('joinGameBtn').addEventListener('click', () => {
+        
+        addSafeEventListener('joinGameBtn', 'click', () => {
             this.initializeSounds(); // Initialize sounds on first user interaction
             this.showJoinForm();
         });
-        document.getElementById('joinGameSubmit').addEventListener('click', () => {
+        
+        addSafeEventListener('joinGameSubmit', 'click', () => {
             this.initializeSounds(); // Initialize sounds on first user interaction
             this.joinGame();
         });
         
         // Game screen events
-        document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
-        document.getElementById('drawTileBtn').addEventListener('click', () => this.drawTile());
-        document.getElementById('undoBtn').addEventListener('click', () => this.undoLastMove());
-        document.getElementById('endTurnBtn').addEventListener('click', () => this.endTurn());
-        document.getElementById('leaveGameBtn').addEventListener('click', () => this.leaveGame());
-        document.getElementById('playSetBtn').addEventListener('click', () => this.playSelectedTiles());
+        addSafeEventListener('startGameBtn', 'click', () => this.startGame());
+        addSafeEventListener('drawTileBtn', 'click', () => this.drawTile());
+        addSafeEventListener('undoBtn', 'click', () => this.undoLastMove());
+        addSafeEventListener('endTurnBtn', 'click', () => this.endTurn());
+        addSafeEventListener('leaveGameBtn', 'click', () => this.leaveGame());
+        addSafeEventListener('playSetBtn', 'click', () => this.playSelectedTiles());
         
         // Hand sorting events
-        document.getElementById('sortByColorBtn').addEventListener('click', () => this.sortHandByColor());
-        document.getElementById('sortByNumberBtn').addEventListener('click', () => this.sortHandByNumber());
+        addSafeEventListener('sortByColorBtn', 'click', () => this.sortHandByColor());
+        addSafeEventListener('sortByNumberBtn', 'click', () => this.sortHandByNumber());
         
         // Enter key events
-        document.getElementById('playerName').addEventListener('keypress', (e) => {
+        addSafeEventListener('playerName', 'keypress', (e) => {
             if (e.key === 'Enter') this.createGame();
         });
         
-        document.getElementById('gameId').addEventListener('keypress', (e) => {
+        addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
         
         // Copy game ID to clipboard
-        const copyGameIdBtn = document.getElementById('copyGameIdBtn');
-        if (copyGameIdBtn) {
-            copyGameIdBtn.addEventListener('click', () => {
-                const gameId = document.getElementById('currentGameId').textContent;
-                if (gameId) {
-                    navigator.clipboard.writeText(gameId)
-                        .then(() => {
-                            this.showNotification('Game code copied to clipboard!', 'success');
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy: ', err);
-                            this.showNotification('Failed to copy game code', 'error');
-                        });
-                }
-            });
-        }
+        addSafeEventListener('copyGameIdBtn', 'click', () => {
+            const gameId = safeGetElementById('currentGameId')?.textContent;
+            if (gameId) {
+                navigator.clipboard.writeText(gameId)
+                    .then(() => {
+                        this.showNotification('Game code copied to clipboard!', 'success');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                        this.showNotification('Failed to copy game code', 'error');
+                    });
+            }
+        });
     }
 
     initializeSocketListeners() {
@@ -976,63 +970,78 @@ class RummikubClient {
     }
 
     updateGameState() {
-        if (!this.gameState) return;
+        if (!this.gameState) {
+            console.warn('⚠️ Cannot update game state: gameState is null');
+            return;
+        }
         
-        // Update game ID
-        document.getElementById('currentGameId').textContent = this.gameId;
-        
-        // Update players list
-        this.renderPlayersList();
-        
-        // Update current turn
-        this.updateCurrentTurn();
-        
-        // Update deck count
-        document.getElementById('deckCount').textContent = this.gameState.deckSize || 106;
-        
-        // Initialize grid layout if hand changed
-        if (this.gameState.playerHand) {
-            // Check if we need to add a single new tile (like after drawing)
-            const handSize = this.gameState.playerHand.length;
-            const lastKnownSize = this.lastKnownHandSize || 0;
+        try {
+            // Update game ID
+            const currentGameIdElement = document.getElementById('currentGameId');
+            if (currentGameIdElement) {
+                currentGameIdElement.textContent = this.gameId;
+            }
             
-            if (this.tileGridLayout && handSize === lastKnownSize + 1 && lastKnownSize > 0) {
-                // We likely just drew a single tile - preserve the existing layout
-                this.addNewTileToLayout();
-            } else {
-                // Auto-sort tiles by number on initial deal only
-                this.autoSortHandByNumber();
+            // Update players list
+            this.renderPlayersList();
+            
+            // Update current turn
+            this.updateCurrentTurn();
+            
+            // Update deck count
+            const deckCountElement = document.getElementById('deckCount');
+            if (deckCountElement) {
+                deckCountElement.textContent = this.gameState.deckSize || 106;
+            }
+            
+            // Initialize grid layout if hand changed
+            if (this.gameState.playerHand) {
+                // Check if we need to add a single new tile (like after drawing)
+                const handSize = this.gameState.playerHand.length;
+                const lastKnownSize = this.lastKnownHandSize || 0;
                 
-                // Always refresh grid layout when hand changes to ensure tiles are properly removed/added
-                if (!this.tileGridLayout || this.hasHandChanged() || this.needsGridExpansion) {
-                    this.initializeGridLayout();
-                    this.needsGridExpansion = false;
+                if (this.tileGridLayout && handSize === lastKnownSize + 1 && lastKnownSize > 0) {
+                    // We likely just drew a single tile - preserve the existing layout
+                    this.addNewTileToLayout();
+                } else {
+                    // Auto-sort tiles by number on initial deal only
+                    this.autoSortHandByNumber();
+                    
+                    // Always refresh grid layout when hand changes to ensure tiles are properly removed/added
+                    if (!this.tileGridLayout || this.hasHandChanged() || this.needsGridExpansion) {
+                        this.initializeGridLayout();
+                        this.needsGridExpansion = false;
+                    }
+                }
+                
+                // Update last known hand size
+                this.lastKnownHandSize = handSize;
+            }
+            
+            // Update player hand
+            this.renderPlayerHand();
+            
+            // Update game board
+            this.renderGameBoard();
+            
+            // Update game log
+            this.updateGameLog(this.gameState.gameLog);
+            
+            // Show/hide start button
+            const startBtn = document.getElementById('startGameBtn');
+            if (startBtn) {
+                if (this.gameState.started) {
+                    startBtn.classList.add('hidden');
+                } else if (this.gameState.players.length >= 2) {
+                    startBtn.classList.remove('hidden');
                 }
             }
             
-            // Update last known hand size
-            this.lastKnownHandSize = handSize;
+            // Update action buttons
+            this.updateActionButtons();
+        } catch (error) {
+            console.error('❌ Error updating game state:', error);
         }
-        
-        // Update player hand
-        this.renderPlayerHand();
-        
-        // Update game board
-        this.renderGameBoard();
-        
-        // Update game log
-        this.updateGameLog(this.gameState.gameLog);
-        
-        // Show/hide start button
-        const startBtn = document.getElementById('startGameBtn');
-        if (this.gameState.started) {
-            startBtn.classList.add('hidden');
-        } else if (this.gameState.players.length >= 2) {
-            startBtn.classList.remove('hidden');
-        }
-        
-        // Update action buttons
-        this.updateActionButtons();
     }
 
     autoSortHandByNumber() {
@@ -1128,6 +1137,16 @@ class RummikubClient {
 
     renderPlayersList() {
         const playersList = document.getElementById('playersList');
+        if (!playersList) {
+            console.warn('⚠️ PlayersList element not found');
+            return;
+        }
+        
+        if (!this.gameState || !this.gameState.players) {
+            console.warn('⚠️ No game state or players available');
+            return;
+        }
+        
         playersList.innerHTML = '';
         
         this.gameState.players.forEach((player, index) => {
@@ -1207,89 +1226,101 @@ class RummikubClient {
     }
 
     renderPlayerHand() {
-        const handElement = document.getElementById('playerHand');
-        
-        console.log(`🎯 renderPlayerHand() called with ${this.gameState.playerHand?.length || 0} tiles`);
-        console.log(`🃏 Tiles to render:`, this.gameState.playerHand?.slice(0, 5).map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-        console.log(`🆔 First 3 tile IDs:`, this.gameState.playerHand?.slice(0, 3).map(t => t.id));
-        
-        if (!this.gameState.playerHand || this.gameState.playerHand.length === 0) {
-            console.log(`⚠️ Skipping render - no tiles to display`);
-            // Don't clear the hand if game has started but we have 0 tiles - this might be a sync issue
-            if (!this.gameState.started) {
-                handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
+        try {
+            const handElement = document.getElementById('playerHand');
+            if (!handElement) {
+                console.warn('⚠️ Player hand element not found');
+                return;
             }
-            return;
-        }
-        
-        console.log(`✅ Proceeding with hand render for ${this.gameState.playerHand.length} tiles`);
-        handElement.innerHTML = '';
-        
-        // Dynamic grid sizing based on number of tiles
-        const totalTiles = this.gameState.playerHand.length;
-        const tilesPerRow = 7;
-        
-        // Calculate rows needed: start with 3 rows (21 slots), add more only when needed
-        let rowsNeeded = 3; // Default to 3 rows (21 slots)
-        if (totalTiles > 21) {
-            rowsNeeded = Math.ceil(totalTiles / tilesPerRow);
-        }
-        
-        const maxGridSlots = rowsNeeded * tilesPerRow;
-        
-        // Initialize grid layout if not exists or if it needs to grow
-        if (!this.tileGridLayout || this.tileGridLayout.length < maxGridSlots) {
-            this.initializeGridLayout(maxGridSlots);
-        }
-        
-        // Update CSS grid template
-        handElement.style.gridTemplateRows = `repeat(${rowsNeeded}, 1fr)`;
-        handElement.style.gridTemplateColumns = `repeat(${tilesPerRow}, 1fr)`;
-        
-        // Fill grid positions - only show slots up to what we actually need
-        for (let i = 0; i < maxGridSlots; i++) {
-            const tile = this.tileGridLayout[i];
             
-            if (tile) {
-                const tileElement = this.createTileElement(tile, true);
-                tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
+            console.log(`🎯 renderPlayerHand() called with ${this.gameState?.playerHand?.length || 0} tiles`);
+            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.map(t => t.id));
+            
+            if (!this.gameState?.playerHand || this.gameState.playerHand.length === 0) {
+                console.log(`⚠️ Skipping render - no tiles to display`);
+                // Don't clear the hand if game has started but we have 0 tiles - this might be a sync issue
+                if (!this.gameState?.started) {
+                    handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
+                }
+                return;
+            }
+            
+            console.log(`✅ Proceeding with hand render for ${this.gameState.playerHand.length} tiles`);
+            handElement.innerHTML = '';
+            
+            // Dynamic grid sizing based on number of tiles
+            const totalTiles = this.gameState.playerHand.length;
+            const tilesPerRow = 7;
+            
+            // Calculate rows needed: start with 3 rows (21 slots), add more only when needed
+            let rowsNeeded = 3; // Default to 3 rows (21 slots)
+            if (totalTiles > 21) {
+                rowsNeeded = Math.ceil(totalTiles / tilesPerRow);
+            }
+            
+            const maxGridSlots = rowsNeeded * tilesPerRow;
+            
+            // Initialize grid layout if not exists or if it needs to grow
+            if (!this.tileGridLayout || this.tileGridLayout.length < maxGridSlots) {
+                this.initializeGridLayout(maxGridSlots);
+            }
+            
+            // Update CSS grid template
+            handElement.style.gridTemplateRows = `repeat(${rowsNeeded}, 1fr)`;
+            handElement.style.gridTemplateColumns = `repeat(${tilesPerRow}, 1fr)`;
+            
+            // Fill grid positions - only show slots up to what we actually need
+            for (let i = 0; i < maxGridSlots; i++) {
+                const tile = this.tileGridLayout[i];
                 
-                // Add drag and drop functionality
-                this.addDragAndDropToTile(tileElement, tile, i);
-                
-                // Calculate grid position
-                const row = Math.floor(i / tilesPerRow) + 1;
-                const col = (i % tilesPerRow) + 1;
-                tileElement.style.gridRow = row;
-                tileElement.style.gridColumn = col;
-                
-                handElement.appendChild(tileElement);
-            } else {
-                // Only create empty slots that are visible and useful for drag-and-drop
-                // Show empty slots in current rows, but only a few extra beyond the tiles
-                const currentRowOfThisSlot = Math.floor(i / tilesPerRow);
-                const lastTileRow = Math.floor((totalTiles - 1) / tilesPerRow);
-                
-                // Show empty slot if:
-                // 1. It's in a row that has tiles, OR
-                // 2. It's in the first few slots of the next row (for drag-and-drop)
-                const shouldShowSlot = currentRowOfThisSlot <= lastTileRow || 
-                                     (currentRowOfThisSlot === lastTileRow + 1 && (i % tilesPerRow) < 3);
-                
-                if (shouldShowSlot) {
-                    const emptySlot = document.createElement('div');
-                    emptySlot.className = 'empty-slot';
-                    emptySlot.dataset.slotIndex = i;
+                if (tile) {
+                    const tileElement = this.createTileElement(tile, true);
+                    tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
                     
+                    // Add drag and drop functionality
+                    this.addDragAndDropToTile(tileElement, tile, i);
+                    
+                    // Calculate grid position
                     const row = Math.floor(i / tilesPerRow) + 1;
                     const col = (i % tilesPerRow) + 1;
-                    emptySlot.style.gridRow = row;
-                    emptySlot.style.gridColumn = col;
+                    tileElement.style.gridRow = row;
+                    tileElement.style.gridColumn = col;
                     
-                    this.addDropFunctionalityToSlot(emptySlot, i);
-                    handElement.appendChild(emptySlot);
+                    handElement.appendChild(tileElement);
+                } else {
+                    // Only create empty slots that are visible and useful for drag-and-drop
+                    // Show empty slots in current rows, but only a few extra beyond the tiles
+                    const currentRowOfThisSlot = Math.floor(i / tilesPerRow);
+                    const lastTileRow = Math.floor((totalTiles - 1) / tilesPerRow);
+                    
+                    // Show empty slot if:
+                    // 1. It's in a row that has tiles, OR
+                    // 2. It's in the first few slots of the next row (for drag-and-drop)
+                    const shouldShowSlot = currentRowOfThisSlot <= lastTileRow || 
+                                        (currentRowOfThisSlot === lastTileRow + 1 && (i % tilesPerRow) < 3);
+                    
+                    if (shouldShowSlot) {
+                        // Create empty slot for drag-and-drop target
+                        const emptySlot = document.createElement('div');
+                        emptySlot.className = 'empty-slot';
+                        emptySlot.dataset.slotIndex = i;
+                        
+                        // Calculate grid position
+                        const row = Math.floor(i / tilesPerRow) + 1;
+                        const col = (i % tilesPerRow) + 1;
+                        emptySlot.style.gridRow = row;
+                        emptySlot.style.gridColumn = col;
+                        
+                        // Add drop functionality
+                        this.addDropFunctionalityToSlot(emptySlot, i);
+                        
+                        handElement.appendChild(emptySlot);
+                    }
                 }
             }
+        } catch (error) {
+            console.error('❌ Error rendering player hand:', error);
         }
     }
 
@@ -1501,7 +1532,12 @@ class RummikubClient {
     }
 
     renderGameBoard() {
-        const boardElement = document.getElementById('gameBoard');
+        const boardElement = safeGetElementById('gameBoard');
+        
+        if (!boardElement) {
+            console.error('❌ Cannot render game board: board element not found');
+            return;
+        }
         
         if (!this.gameState.board || this.gameState.board.length === 0) {
             boardElement.innerHTML = `
