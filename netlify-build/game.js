@@ -93,12 +93,6 @@ class RummikubClient {
         document.getElementById('sortByColorBtn').addEventListener('click', () => this.sortHandByColor());
         document.getElementById('sortByNumberBtn').addEventListener('click', () => this.sortHandByNumber());
         
-        // Chat events
-        document.getElementById('sendMessageBtn').addEventListener('click', () => this.sendMessage());
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.sendMessage();
-        });
-        
         // Enter key events
         document.getElementById('playerName').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.createGame();
@@ -229,7 +223,8 @@ class RummikubClient {
         });
 
         this.socket.on('messageReceived', (data) => {
-            this.updateChat(data.chatMessages);
+            // Chat functionality has been removed
+            console.log('Chat functionality has been removed');
         });
 
         this.socket.on('gameWon', (data) => {
@@ -871,13 +866,8 @@ class RummikubClient {
     }
 
     sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        
-        if (!message) return;
-        
-        this.socket.emit('sendMessage', { message });
-        input.value = '';
+        // Chat functionality has been removed
+        console.log('Chat functionality has been removed');
     }
 
     isMyTurn() {
@@ -1029,9 +1019,6 @@ class RummikubClient {
         
         // Update game board
         this.renderGameBoard();
-        
-        // Update chat
-        this.updateChat(this.gameState.chatMessages);
         
         // Update game log
         this.updateGameLog(this.gameState.gameLog);
@@ -1755,36 +1742,8 @@ class RummikubClient {
     }
 
     updateChat(messages) {
-        const chatElement = document.getElementById('chatMessages');
-        chatElement.innerHTML = '';
-        
-        if (!messages || messages.length === 0) {
-            chatElement.innerHTML = '<div style="text-align: center; color: #a0aec0; font-style: italic;">No messages yet. Say hello!</div>';
-            return;
-        }
-        
-        messages.forEach(message => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message';
-            
-            const time = new Date(message.timestamp).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="message-sender">${message.playerName}</span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${this.escapeHtml(message.message)}</div>
-            `;
-            
-            chatElement.appendChild(messageDiv);
-        });
-        
-        // Scroll to bottom
-        chatElement.scrollTop = chatElement.scrollHeight;
+        // Chat functionality has been removed
+        console.log('Chat functionality has been removed');
     }
 
     updateGameLog(logEntries) {
