@@ -116,7 +116,7 @@ class RummikubGame {
   addBotPlayer() {
     if (this.players.length >= 4) return false;
     
-    const botNames = ['Bot_A', 'Bot_B', 'Bot_C', 'Bot_D'];
+    const botNames = ['Dogman-do', 'Turdburg', 'Babyman', 'Bot_D'];
     const usedNames = this.players.filter(p => p.isBot).map(p => p.name);
     const availableNames = botNames.filter(name => !usedNames.includes(name));
     
