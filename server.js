@@ -973,7 +973,7 @@ class RummikubGame {
     }
   }
 
-  scheduleNextBotMove(io, gameId, delay = 2000) {
+  scheduleNextBotMove(io, gameId, delay = 4000) {
     console.log(`🔍 scheduleNextBotMove called for game ${gameId}, isBotGame: ${this.isBotGame}, started: ${this.started}, winner: ${!!this.winner}`);
     
     if (!this.isBotGame || !this.started || this.winner) return;
@@ -1023,7 +1023,7 @@ class RummikubGame {
           // Only schedule next move if the new current player is also a bot
           if (nextPlayer && nextPlayer.isBot) {
             console.log(`🔄 Scheduling next bot move...`);
-            this.scheduleNextBotMove(io, gameId, 1500);
+            this.scheduleNextBotMove(io, gameId, 3500);
           } else {
             console.log(`👤 Turn passed to human player: ${nextPlayer?.name}`);
           }
@@ -1180,7 +1180,7 @@ io.on('connection', (socket) => {
           // Only start bot moves if it's the bot's turn
           const currentPlayer = game.getCurrentPlayer();
           if (currentPlayer && currentPlayer.isBot) {
-            game.scheduleNextBotMove(io, gameId, 3000);
+            game.scheduleNextBotMove(io, gameId, 5000);
           }
           
           console.log(`Bot game created: ${gameId} by ${data.playerName} vs ${botNames.join(', ')} (${addedBots.length} bots)`);
@@ -1339,7 +1339,7 @@ io.on('connection', (socket) => {
         const nextPlayer = game.getCurrentPlayer();
         if (game.isBotGame && nextPlayer && nextPlayer.isBot) {
           console.log(`👤➡️🤖 Human drew tile, triggering bot move for ${nextPlayer.name}`);
-          game.scheduleNextBotMove(io, playerData.gameId);
+          game.scheduleNextBotMove(io, playerData.gameId, 4000);
         } else {
           console.log(`👤 Human drew tile, next player: ${nextPlayer?.name} (isBot: ${nextPlayer?.isBot})`);
         }
@@ -1446,7 +1446,7 @@ io.on('connection', (socket) => {
         // Trigger bot move if it's a bot game and we just advanced to bot
         if (game.isBotGame) {
           console.log(`👤➡️🤖 Human ended turn, triggering bot move`);
-          game.scheduleNextBotMove(io, playerData.gameId);
+          game.scheduleNextBotMove(io, playerData.gameId, 4000);
         }
       }
     });
