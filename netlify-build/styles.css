@@ -1585,7 +1585,7 @@ body {
 /* Toast Notifications */
 .toast-container {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     right: 20px;
     width: 300px;
     z-index: 9999;
