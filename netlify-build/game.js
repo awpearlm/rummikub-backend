@@ -429,7 +429,7 @@ class RummikubClient {
             const soundPath = `${baseUrl}/sounds/`;
             
             this.sounds = {
-                pickupTile: new Audio(`${soundPath}tile-pickup.mp3`),
+                pickupTile: new Audio(`${soundPath}new_tile_pickup.wav`),
                 placeTile: new Audio(`${soundPath}tile-place.mp3`)
             };
             
