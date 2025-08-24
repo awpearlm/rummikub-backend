@@ -739,15 +739,32 @@ class RummikubClient {
             this.gameState.playerHand.find(tile => tile.id === id)
         ).filter(Boolean);
         
-        // Debug the selected set
-        this.validateAndDebugSet(selectedTileObjects);
-        
         // Check if player hasn't played initial yet
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
         
+        // For initial play, try to detect multiple sets first
+        if (needsInitialPlay && selectedTileObjects.length >= 6) {
+            const multipleSets = this.detectMultipleSets(this.selectedTiles);
+            
+            if (multipleSets.length > 1) {
+                // Show multiple sets detected notification
+                const tileCount = multipleSets.reduce((sum, set) => sum + set.length, 0);
+                this.showNotification(`Playing ${multipleSets.length} valid sets (${tileCount} tiles total) for initial play`, 'success');
+                
+                // Send multiple sets for initial play validation
+                this.socket.emit('playSet', { setArrays: multipleSets });
+                console.log(`🎯 Playing ${multipleSets.length} sets for initial play:`, multipleSets);
+                return;
+            }
+        }
+        
+        // If we got here, validate as a single set
+        this.validateAndDebugSet(selectedTileObjects);
+        
+        // Send to server based on initial play status
         if (needsInitialPlay) {
-            // For initial play, try to detect multiple sets within selected tiles
+            // For initial play, check again for multiple sets
             const multipleSets = this.detectMultipleSets(this.selectedTiles);
             
             if (multipleSets.length > 1) {
@@ -775,6 +792,19 @@ class RummikubClient {
             if (t.isJoker) return "JOKER";
             return `${t.number}${t.color[0]}`;
         }).join(', ');
+        
+        // Check if this could be multiple sets instead
+        if (!isValid && tiles.length >= 6) {
+            // See if we can detect multiple valid sets
+            const tileIds = tiles.map(t => t.id);
+            const multipleSets = this.detectMultipleSets(tileIds);
+            
+            if (multipleSets.length > 1) {
+                // Found multiple valid sets!
+                this.showNotification(`Detected ${multipleSets.length} valid sets within selection`, 'success');
+                return;
+            }
+        }
         
         // Show status in toast
         if (isValid) {
