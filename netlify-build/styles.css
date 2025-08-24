@@ -1826,6 +1826,22 @@ body {
     margin-bottom: 20px;
 }
 
+/* Special styling for when it's the player's turn */
+.turn-notification-card.my-turn {
+    background-color: #fff8e1; /* Light yellow background */
+    border: 2px solid #ffca28; /* Gold border */
+}
+
+.turn-notification-card.my-turn .notification-icon {
+    color: #ff9800; /* Orange/gold star */
+    animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.2); }
+}
+
 .turn-notification-card h2 {
     font-size: 28px;
     margin-bottom: 10px;

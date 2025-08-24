@@ -568,6 +568,13 @@ class RummikubClient {
             this.showNotification("It's not your turn!", 'error');
             return;
         }
+        
+        // Check if there are tiles left in the deck
+        if (this.gameState && this.gameState.deckSize === 0) {
+            this.showNotification("No tiles left in the deck!", 'warning');
+            return;
+        }
+        
         this.playSound('pickupTile');
         this.socket.emit('drawTile');
     }
@@ -971,14 +978,34 @@ class RummikubClient {
     
     // Show turn notification when it becomes the player's turn
     showTurnNotification(playerName) {
+        // Check if it's the player's turn
+        const isMyTurn = playerName === this.getMyName();
+        
         // Update the player name in the notification
         const nameElement = document.getElementById('turnNotificationPlayerName');
-        nameElement.textContent = playerName === this.getMyName() ? "Your Turn!" : `${playerName}'s Turn!`;
+        nameElement.textContent = isMyTurn ? "Your Turn!" : `${playerName}'s Turn!`;
         
         console.log(`🎮 Showing turn notification for: ${playerName}`);
         
-        // Get the overlay element
+        // Get the overlay element and card element
         const overlay = document.getElementById('turnNotificationOverlay');
+        const card = document.querySelector('.turn-notification-card');
+        
+        // Update the icon based on whose turn it is
+        const iconElement = document.querySelector('.notification-icon i');
+        if (iconElement) {
+            // Use a star icon for player's turn, and regular play icon for others
+            iconElement.className = isMyTurn ? 'fas fa-star' : 'fas fa-play-circle';
+        }
+        
+        // Add or remove the "my-turn" class based on whose turn it is
+        if (card) {
+            if (isMyTurn) {
+                card.classList.add('my-turn');
+            } else {
+                card.classList.remove('my-turn');
+            }
+        }
         
         // First make sure it's not hidden
         overlay.classList.remove('hidden');
@@ -1860,15 +1887,28 @@ class RummikubClient {
         const isMyTurn = this.isMyTurn();
         const gameStarted = this.gameState && this.gameState.started;
         const canAct = isMyTurn && gameStarted;
+        const noTilesLeft = this.gameState && this.gameState.deckSize === 0;
         
         // Always check if board state has changed
         this.hasBoardStateChanged();
         
-        // Draw Tile button - disable if tiles have been played this turn or if board state has changed
+        // Draw Tile button - disable if:
+        // 1. Tiles have been played this turn
+        // 2. Board state has changed
+        // 3. No tiles left in the deck
         const drawBtn = document.getElementById('drawTileBtn');
         if (drawBtn) {
-            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !this.hasBoardChanged;
-            drawBtn.style.opacity = canDrawTile ? '1' : '0.5';
+            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !this.hasBoardChanged && !noTilesLeft;
+            
+            // If no tiles are left, add a visual indication
+            if (noTilesLeft) {
+                drawBtn.style.opacity = '0.5';
+                drawBtn.title = 'No tiles left in the deck';
+            } else {
+                drawBtn.style.opacity = canDrawTile ? '1' : '0.5';
+                drawBtn.title = canDrawTile ? 'Draw a tile' : 'Cannot draw a tile right now';
+            }
+            
             drawBtn.disabled = !canDrawTile;
             if (canDrawTile) {
                 drawBtn.removeAttribute('disabled');
