@@ -2006,11 +2006,11 @@ class RummikubClient {
         
         // Draw Tile button - disable if:
         // 1. Tiles have been played this turn
-        // 2. Board state has changed
-        // 3. No tiles left in the deck
+        // 2. No tiles left in the deck
+        // Note: Board state changes should not prevent drawing if no new tiles have been played
         const drawBtn = document.getElementById('drawTileBtn');
         if (drawBtn) {
-            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !this.hasBoardChanged && !noTilesLeft;
+            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !noTilesLeft;
             
             // If no tiles are left, add a visual indication
             if (noTilesLeft) {
