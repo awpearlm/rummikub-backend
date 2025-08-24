@@ -9,26 +9,89 @@ class RummikubClient {
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
         });
         
         // Add connection debugging
         this.socket.on('connect', () => {
             console.log('✅ Connected to server!', this.socket.id);
-            // Hide refresh button when connection is established
+            // Update connection status
+            this.updateConnectionStatus('connected');
+            // Hide refresh button and connection lost overlay
             this.hideRefreshButton();
+            this.hideConnectionLostOverlay();
         });
         
         this.socket.on('connect_error', (error) => {
             console.error('❌ Connection error:', error);
-            // Show refresh button on connection error
-            this.showRefreshButton();
+            // Update connection status
+            this.updateConnectionStatus('disconnected');
+            // Show connection lost overlay after a short delay if still not connected
+            setTimeout(() => {
+                if (!this.socket.connected) {
+                    this.showConnectionLostOverlay();
+                }
+            }, 3000);
         });
         
         this.socket.on('disconnect', (reason) => {
             console.log('🔌 Disconnected:', reason);
-            // Show refresh button on disconnect
-            this.showRefreshButton();
+            
+            // Update connection status
+            this.updateConnectionStatus('disconnected');
+            
+            // Show user-friendly notification
+            this.showNotification(`Connection lost: ${reason}. Attempting to reconnect...`, 'error');
+            
+            // Add a timer to show connection lost overlay if reconnection takes too long
+            setTimeout(() => {
+                if (!this.socket.connected) {
+                    this.showConnectionLostOverlay();
+                }
+            }, 5000); // Wait 5 seconds before showing overlay
+            
+            // Handle server-initiated disconnects
+            if (reason === 'io server disconnect') {
+                console.log('Server disconnected us - attempting manual reconnection');
+                this.socket.connect();
+            }
+        });
+        
+        // Add reconnection event listeners
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log(`🔄 Reconnection attempt #${attemptNumber}`);
+            this.updateConnectionStatus('connecting');
+            this.updateReconnectionStatus(`Reconnection attempt ${attemptNumber}...`);
+        });
+        
+        this.socket.on('reconnect', (attemptNumber) => {
+            console.log(`✅ Reconnected after ${attemptNumber} attempts!`);
+            this.showNotification('Reconnected successfully! Resuming game...', 'success');
+            this.updateConnectionStatus('connected');
+            this.hideConnectionLostOverlay();
+            
+            // If we're in a game, rejoin it
+            if (this.gameId && this.playerName) {
+                console.log(`Rejoining game ${this.gameId} as ${this.playerName}`);
+                this.rejoinGame(this.gameId, this.playerName);
+            }
+        });
+        
+        this.socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnection error:', error);
+            this.showNotification('Error reconnecting to the server. Will retry...', 'error');
+            this.updateConnectionStatus('disconnected');
+        });
+        
+        this.socket.on('reconnect_failed', () => {
+            console.error('❌ Failed to reconnect after all attempts');
+            this.showNotification('Failed to reconnect after multiple attempts. Please refresh the page.', 'error');
+            this.updateConnectionStatus('disconnected');
+            this.updateReconnectionStatus('Automatic reconnection failed. Please refresh the game manually.');
         });
         
         this.gameState = null;
@@ -3032,18 +3095,138 @@ class RummikubClient {
         console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
     }
     
+    // Helper method to rejoin a game after reconnection
+    rejoinGame(gameId, playerName) {
+        // Emit event to server to rejoin the game
+        this.socket.emit('joinGame', {
+            gameId: gameId,
+            playerName: playerName
+        });
+        
+        this.showNotification(`Attempting to rejoin game ${gameId}...`, 'info');
+    }
+    
     // Methods for handling refresh button and inactivity
     showRefreshButton() {
         const refreshBtn = document.getElementById('refreshGameBtn');
         if (refreshBtn) {
             refreshBtn.classList.remove('hidden');
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Game';
+            
+            // Make sure the refresh button actually refreshes the page
+            refreshBtn.onclick = () => {
+                window.location.reload();
+            };
+        } else {
+            console.warn('Refresh button not found in the DOM');
+            
+            // Create a floating refresh button if not found
+            this.createFloatingRefreshButton();
         }
+    }
+    
+    // Create a floating refresh button that stays visible even if the game UI is broken
+    createFloatingRefreshButton() {
+        if (document.getElementById('floatingRefreshBtn')) return; // Don't create duplicate buttons
+        
+        const btn = document.createElement('button');
+        btn.id = 'floatingRefreshBtn';
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Game';
+        btn.onclick = () => window.location.reload();
+        
+        // Style the button
+        btn.style.position = 'fixed';
+        btn.style.top = '20px';
+        btn.style.right = '20px';
+        btn.style.zIndex = '9999';
+        btn.style.padding = '10px 20px';
+        btn.style.backgroundColor = '#e74c3c';
+        btn.style.color = 'white';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '5px';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+        btn.style.animation = 'pulse 2s infinite';
+        
+        // Add a style for the pulse animation
+        if (!document.getElementById('floatingBtnStyle')) {
+            const style = document.createElement('style');
+            style.id = 'floatingBtnStyle';
+            style.textContent = `
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(btn);
     }
     
     hideRefreshButton() {
         const refreshBtn = document.getElementById('refreshGameBtn');
         if (refreshBtn) {
             refreshBtn.classList.add('hidden');
+        }
+        
+        // Also hide the floating refresh button if it exists
+        const floatingBtn = document.getElementById('floatingRefreshBtn');
+        if (floatingBtn) {
+            floatingBtn.style.display = 'none';
+        }
+    }
+    
+    // Connection status management
+    updateConnectionStatus(status) {
+        const statusElement = document.getElementById('connectionStatus');
+        if (!statusElement) return;
+        
+        // Remove all status classes
+        statusElement.classList.remove('connected', 'connecting', 'disconnected');
+        
+        // Update the status element based on the new status
+        switch (status) {
+            case 'connected':
+                statusElement.classList.add('connected');
+                statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <span>Connected</span>';
+                break;
+            case 'connecting':
+                statusElement.classList.add('connecting');
+                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Connecting...</span>';
+                break;
+            case 'disconnected':
+                statusElement.classList.add('disconnected');
+                statusElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Disconnected</span>';
+                break;
+        }
+    }
+    
+    showConnectionLostOverlay() {
+        const overlay = document.getElementById('connectionLostOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            
+            // Set up the manual reconnect button
+            const reconnectBtn = document.getElementById('manualReconnectBtn');
+            if (reconnectBtn) {
+                reconnectBtn.onclick = () => window.location.reload();
+            }
+        }
+    }
+    
+    hideConnectionLostOverlay() {
+        const overlay = document.getElementById('connectionLostOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
+    
+    updateReconnectionStatus(message) {
+        const statusElement = document.getElementById('reconnectionStatus');
+        if (statusElement) {
+            statusElement.innerHTML = message;
         }
     }
     
@@ -3136,4 +3319,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 DOM loaded, initializing RummikubClient...');
     window.game = new RummikubClient();
     console.log('✅ RummikubClient initialized');
+    
+    // Set up manual reconnect button
+    const manualReconnectBtn = document.getElementById('manualReconnectBtn');
+    if (manualReconnectBtn) {
+        manualReconnectBtn.addEventListener('click', () => {
+            window.location.reload();
+        });
+    }
 });

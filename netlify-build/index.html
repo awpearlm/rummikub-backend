@@ -18,6 +18,7 @@
     <meta name="description" content="Play the classic tile-laying game with Jillian and have her yell at you when you win!">
     
         <link rel="stylesheet" href="styles.css?v=51">
+    <link rel="stylesheet" href="connection-status.css?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -255,6 +256,24 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Connection Status Indicator -->
+    <div id="connectionStatus" class="connection-status connecting">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Connecting...</span>
+    </div>
+
+    <!-- Connection Lost Overlay -->
+    <div id="connectionLostOverlay" class="connection-lost-overlay" style="display: none;">
+        <div class="connection-lost-content">
+            <h2><i class="fas fa-exclamation-triangle"></i> Connection Lost</h2>
+            <p>We're having trouble connecting to the game server. This could be due to internet issues or server maintenance.</p>
+            <div id="reconnectionStatus">Attempting to reconnect automatically...</div>
+            <button id="manualReconnectBtn" class="reconnect-button">
+                <i class="fas fa-sync-alt"></i> Refresh Game
+            </button>
+        </div>
+    </div>
+
     <!-- Victory Celebration -->
     <div id="victoryOverlay" class="victory-overlay hidden">
         <div class="confetti-container">
@@ -287,6 +306,6 @@
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="safe-events.js?v=1"></script>
-    <script src="game.js?v=62"></script>
+    <script src="game.js?v=63"></script>
 </body>
 </html>
