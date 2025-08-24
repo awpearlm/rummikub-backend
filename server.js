@@ -884,34 +884,53 @@ class RummikubGame {
     const currentPlayer = this.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return null;
 
-    console.log(`Bot ${currentPlayer.name} making move. Hand size: ${currentPlayer.hand.length}, hasPlayedInitial: ${currentPlayer.hasPlayedInitial}`);
+    // Initialize consecutive draw counter if not exists
+    if (currentPlayer.consecutiveDraws === undefined) {
+      currentPlayer.consecutiveDraws = 0;
+    }
 
-    // Simple AI: Try to play sets, otherwise draw a tile
-    const possibleSets = this.findPossibleSets(currentPlayer.hand);
-    console.log(`Found ${possibleSets.length} possible sets`);
-    
-    if (possibleSets.length > 0) {
-      // Choose the best set based on difficulty
-      const setToPlay = this.chooseBestSet(possibleSets);
-      console.log(`Attempting to play set:`, setToPlay?.map(t => `${t.color}_${t.number}`));
-      
-      if (setToPlay && this.playSet(currentPlayer.id, setToPlay.map(t => t.id))) {
-        console.log(`Bot successfully played set`);
+    console.log(`Bot ${currentPlayer.name} making move. Hand size: ${currentPlayer.hand.length}, hasPlayedInitial: ${currentPlayer.hasPlayedInitial}, consecutiveDraws: ${currentPlayer.consecutiveDraws}`);
+
+    // STRATEGY 1: Play a complete set from hand
+    if (this.tryPlayCompleteSet(currentPlayer)) {
+      // Reset consecutive draws counter when successfully playing tiles
+      currentPlayer.consecutiveDraws = 0;
+      return {
+        type: 'playSet',
+        description: 'played a set from hand'
+      };
+    }
+
+    // STRATEGY 2: Play tiles on existing board sets if the board has sets
+    if (this.board.length > 0 && this.tryPlayOnExistingSets(currentPlayer)) {
+      // Reset consecutive draws counter when successfully playing tiles
+      currentPlayer.consecutiveDraws = 0;
+      return {
+        type: 'playSet',
+        description: 'added to existing set'
+      };
+    }
+
+    // STRATEGY 3: If bot has drawn too many consecutive tiles (3+), 
+    // make a more aggressive play attempt or rearrange board
+    if (currentPlayer.consecutiveDraws >= 3) {
+      if (this.tryAggressivePlay(currentPlayer)) {
+        // Reset consecutive draws counter when successfully playing tiles
+        currentPlayer.consecutiveDraws = 0;
         return {
           type: 'playSet',
-          description: `${setToPlay.length} tiles`,
-          tiles: setToPlay
+          description: 'made an aggressive play'
         };
-      } else {
-        console.log(`Bot failed to play set (likely 30-point rule)`);
       }
     }
 
-    // If can't play, draw a tile
+    // STRATEGY 4: If can't play, draw a tile
     console.log(`Bot attempting to draw tile. Deck size: ${this.deck.length}`);
     const drawnTile = this.drawTile(currentPlayer.id);
     if (drawnTile) {
-      console.log(`Bot drew tile: ${drawnTile.color}_${drawnTile.number || 'joker'}`);
+      // Increment consecutive draws counter
+      currentPlayer.consecutiveDraws++;
+      console.log(`Bot drew tile: ${drawnTile.color}_${drawnTile.number || 'joker'}, consecutive draws: ${currentPlayer.consecutiveDraws}`);
       return {
         type: 'drawTile',
         description: 'drew a tile'
@@ -922,22 +941,304 @@ class RummikubGame {
 
     return null;
   }
+  
+  tryPlayCompleteSet(player) {
+    // Find and play complete sets from hand
+    const possibleSets = this.findPossibleSets(player.hand);
+    
+    // Filter sets that meet initial play requirements if needed
+    const validSets = player.hasPlayedInitial 
+      ? possibleSets 
+      : possibleSets.filter(set => this.calculateSetValue(set) >= 30);
+    
+    console.log(`Found ${possibleSets.length} possible sets, ${validSets.length} valid for initial play`);
+    
+    if (validSets.length > 0) {
+      // Choose the best set based on difficulty
+      const setToPlay = this.chooseBestSet(validSets);
+      console.log(`Attempting to play set:`, setToPlay?.map(t => `${t.color}_${t.number}`));
+      
+      if (setToPlay && this.playSet(player.id, setToPlay.map(t => t.id))) {
+        console.log(`Bot successfully played set`);
+        return true;
+      } else {
+        console.log(`Bot failed to play set`);
+      }
+    }
+    
+    return false;
+  }
+  
+  calculateSetValue(set) {
+    return set.reduce((sum, tile) => sum + (tile.isJoker ? 0 : tile.number), 0);
+  }
+  
+  tryPlayOnExistingSets(player) {
+    // Don't try this strategy if the player hasn't made their initial play
+    if (!player.hasPlayedInitial) return false;
+    
+    // Go through each tile in the player's hand
+    for (const tile of player.hand) {
+      // Skip jokers for this simple strategy (we'll use them in aggressive play)
+      if (tile.isJoker) continue;
+      
+      // Check each set on the board
+      for (let setIndex = 0; setIndex < this.board.length; setIndex++) {
+        const boardSet = this.board[setIndex];
+        
+        // Try to add the tile to the beginning or end of run sets
+        if (this.isValidRun(boardSet)) {
+          const testBeginning = [tile, ...boardSet];
+          if (this.isValidRun(testBeginning)) {
+            console.log(`Bot adding tile ${tile.color}_${tile.number} to beginning of run`);
+            // Add the tile to the set
+            if (this.playSet(player.id, [tile.id], setIndex)) {
+              return true;
+            }
+          }
+          
+          const testEnd = [...boardSet, tile];
+          if (this.isValidRun(testEnd)) {
+            console.log(`Bot adding tile ${tile.color}_${tile.number} to end of run`);
+            // Add the tile to the set
+            if (this.playSet(player.id, [tile.id], setIndex)) {
+              return true;
+            }
+          }
+        }
+        
+        // Try to add to group sets
+        if (this.isValidGroup(boardSet) && boardSet.length < 4) {
+          const testGroup = [...boardSet, tile];
+          if (this.isValidGroup(testGroup)) {
+            console.log(`Bot adding tile ${tile.color}_${tile.number} to group`);
+            // Add the tile to the set
+            if (this.playSet(player.id, [tile.id], setIndex)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  tryAggressivePlay(player) {
+    // This is a more aggressive strategy when the bot has been drawing too many tiles
+    console.log(`Bot making aggressive play attempt after ${player.consecutiveDraws} consecutive draws`);
+    
+    // STRATEGY 1: Use jokers more aggressively
+    const jokers = player.hand.filter(t => t.isJoker);
+    const nonJokers = player.hand.filter(t => !t.isJoker);
+    
+    if (jokers.length > 0 && this.board.length > 0 && player.hasPlayedInitial) {
+      // Try to add jokers to existing sets
+      for (let setIndex = 0; setIndex < this.board.length; setIndex++) {
+        const boardSet = this.board[setIndex];
+        
+        // Add joker to a run
+        if (this.isValidRun(boardSet)) {
+          const jokerTile = jokers[0];
+          const testEnd = [...boardSet, jokerTile];
+          
+          if (this.isValidRun(testEnd)) {
+            console.log(`Bot adding joker to end of run`);
+            if (this.playSet(player.id, [jokerTile.id], setIndex)) {
+              return true;
+            }
+          }
+        }
+        
+        // Add joker to a group
+        if (this.isValidGroup(boardSet) && boardSet.length < 4) {
+          const jokerTile = jokers[0];
+          const testGroup = [...boardSet, jokerTile];
+          
+          if (this.isValidGroup(testGroup)) {
+            console.log(`Bot adding joker to group`);
+            if (this.playSet(player.id, [jokerTile.id], setIndex)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    // STRATEGY 2: Look for pairs of tiles that could make a set with a joker
+    if (jokers.length > 0 && nonJokers.length >= 2) {
+      // Check for pairs of same color, consecutive numbers
+      for (let i = 0; i < nonJokers.length - 1; i++) {
+        for (let j = i + 1; j < nonJokers.length; j++) {
+          const tile1 = nonJokers[i];
+          const tile2 = nonJokers[j];
+          
+          // Same color, one number apart
+          if (tile1.color === tile2.color && Math.abs(tile1.number - tile2.number) === 2) {
+            const testSet = [tile1, tile2, jokers[0]].sort((a, b) => 
+              a.isJoker ? 0 : b.isJoker ? 0 : a.number - b.number
+            );
+            
+            if (this.isValidSet(testSet)) {
+              // Try to play this set if it meets initial play requirements
+              if (!player.hasPlayedInitial && this.calculateSetValue(testSet) < 30) {
+                continue;
+              }
+              
+              console.log(`Bot creating run with joker: ${testSet.map(t => t.isJoker ? 'joker' : `${t.color}_${t.number}`).join(', ')}`);
+              if (this.playSet(player.id, testSet.map(t => t.id))) {
+                return true;
+              }
+            }
+          }
+          
+          // Same number, different colors
+          if (tile1.number === tile2.number && tile1.color !== tile2.color) {
+            const testSet = [tile1, tile2, jokers[0]];
+            
+            if (this.isValidSet(testSet)) {
+              // Try to play this set if it meets initial play requirements
+              if (!player.hasPlayedInitial && this.calculateSetValue(testSet) < 30) {
+                continue;
+              }
+              
+              console.log(`Bot creating group with joker: ${testSet.map(t => t.isJoker ? 'joker' : `${t.color}_${t.number}`).join(', ')}`);
+              if (this.playSet(player.id, testSet.map(t => t.id))) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // If all else fails but we have two jokers, try to play them with any tile
+    if (jokers.length >= 2 && nonJokers.length >= 1 && player.hasPlayedInitial) {
+      const tile = nonJokers[0];
+      const testSet = [tile, jokers[0], jokers[1]];
+      
+      console.log(`Bot making desperate play with 2 jokers and ${tile.color}_${tile.number}`);
+      if (this.playSet(player.id, testSet.map(t => t.id))) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
 
   findPossibleSets(hand) {
     const sets = [];
     
-    // Check all possible combinations of 3+ tiles
+    // Group tiles by color and number for faster analysis
+    const tilesByColor = {};
+    const tilesByNumber = {};
+    const jokers = hand.filter(t => t.isJoker);
+    
+    // Organize tiles by color and number
+    for (const tile of hand) {
+      if (tile.isJoker) continue;
+      
+      if (!tilesByColor[tile.color]) {
+        tilesByColor[tile.color] = [];
+      }
+      tilesByColor[tile.color].push(tile);
+      
+      if (!tilesByNumber[tile.number]) {
+        tilesByNumber[tile.number] = [];
+      }
+      tilesByNumber[tile.number].push(tile);
+    }
+    
+    // Sort tiles within each color by number
+    for (const color in tilesByColor) {
+      tilesByColor[color].sort((a, b) => a.number - b.number);
+    }
+    
+    // 1. Find runs (same color, consecutive numbers)
+    for (const color in tilesByColor) {
+      const colorTiles = tilesByColor[color];
+      
+      // Try all possible starting positions for runs
+      for (let start = 0; start < colorTiles.length; start++) {
+        let currentRun = [colorTiles[start]];
+        let lastNumber = colorTiles[start].number;
+        
+        // Add consecutive numbers to the run
+        for (let j = start + 1; j < colorTiles.length; j++) {
+          if (colorTiles[j].number === lastNumber + 1) {
+            currentRun.push(colorTiles[j]);
+            lastNumber = colorTiles[j].number;
+          } else if (colorTiles[j].number > lastNumber + 1) {
+            // Gap detected, check if we can use jokers to bridge it
+            const gap = colorTiles[j].number - lastNumber - 1;
+            if (jokers.length >= gap) {
+              // We have enough jokers to fill the gap
+              for (let k = 0; k < gap; k++) {
+                currentRun.push(jokers[k]);
+              }
+              currentRun.push(colorTiles[j]);
+              lastNumber = colorTiles[j].number;
+            } else {
+              // Not enough jokers, end the run
+              break;
+            }
+          }
+        }
+        
+        // Add valid runs (3+ tiles)
+        if (currentRun.length >= 3) {
+          sets.push([...currentRun]);
+          
+          // Also add subsets of the run (if 4+ tiles)
+          if (currentRun.length > 3) {
+            for (let i = 0; i < currentRun.length - 2; i++) {
+              for (let j = i + 3; j <= currentRun.length; j++) {
+                const subset = currentRun.slice(i, j);
+                if (subset.length >= 3 && subset.length !== currentRun.length) {
+                  sets.push([...subset]);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // 2. Find groups (same number, different colors)
+    for (const number in tilesByNumber) {
+      const numberTiles = tilesByNumber[number];
+      
+      // If we have 3 or 4 tiles of same number
+      if (numberTiles.length >= 3 && numberTiles.length <= 4) {
+        // Check that they're all different colors
+        const colors = new Set(numberTiles.map(t => t.color));
+        if (colors.size === numberTiles.length) {
+          sets.push([...numberTiles]);
+        }
+      }
+      
+      // If we have 2 tiles of same number but different colors and at least 1 joker
+      if (numberTiles.length === 2 && jokers.length >= 1) {
+        const colors = new Set(numberTiles.map(t => t.color));
+        if (colors.size === 2) {
+          sets.push([...numberTiles, jokers[0]]);
+        }
+      }
+    }
+    
+    // 3. Check all possible combinations of 3+ tiles (traditional approach)
+    // This catches sets that might have been missed by the optimized approaches above
     for (let i = 0; i < hand.length - 2; i++) {
       for (let j = i + 1; j < hand.length - 1; j++) {
         for (let k = j + 1; k < hand.length; k++) {
           const testSet = [hand[i], hand[j], hand[k]];
-          if (this.isValidSet(testSet)) {
+          if (this.isValidSet(testSet) && !this.isDuplicateSet(sets, testSet)) {
             sets.push(testSet);
             
             // Try adding more tiles to this set
             for (let l = k + 1; l < hand.length; l++) {
               const extendedSet = [...testSet, hand[l]];
-              if (this.isValidSet(extendedSet)) {
+              if (this.isValidSet(extendedSet) && !this.isDuplicateSet(sets, extendedSet)) {
                 sets.push(extendedSet);
               }
             }
@@ -948,27 +1249,70 @@ class RummikubGame {
     
     return sets;
   }
+  
+  isDuplicateSet(existingSets, newSet) {
+    // Check if a set with the same tiles already exists
+    const newSetIds = new Set(newSet.map(t => t.id));
+    
+    for (const existingSet of existingSets) {
+      if (existingSet.length !== newSet.length) continue;
+      
+      const existingSetIds = new Set(existingSet.map(t => t.id));
+      
+      // Check if all IDs match
+      let allMatch = true;
+      for (const id of newSetIds) {
+        if (!existingSetIds.has(id)) {
+          allMatch = false;
+          break;
+        }
+      }
+      
+      if (allMatch) return true;
+    }
+    
+    return false;
+  }
 
   chooseBestSet(possibleSets) {
     if (possibleSets.length === 0) return null;
 
-    // Sort sets by value and pick based on difficulty
+    const currentPlayer = this.getCurrentPlayer();
+    const needsInitial = currentPlayer && !currentPlayer.hasPlayedInitial;
+
+    // Sort sets by value and pick based on difficulty and initial play requirements
     const sortedSets = possibleSets.sort((a, b) => {
       const valueA = a.reduce((sum, tile) => sum + (tile.isJoker ? 0 : tile.number), 0);
       const valueB = b.reduce((sum, tile) => sum + (tile.isJoker ? 0 : tile.number), 0);
+      
+      // If player needs to make initial play, prioritize sets >= 30 points
+      if (needsInitial) {
+        if (valueA >= 30 && valueB < 30) return -1;
+        if (valueA < 30 && valueB >= 30) return 1;
+      }
+      
+      // For normal play or tie-breaking initial plays
       return valueB - valueA; // Highest value first
     });
+
+    // Filter out sets that don't meet initial play requirements if needed
+    const validSets = needsInitial 
+      ? sortedSets.filter(set => this.calculateSetValue(set) >= 30)
+      : sortedSets;
+    
+    if (validSets.length === 0) return null;
 
     switch (this.botDifficulty) {
       case 'easy':
         // Easy bot plays randomly or lower value sets
-        return possibleSets[Math.floor(Math.random() * Math.min(3, possibleSets.length))];
+        // But still respects initial play requirements
+        return validSets[Math.floor(Math.random() * Math.min(3, validSets.length))];
       case 'hard':
         // Hard bot always plays the best set
-        return sortedSets[0];
+        return validSets[0];
       default: // medium
         // Medium bot plays good sets but not always optimal
-        const topSets = sortedSets.slice(0, Math.min(2, sortedSets.length));
+        const topSets = validSets.slice(0, Math.min(2, validSets.length));
         return topSets[Math.floor(Math.random() * topSets.length)];
     }
   }
