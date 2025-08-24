@@ -309,6 +309,11 @@ class RummikubClient {
                 this.lastPlayedSet = data.gameState.lastPlayedSet;
             }
             
+            // Sort the board sets before updating the game state
+            if (data.gameState && data.gameState.board) {
+                this.sortAllBoardSets(data.gameState.board);
+            }
+            
             this.gameState = data.gameState;
             this.hasPlayedTilesThisTurn = true; // Mark that tiles have been played this turn
             this.updateGameState();
@@ -410,6 +415,11 @@ class RummikubClient {
                 this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
             }
             
+            // Sort the board sets before updating the game state
+            if (data.gameState && data.gameState.board) {
+                this.sortAllBoardSets(data.gameState.board);
+            }
+            
             this.gameState = data.gameState;
             // Update the full game state, not just the board
             this.updateGameState();
@@ -434,6 +444,12 @@ class RummikubClient {
         this.socket.on('gameStateUpdate', (data) => {
             console.log('🎮 Game state updated', data);
             const wasMyTurn = this.isMyTurn();
+            
+            // Sort the board sets before updating the game state
+            if (data.gameState && data.gameState.board) {
+                this.sortAllBoardSets(data.gameState.board);
+            }
+            
             this.gameState = data.gameState;
             
             // If turn changed from me to someone else, clear any selections
@@ -1772,6 +1788,9 @@ class RummikubClient {
             return;
         }
         
+        // Sort all sets on the board before rendering
+        this.sortAllBoardSets(this.gameState.board);
+        
         boardElement.innerHTML = '';
         
         // Create a four-column layout by distributing sets evenly
@@ -2703,140 +2722,17 @@ class RummikubClient {
     addTileToSetIntelligently(set, tile) {
         if (!set || !tile) return;
         
-        // First, determine if this is a run or a group
-        let isRun = false;
-        let isGroup = false;
-        
-        if (set.length >= 2) {
-            // Check if it's potentially a run (consecutive numbers of same color)
-            const nonJokers = set.filter(t => !t.isJoker);
-            if (nonJokers.length >= 2) {
-                const allSameColor = new Set(nonJokers.map(t => t.color)).size === 1;
-                isRun = allSameColor;
-                
-                // If not a run, must be a group (same number, different colors)
-                if (!isRun) {
-                    const allSameNumber = new Set(nonJokers.map(t => t.number)).size === 1;
-                    isGroup = allSameNumber;
-                }
-            }
-        }
-        
-        // Handle joker - we'll insert it based on the set type
-        if (tile.isJoker) {
-            // For a group, just append the joker
-            if (isGroup || (!isRun && !isGroup)) {
-                set.push(tile);
-                return;
-            }
-            
-            // For a run, determine the best position based on the gaps
-            if (isRun) {
-                const numbers = set.filter(t => !t.isJoker).map(t => t.number).sort((a, b) => a - b);
-                
-                // Determine if joker should go at the beginning, end, or middle
-                if (numbers.length >= 1) {
-                    if (numbers[0] > 1) {
-                        // Insert at the beginning (joker represents numbers[0]-1)
-                        set.unshift(tile);
-                        return;
-                    } else if (numbers[numbers.length - 1] < 13) {
-                        // Insert at the end (joker represents numbers[numbers.length-1]+1)
-                        set.push(tile);
-                        return;
-                    } else {
-                        // Look for gaps in the run
-                        for (let i = 0; i < numbers.length - 1; i++) {
-                            if (numbers[i+1] - numbers[i] > 1) {
-                                // Find the position to insert at
-                                let insertIndex = 0;
-                                for (let j = 0; j < set.length; j++) {
-                                    if (!set[j].isJoker && set[j].number === numbers[i]) {
-                                        insertIndex = j + 1;
-                                        break;
-                                    }
-                                }
-                                set.splice(insertIndex, 0, tile);
-                                return;
-                            }
-                        }
-                        // If we get here, there are no gaps - append to end
-                        set.push(tile);
-                    }
-                } else {
-                    // No non-joker tiles, just append
-                    set.push(tile);
-                }
-                return;
-            }
-        }
-        
-        // Non-joker tiles
-        if (isRun) {
-            // Insert the tile in the correct numerical order
-            const currentColor = set.find(t => !t.isJoker)?.color;
-            
-            // If the color doesn't match and it's a run, this might not be valid
-            // We'll insert it anyway and let end-turn validation catch the issue
-            if (currentColor && tile.color !== currentColor) {
-                set.push(tile);
-                return;
-            }
-            
-            // Insert in numerical order
-            let insertIndex = set.length;
-            for (let i = 0; i < set.length; i++) {
-                const setTile = set[i];
-                if ((setTile.isJoker && i === set.length - 1) || 
-                    (!setTile.isJoker && tile.number < setTile.number)) {
-                    insertIndex = i;
-                    break;
-                }
-            }
-            set.splice(insertIndex, 0, tile);
-            return;
-        }
-        
-        // For groups (same number, different colors)
-        if (isGroup) {
-            const currentNumber = set.find(t => !t.isJoker)?.number;
-            
-            // If the number doesn't match and it's a group, this might not be valid
-            // We'll insert it anyway and let end-turn validation catch the issue
-            if (currentNumber && tile.number !== currentNumber) {
-                set.push(tile);
-                return;
-            }
-            
-            // Check if this color already exists in the group
-            const colors = set.map(t => t.color);
-            if (colors.includes(tile.color)) {
-                // Color already exists, just append (may not be valid)
-                set.push(tile);
-                return;
-            }
-            
-            // Insert based on color order (red, blue, yellow, black)
-            const colorOrder = { 'red': 0, 'blue': 1, 'yellow': 2, 'black': 3 };
-            let insertIndex = set.length;
-            
-            for (let i = 0; i < set.length; i++) {
-                if (set[i].isJoker) continue;
-                if (colorOrder[tile.color] < colorOrder[set[i].color]) {
-                    insertIndex = i;
-                    break;
-                }
-            }
-            
-            set.splice(insertIndex, 0, tile);
-            return;
-        }
-        
-        // If we can't determine the set type (e.g., only one tile), just append
+        // Simply add the tile to the set
         set.push(tile);
+        
+        // Then sort the entire set
+        this.sortBoardSet(set);
     }
     
     updateBoard(newBoard, tilesFromHand = []) {
+        // Sort all sets on the board before updating
+        this.sortAllBoardSets(newBoard);
+        
         // Store local copy immediately for better UX response
         if (this.gameState) {
             this.gameState.board = newBoard;
@@ -2850,6 +2746,138 @@ class RummikubClient {
             board: newBoard,
             tilesFromHand: tilesFromHand
         });
+    }
+    
+    // Sort all sets on the board for consistent display
+    sortAllBoardSets(board) {
+        if (!board || !Array.isArray(board)) return;
+        
+        board.forEach(set => {
+            this.sortBoardSet(set);
+        });
+    }
+    
+    // Sort a single set based on whether it's a run or group
+    sortBoardSet(set) {
+        if (!set || !Array.isArray(set) || set.length < 2) return;
+        
+        // Determine if this is a run or a group
+        const nonJokers = set.filter(t => !t.isJoker);
+        const jokers = set.filter(t => t.isJoker);
+        
+        if (nonJokers.length < 2) {
+            // Not enough non-joker tiles to determine type
+            return;
+        }
+        
+        // Check if it's a run (all same color)
+        const colors = new Set(nonJokers.map(t => t.color));
+        const isRun = colors.size === 1;
+        
+        // Check if it's a group (all same number)
+        const numbers = new Set(nonJokers.map(t => t.number));
+        const isGroup = numbers.size === 1;
+        
+        if (isRun) {
+            // For runs, we need to infer where jokers should be placed
+            
+            // First, sort the non-joker tiles by number
+            nonJokers.sort((a, b) => a.number - b.number);
+            
+            // If there are no jokers, just sort normally
+            if (jokers.length === 0) {
+                set.sort((a, b) => a.number - b.number);
+                return;
+            }
+            
+            // Create a new sorted array
+            const sortedSet = [];
+            
+            // Find gaps in the run where jokers could be placed
+            let jokerPositions = [];
+            
+            // Check for gaps between consecutive non-joker tiles
+            for (let i = 1; i < nonJokers.length; i++) {
+                const gap = nonJokers[i].number - nonJokers[i-1].number - 1;
+                if (gap > 0) {
+                    // Add potential joker positions for each gap
+                    for (let j = 1; j <= gap; j++) {
+                        jokerPositions.push({
+                            position: nonJokers[i-1].number + j,
+                            index: i // Insert after this index in the sortedSet
+                        });
+                    }
+                }
+            }
+            
+            // Sort positions by the size of the gap they fill
+            jokerPositions.sort((a, b) => a.position - b.position);
+            
+            // If we have more jokers than identified gaps, check for positions at the start or end
+            if (jokers.length > jokerPositions.length) {
+                // Check if a joker could go before the first non-joker
+                if (nonJokers.length > 0 && nonJokers[0].number > 1) {
+                    jokerPositions.unshift({
+                        position: nonJokers[0].number - 1,
+                        index: 0 // Insert at the beginning
+                    });
+                }
+                
+                // Check if a joker could go after the last non-joker
+                if (nonJokers.length > 0 && nonJokers[nonJokers.length - 1].number < 13) {
+                    jokerPositions.push({
+                        position: nonJokers[nonJokers.length - 1].number + 1,
+                        index: nonJokers.length // Insert at the end
+                    });
+                }
+            }
+            
+            // Use only as many joker positions as we have jokers
+            jokerPositions = jokerPositions.slice(0, jokers.length);
+            
+            // Assign each joker its inferred number based on position
+            jokers.forEach((joker, idx) => {
+                if (idx < jokerPositions.length) {
+                    joker._inferredNumber = jokerPositions[idx].position;
+                } else {
+                    // If we couldn't infer a position, just place at the end
+                    joker._inferredNumber = 14; // Higher than any valid tile
+                }
+            });
+            
+            // Create the final sorted array including jokers
+            set.sort((a, b) => {
+                if (a.isJoker && b.isJoker) {
+                    // Sort jokers by their inferred number
+                    return a._inferredNumber - b._inferredNumber;
+                }
+                if (a.isJoker) {
+                    return a._inferredNumber - b.number;
+                }
+                if (b.isJoker) {
+                    return a.number - b._inferredNumber;
+                }
+                // Regular tiles sorted by number
+                return a.number - b.number;
+            });
+            
+            // Clean up temporary properties
+            jokers.forEach(joker => {
+                delete joker._inferredNumber;
+            });
+        } else if (isGroup) {
+            // Sort by color for groups
+            const colorOrder = { 'red': 0, 'blue': 1, 'yellow': 2, 'black': 3 };
+            set.sort((a, b) => {
+                // Handle jokers
+                if (a.isJoker && b.isJoker) return 0;
+                if (a.isJoker) return 1; // Jokers at the end
+                if (b.isJoker) return -1;
+                
+                // Regular tiles are sorted by color
+                return colorOrder[a.color] - colorOrder[b.color];
+            });
+        }
     }
 
     highlightInvalidSet(setIndex) {
