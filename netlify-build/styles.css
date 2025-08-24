@@ -1821,14 +1821,15 @@ body {
 }
 
 .notification-icon {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.notification-icon i {
     font-size: 48px;
     color: #4CAF50;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 60px; /* Fixed height for icon container */
-    line-height: 1;
+    display: inline-block;
 }
 
 /* Special styling for when it's the player's turn */
@@ -1837,27 +1838,21 @@ body {
     border: 2px solid #ffca28; /* Gold border */
 }
 
-.turn-notification-card.my-turn .notification-icon {
+.turn-notification-card.my-turn .notification-icon i {
     color: #ff9800; /* Orange/gold star */
     animation: pulse 1.5s infinite alternate;
 }
 
-.turn-notification-card.my-turn .notification-icon i {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-}
-
 @keyframes pulse {
-    from { 
+    0% { 
         transform: scale(1);
         opacity: 0.9;
+        text-shadow: 0 0 5px rgba(255, 152, 0, 0.5);
     }
-    to { 
+    100% { 
         transform: scale(1.2);
         opacity: 1;
+        text-shadow: 0 0 15px rgba(255, 152, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.5);
     }
 }
 
