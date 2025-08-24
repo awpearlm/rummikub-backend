@@ -1822,14 +1822,19 @@ body {
 
 .notification-icon {
     width: 100%;
-    text-align: center;
     margin-bottom: 20px;
+    display: block;
+    height: 50px;
+    position: relative;
 }
 
 .notification-icon i {
     font-size: 48px;
     color: #4CAF50;
-    display: inline-block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 /* Special styling for when it's the player's turn */
