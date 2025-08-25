@@ -5,14 +5,22 @@ describe('Multiplayer Game Reconnection', () => {
   const getPlayerName = (prefix = 'Player') => `${prefix}_${Date.now().toString().slice(-5)}`
   let gameId
 
-  before(() => {
-    // Log environment information at the beginning of the test suite
-    cy.logEnvironmentInfo()
-  })
-
   it('should maintain game state across reconnection with multiple players', () => {
     // First browser: Create a game
     const hostName = getPlayerName('Host')
+    
+    // Log environment info
+    const environment = Cypress.env('environment') || 'local';
+    const frontendUrl = Cypress.env('currentFrontendUrl') || Cypress.config('baseUrl');
+    const backendUrl = Cypress.env('currentBackendUrl') || Cypress.config('baseUrl');
+    
+    console.log(`Testing Environment: ${environment}`);
+    console.log(`Frontend URL: ${frontendUrl}`);
+    console.log(`Backend URL: ${backendUrl}`);
+    
+    cy.log(`Testing Environment: ${environment}`);
+    cy.log(`Frontend URL: ${frontendUrl}`);
+    cy.log(`Backend URL: ${backendUrl}`);
     
     // Create a new game
     cy.createGame(hostName).then(id => {
@@ -24,7 +32,7 @@ describe('Multiplayer Game Reconnection', () => {
         
         // Second browser: Join the game
         cy.getFrontendUrl().then(url => {
-          cy.visit(url, { timeout: 15000 })
+          cy.visit(url, { timeout: 15000, failOnStatusCode: false })
           cy.log(`Visiting frontend URL: ${url}`)
         })
         

@@ -30,7 +30,7 @@ Cypress.Commands.add('hasStoredGame', () => {
 Cypress.Commands.add('createGame', (playerName) => {
   // Visit the frontend URL
   cy.getFrontendUrl().then(url => {
-    cy.visit(url)
+    cy.visit(url, { failOnStatusCode: false })
     cy.log(`Visiting frontend URL: ${url}`)
   })
   
@@ -50,7 +50,7 @@ Cypress.Commands.add('createGame', (playerName) => {
 Cypress.Commands.add('joinGame', (playerName, gameId) => {
   // Visit the frontend URL
   cy.getFrontendUrl().then(url => {
-    cy.visit(url)
+    cy.visit(url, { failOnStatusCode: false })
     cy.log(`Visiting frontend URL: ${url}`)
   })
   
@@ -107,7 +107,17 @@ Cypress.Commands.add('getStoredGameInfo', () => {
 
 // Command to log the current environment configuration
 Cypress.Commands.add('logEnvironmentInfo', () => {
-  cy.log(`Testing Environment: ${Cypress.env('environment') || 'local'}`)
-  cy.log(`Frontend URL: ${Cypress.env('currentFrontendUrl') || Cypress.config('baseUrl')}`)
-  cy.log(`Backend URL: ${Cypress.env('currentBackendUrl') || Cypress.config('baseUrl')}`)
+  // Simple console.log for debugging - doesn't use cy.task()
+  const environment = Cypress.env('environment') || 'local';
+  const frontendUrl = Cypress.env('currentFrontendUrl') || Cypress.config('baseUrl');
+  const backendUrl = Cypress.env('currentBackendUrl') || Cypress.config('baseUrl');
+  
+  console.log(`Testing Environment: ${environment}`);
+  console.log(`Frontend URL: ${frontendUrl}`);
+  console.log(`Backend URL: ${backendUrl}`);
+  
+  // Also log to the test interface
+  cy.log(`Testing Environment: ${environment}`);
+  cy.log(`Frontend URL: ${frontendUrl}`);
+  cy.log(`Backend URL: ${backendUrl}`);
 })

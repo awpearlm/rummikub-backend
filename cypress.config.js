@@ -21,7 +21,7 @@ module.exports = defineConfig({
       },
       // For testing against deployed environments
       production: {
-        frontendUrl: 'https://j-kube.netlify.app', // Update with your Netlify URL
+        frontendUrl: 'https://jkube.netlify.app', // Correct Netlify URL
         backendUrl: 'https://rummikub-backend.onrender.com', // Your Render backend URL
       },
     },
@@ -36,16 +36,18 @@ module.exports = defineConfig({
       
       // Allow overriding the environment via command line
       const environment = process.env.CYPRESS_ENVIRONMENT || 'local'
-      config.env = { 
-        ...config.env,
-        environment,
-        // Set current environment values
-        currentFrontendUrl: config.env[environment]?.frontendUrl || config.baseUrl,
-        currentBackendUrl: config.env[environment]?.backendUrl || config.baseUrl,
-      }
+      console.log(`Setting up Cypress with environment: ${environment}`)
+      
+      // Create a copy of the environment settings to avoid modifying the original config
+      config.env.environment = environment
+      config.env.currentFrontendUrl = config.env[environment]?.frontendUrl || config.baseUrl
+      config.env.currentBackendUrl = config.env[environment]?.backendUrl || config.baseUrl
       
       // Use the frontend URL as the baseUrl
       config.baseUrl = config.env.currentFrontendUrl
+      
+      console.log(`Frontend URL: ${config.env.currentFrontendUrl}`)
+      console.log(`Backend URL: ${config.env.currentBackendUrl}`)
       
       return config
     },

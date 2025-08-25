@@ -5,12 +5,20 @@ describe('Game Reconnection', () => {
   const getPlayerName = () => `TestPlayer_${Date.now().toString().slice(-5)}`
   let gameId
 
-  before(() => {
-    // Log environment information at the beginning of the test suite
-    cy.logEnvironmentInfo()
-  })
-
   it('should save game info to localStorage when creating a game', () => {
+    // Log environment info
+    const environment = Cypress.env('environment') || 'local';
+    const frontendUrl = Cypress.env('currentFrontendUrl') || Cypress.config('baseUrl');
+    const backendUrl = Cypress.env('currentBackendUrl') || Cypress.config('baseUrl');
+    
+    console.log(`Testing Environment: ${environment}`);
+    console.log(`Frontend URL: ${frontendUrl}`);
+    console.log(`Backend URL: ${backendUrl}`);
+    
+    cy.log(`Testing Environment: ${environment}`);
+    cy.log(`Frontend URL: ${frontendUrl}`);
+    cy.log(`Backend URL: ${backendUrl}`);
+    
     const playerName = getPlayerName()
     
     // Create a new game

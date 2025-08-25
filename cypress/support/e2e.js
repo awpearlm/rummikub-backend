@@ -19,9 +19,9 @@ import './commands'
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
-// Log information about the test
+// Log information about the test using console.log instead of cy.task
 Cypress.on('test:before:run', (attributes) => {
-  cy.task('log', `Running: ${attributes.title}`)
+  console.log(`Running: ${attributes.title}`)
 })
 
 // Avoid failing tests on uncaught exceptions from the application
