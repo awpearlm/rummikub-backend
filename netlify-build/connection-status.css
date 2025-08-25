@@ -102,6 +102,20 @@
     opacity: 0.9;
 }
 
+#reconnectionStatus {
+    margin-bottom: 15px;
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.reconnect-info {
+    font-size: 14px;
+    background-color: rgba(52, 152, 219, 0.2);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
 .reconnect-button {
     background-color: #3498db;
     color: white;

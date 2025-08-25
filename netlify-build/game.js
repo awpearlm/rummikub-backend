@@ -215,6 +215,9 @@ class RummikubClient {
             this.updateGameState();
             this.showNotification(`Game created! Share code: ${data.gameId}`, 'success');
             
+            // Save game info to localStorage
+            this.saveGameStateToStorage();
+            
             // Start tracking activity
             this.startInactivityCheck();
         });
@@ -225,6 +228,23 @@ class RummikubClient {
             this.showGameScreen();
             this.updateGameState();
             this.showNotification('Joined game successfully!', 'success');
+            
+            // Save game info to localStorage
+            this.saveGameStateToStorage();
+            
+            // Start tracking activity
+            this.startInactivityCheck();
+        });
+
+        this.socket.on('botGameCreated', (data) => {
+            this.gameId = data.gameId;
+            this.gameState = data.gameState;
+            this.showGameScreen();
+            this.updateGameState();
+            this.showNotification(`Game with bots created! Game code: ${data.gameId}`, 'success');
+            
+            // Save game info to localStorage
+            this.saveGameStateToStorage();
             
             // Start tracking activity
             this.startInactivityCheck();
@@ -342,6 +362,8 @@ class RummikubClient {
         this.socket.on('gameWon', (data) => {
             this.gameState = data.gameState;
             this.updateGameState();
+            // Clear game info from storage since the game is over
+            this.clearGameStateFromStorage();
             this.showVictoryCelebration(data.winner.name);
         });
 
@@ -715,6 +737,9 @@ class RummikubClient {
 
     leaveGame() {
         if (confirm('Are you sure you want to leave the game?')) {
+            // Clear game info from storage
+            this.clearGameStateFromStorage();
+            
             // Stop inactivity check
             this.stopInactivityCheck();
             location.reload();
@@ -3266,10 +3291,57 @@ class RummikubClient {
         if (overlay) {
             overlay.style.display = 'flex';
             
+            // Check if we have game info stored
+            const gameInfo = this.getGameStateFromStorage();
+            const reconnectInfo = document.querySelector('.reconnect-info');
+            
+            if (gameInfo && gameInfo.gameId && gameInfo.playerName && reconnectInfo) {
+                reconnectInfo.textContent = `You have an active game (${gameInfo.gameId}). Clicking the button below will attempt to restore your game session.`;
+                
+                // Update the button text to be more specific
+                const reconnectBtn = document.getElementById('manualReconnectBtn');
+                if (reconnectBtn) {
+                    reconnectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Reconnect to Game #' + gameInfo.gameId;
+                }
+            } else if (reconnectInfo) {
+                reconnectInfo.textContent = 'You don\'t have any saved games. Clicking the button below will refresh the page.';
+                
+                // Update the button text
+                const reconnectBtn = document.getElementById('manualReconnectBtn');
+                if (reconnectBtn) {
+                    reconnectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Page';
+                }
+            }
+            
             // Set up the manual reconnect button
             const reconnectBtn = document.getElementById('manualReconnectBtn');
             if (reconnectBtn) {
-                reconnectBtn.onclick = () => window.location.reload();
+                reconnectBtn.onclick = () => {
+                    // This behavior is now handled in the DOMContentLoaded event
+                    // as we set it up there for consistent behavior
+                    const gameInfo = this.getGameStateFromStorage();
+                    
+                    if (gameInfo && gameInfo.gameId && gameInfo.playerName) {
+                        console.log('🔄 Attempting to rejoin game with saved info:', gameInfo);
+                        this.showNotification('Attempting to reconnect to your game...', 'info');
+                        
+                        // Show loading screen while reconnecting
+                        document.getElementById('welcomeScreen').classList.remove('active');
+                        document.getElementById('gameScreen').classList.remove('active');
+                        document.getElementById('loadingScreen').classList.add('active');
+                        
+                        // Hide connection lost overlay
+                        this.hideConnectionLostOverlay();
+                        
+                        // Attempt to rejoin with the stored game info
+                        this.gameId = gameInfo.gameId;
+                        this.playerName = gameInfo.playerName;
+                        this.rejoinGame(gameInfo.gameId, gameInfo.playerName);
+                    } else {
+                        console.log('⚠️ No valid game info found, reloading page');
+                        window.location.reload();
+                    }
+                };
             }
         }
     }
@@ -3372,6 +3444,55 @@ function closeGameLogModal() {
 RummikubClient.prototype.openGameLogModal = openGameLogModal;
 RummikubClient.prototype.closeGameLogModal = closeGameLogModal;
 
+// Methods to save and restore game state
+RummikubClient.prototype.saveGameStateToStorage = function() {
+    if (!this.gameId || !this.playerName) return;
+    
+    try {
+        const gameInfo = {
+            gameId: this.gameId,
+            playerName: this.playerName,
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem('rummikub_game_info', JSON.stringify(gameInfo));
+        console.log('💾 Game info saved to localStorage:', gameInfo);
+    } catch (err) {
+        console.warn('Could not save game info to localStorage:', err);
+    }
+};
+
+RummikubClient.prototype.clearGameStateFromStorage = function() {
+    try {
+        localStorage.removeItem('rummikub_game_info');
+        console.log('🧹 Game info cleared from localStorage');
+    } catch (err) {
+        console.warn('Could not clear game info from localStorage:', err);
+    }
+};
+
+RummikubClient.prototype.getGameStateFromStorage = function() {
+    try {
+        const gameInfoStr = localStorage.getItem('rummikub_game_info');
+        if (!gameInfoStr) return null;
+        
+        const gameInfo = JSON.parse(gameInfoStr);
+        
+        // Check if stored game info is recent enough (within last 2 hours)
+        const twoHoursInMs = 2 * 60 * 60 * 1000;
+        if (Date.now() - gameInfo.timestamp > twoHoursInMs) {
+            console.log('🕒 Stored game info is too old, clearing');
+            this.clearGameStateFromStorage();
+            return null;
+        }
+        
+        return gameInfo;
+    } catch (err) {
+        console.warn('Could not retrieve game info from localStorage:', err);
+        return null;
+    }
+};
+
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 DOM loaded, initializing RummikubClient...');
@@ -3382,7 +3503,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
     if (manualReconnectBtn) {
         manualReconnectBtn.addEventListener('click', () => {
-            window.location.reload();
+            // Instead of reloading, try to restore from saved state
+            const gameInfo = window.game.getGameStateFromStorage();
+            
+            if (gameInfo && gameInfo.gameId && gameInfo.playerName) {
+                console.log('🔄 Attempting to rejoin game with saved info:', gameInfo);
+                window.game.showNotification('Attempting to reconnect to your game...', 'info');
+                
+                // Show loading screen while reconnecting
+                document.getElementById('welcomeScreen').classList.remove('active');
+                document.getElementById('gameScreen').classList.remove('active');
+                document.getElementById('loadingScreen').classList.add('active');
+                
+                // Hide connection lost overlay
+                window.game.hideConnectionLostOverlay();
+                
+                // Attempt to rejoin with the stored game info
+                window.game.gameId = gameInfo.gameId;
+                window.game.playerName = gameInfo.playerName;
+                window.game.rejoinGame(gameInfo.gameId, gameInfo.playerName);
+            } else {
+                console.log('⚠️ No valid game info found, reloading page');
+                window.location.reload();
+            }
         });
+    }
+    
+    // Check if we have a saved game to restore
+    const savedGameInfo = window.game.getGameStateFromStorage();
+    if (savedGameInfo && savedGameInfo.gameId && savedGameInfo.playerName) {
+        console.log('🔄 Found saved game info on page load:', savedGameInfo);
+        
+        // Fill in the player name field
+        const playerNameInput = document.getElementById('playerName');
+        if (playerNameInput) {
+            playerNameInput.value = savedGameInfo.playerName;
+        }
+        
+        // Show a toast notification about the saved game
+        window.game.showNotification(`You have a saved game (${savedGameInfo.gameId}). You can rejoin it from the connection panel if disconnected.`, 'info', 8000);
     }
 });

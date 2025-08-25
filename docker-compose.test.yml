@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  j_kube_test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: bash -c "node server.js & sleep 5 && cypress run"

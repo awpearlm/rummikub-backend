@@ -31,6 +31,7 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
 - **Color-coded Tiles** - Easy-to-read tiles with proper Rummikub colors
 - **Interactive Gameplay** - Click to select tiles, drag and drop coming soon
 - **Smart Sorting** - Auto-sort your hand by color and number
+- **Connection Recovery** - Robust reconnection system that preserves game state
 
 ## 🚀 Quick Start
 
@@ -60,6 +61,62 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
    ```
    http://localhost:3000
    ```
+
+## 🧪 Testing
+
+J_kube includes comprehensive automated testing for key features, especially the connection and reconnection functionality.
+
+### Running Tests
+
+#### Standard Test Suite
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm run test:reconnection
+npm run test:multiplayer
+npm run test:edge
+```
+
+#### Automated Test Script
+We provide a complete test automation script that handles the entire process:
+
+```bash
+# Make script executable (first time only)
+chmod +x run-reconnection-tests.sh
+
+# Run the automated test suite
+./run-reconnection-tests.sh
+```
+
+The automated script:
+- Starts the server
+- Runs all test suites
+- Generates a detailed HTML report
+- Manages the server lifecycle
+
+#### Docker-based Testing
+For completely isolated testing:
+
+```bash
+# Make script executable (first time only)
+chmod +x run-docker-tests.sh
+
+# Run the Docker-based tests
+./run-docker-tests.sh
+```
+
+This runs tests in a containerized environment for maximum consistency.
+
+### Test Reports
+Test reports are generated in the `test-reports` directory, including:
+- HTML summary report
+- Test logs
+- Server logs
+- Video recordings of test runs
+
+For more details on testing, see [TESTING.md](TESTING.md).
 
 ## 🎮 How to Play
 
@@ -103,6 +160,7 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
 - **Real-time**: Socket.IO
 - **Frontend**: Vanilla HTML, CSS, JavaScript
 - **Security**: Helmet.js + CORS
+- **Testing**: Cypress for end-to-end testing
 
 ### Architecture
 ```
@@ -132,6 +190,13 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
 - Server-side game state validation
 - Real-time synchronization across all clients
 - Persistent game rooms until all players leave
+- LocalStorage for game state preservation during reconnection
+
+#### Connection Recovery System
+- Automatic reconnection attempts when connection is lost
+- Manual reconnection option with game state preservation
+- Session persistence using browser storage
+- Clear user feedback during connection issues
 
 #### AI Bot System
 - **Smart Move Analysis**: Bots analyze all possible tile combinations
@@ -211,4 +276,4 @@ MIT License - feel free to use this code for your own family game nights!
 **Happy Gaming! 🎲✨**
 
 *Share a game code, gather your friends, and let the tiles fall where they may!*
-# Force redeploy Thu Aug 21 12:19:22 BST 2025
+# Force redeploy Mon Aug 26 12:19:22 BST 2025
