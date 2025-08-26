@@ -342,14 +342,7 @@ body {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.button-group {
-    display: flex;
-    gap: 15px;
-}
-
-.button-group .btn {
-    flex: 1;
-}
+/* Button group removed as buttons are now in the lobby actions */
 
 /* Join Form */
 .join-form {
@@ -2030,6 +2023,7 @@ body {
 .lobby-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     margin-top: 10px;
 }
 
@@ -2042,28 +2036,15 @@ body {
     font-size: 0.85rem;
     cursor: pointer;
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    min-height: auto;
 }
 
 .btn-refresh:hover {
     background-color: #cbd5e0;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.separator {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 20px 0;
-    color: #a0aec0;
-}
-
-.separator::before,
-.separator::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.separator span {
-    padding: 0 10px;
-    font-size: 0.85rem;
-}
+/* Separator removed as buttons are now in the lobby actions */
