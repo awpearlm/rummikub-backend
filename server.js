@@ -725,6 +725,8 @@ class RummikubGame {
     // Broadcast updated game state
     io.to(this.id).emit('turnEnded', {
       gameState: this.getGameState(currentPlayer.id),
+      currentPlayerId: this.getCurrentPlayer()?.id,
+      isYourTurn: false, // For the timed-out player
       message: `Time's up for ${currentPlayer.name}! Drew a tile and ended turn.`
     });
   }
@@ -1752,7 +1754,9 @@ io.on('connection', (socket) => {
           const playerSocket = io.sockets.sockets.get(player.id);
           if (playerSocket) {
             playerSocket.emit('tileDrawn', {
-              gameState: game.getGameState(player.id)
+              gameState: game.getGameState(player.id),
+              currentPlayerId: game.getCurrentPlayer()?.id,
+              isYourTurn: player.id === game.getCurrentPlayer()?.id
             });
           }
         });
@@ -1859,8 +1863,11 @@ io.on('connection', (socket) => {
         game.players.forEach(player => {
           const playerSocket = io.sockets.sockets.get(player.id);
           if (playerSocket) {
+            // Send a more detailed turnEnded event with the current player info
             playerSocket.emit('turnEnded', {
-              gameState: game.getGameState(player.id)
+              gameState: game.getGameState(player.id),
+              currentPlayerId: game.getCurrentPlayer()?.id,
+              isYourTurn: player.id === game.getCurrentPlayer()?.id
             });
           }
         });

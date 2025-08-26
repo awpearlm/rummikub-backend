@@ -343,7 +343,16 @@ class RummikubClient {
 
         this.socket.on('tileDrawn', (data) => {
             this.gameState = data.gameState;
+            
+            // Force update of buttons based on server-provided turn info
+            const isMyTurnNow = data.isYourTurn || (data.currentPlayerId === this.socket.id);
+            console.log(`🎮 Tile drawn - isMyTurnNow: ${isMyTurnNow}, currentPlayerId: ${data.currentPlayerId}`);
+            
             this.updateGameState();
+            
+            // Explicitly update action buttons after state update
+            this.updateActionButtons();
+            
             this.showNotification('Tile drawn', 'info');
         });
 
@@ -351,7 +360,15 @@ class RummikubClient {
             this.gameState = data.gameState;
             this.hasPlayedTilesThisTurn = false; // Reset for new turn
             this.hasBoardChanged = false; // Reset board change flag for new turn
+            
+            // Force update of buttons based on server-provided turn info
+            const isMyTurnNow = data.isYourTurn || (data.currentPlayerId === this.socket.id);
+            console.log(`🎮 Turn ended - isMyTurnNow: ${isMyTurnNow}, currentPlayerId: ${data.currentPlayerId}`);
+            
             this.updateGameState();
+            
+            // Explicitly update action buttons after state update
+            this.updateActionButtons();
         });
 
         this.socket.on('messageReceived', (data) => {
@@ -1121,7 +1138,7 @@ class RummikubClient {
         }
         
         const result = currentPlayer.id === this.socket.id;
-        console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}`);
+        console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
         
         return result;
     }
