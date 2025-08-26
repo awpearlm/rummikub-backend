@@ -125,3 +125,29 @@ Cypress.Commands.add('logEnvironmentInfo', () => {
   cy.log(`Frontend URL: ${frontendUrl}`);
   cy.log(`Backend URL: ${backendUrl}`);
 })
+
+// Command to check if the draw button is enabled
+Cypress.Commands.add('drawButtonShouldBeEnabled', () => {
+  cy.get('#drawTileBtn').should('not.be.disabled')
+  cy.get('#drawTileBtn').should('have.css', 'opacity', '1')
+})
+
+// Command to check if the draw button is disabled
+Cypress.Commands.add('drawButtonShouldBeDisabled', () => {
+  cy.get('#drawTileBtn').should('be.disabled')
+  cy.get('#drawTileBtn').should('have.css', 'opacity', '0.5')
+})
+
+// Command to store the initial board state
+Cypress.Commands.add('storeInitialBoardState', () => {
+  cy.get('#gameBoard').invoke('html').as('initialBoardState')
+})
+
+// Command to check if board matches the stored initial state
+Cypress.Commands.add('boardShouldMatchInitialState', () => {
+  cy.get('#gameBoard').invoke('html').then(currentBoardHtml => {
+    cy.get('@initialBoardState').then(initialBoardHtml => {
+      expect(currentBoardHtml).to.equal(initialBoardHtml)
+    })
+  })
+})

@@ -480,6 +480,12 @@ class RummikubClient {
             }
             
             this.updateGameState();
+            
+            // Check if board has been restored to its original state (happens after undo)
+            // This needs to be after updateGameState since it depends on the updated state
+            if (this.isMyTurn()) {
+                this.hasBoardStateChanged(); // This will now reset hasPlayedTilesThisTurn if board matches snapshot
+            }
         });
     }
 
@@ -707,6 +713,7 @@ class RummikubClient {
         // Request a full undo from the server, which will also return tiles to hand
         this.socket.emit('requestUndoTurn');
         this.hasBoardChanged = false; // Reset the flag when undoing
+        this.hasPlayedTilesThisTurn = false; // Reset this flag to allow drawing after an undo
         
         // Reset the timer when undoing
         if (this.timerEnabled) {
@@ -731,6 +738,14 @@ class RummikubClient {
         
         // Update the board changed flag
         this.hasBoardChanged = hasChanged;
+        
+        // If the board has been restored to its original state (matches the snapshot),
+        // reset the hasPlayedTilesThisTurn flag to allow drawing again
+        if (!hasChanged && this.hasPlayedTilesThisTurn) {
+            this.hasPlayedTilesThisTurn = false;
+            // Update buttons since we've changed a flag that affects them
+            this.updateActionButtons();
+        }
         
         return hasChanged;
     }
@@ -1010,6 +1025,7 @@ class RummikubClient {
             tile.classList.remove('selected');
         });
         this.updatePlayButton();
+        this.updateActionButtons(); // Update all buttons, including enabling the draw button
     }
 
     sortHandByColor() {
@@ -1999,6 +2015,7 @@ class RummikubClient {
         }
         
         this.updatePlayButton();
+        this.updateActionButtons(); // Update all action buttons to disable the draw button when tiles are selected
     }
 
     updatePlayButton() {
@@ -2032,15 +2049,23 @@ class RummikubClient {
         // Draw Tile button - disable if:
         // 1. Tiles have been played this turn
         // 2. No tiles left in the deck
+        // 3. Tiles are selected (for Play Selected functionality)
         // Note: Board state changes should not prevent drawing if no new tiles have been played
         const drawBtn = document.getElementById('drawTileBtn');
         if (drawBtn) {
-            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !noTilesLeft;
+            const hasTilesSelected = this.selectedTiles && this.selectedTiles.length > 0;
+            const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !noTilesLeft && !hasTilesSelected;
             
             // If no tiles are left, add a visual indication
             if (noTilesLeft) {
                 drawBtn.style.opacity = '0.5';
                 drawBtn.title = 'No tiles left in the deck';
+            } else if (hasTilesSelected) {
+                drawBtn.style.opacity = '0.5';
+                drawBtn.title = 'Cannot draw while tiles are selected';
+            } else if (this.hasPlayedTilesThisTurn) {
+                drawBtn.style.opacity = '0.5';
+                drawBtn.title = 'Cannot draw after playing tiles this turn';
             } else {
                 drawBtn.style.opacity = canDrawTile ? '1' : '0.5';
                 drawBtn.title = canDrawTile ? 'Draw a tile' : 'Cannot draw a tile right now';
