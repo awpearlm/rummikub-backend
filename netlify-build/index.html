@@ -314,6 +314,34 @@
             <p>Make your move now</p>
         </div>
     </div>
+    
+    <!-- Game Settings Modal -->
+    <div id="gameSettingsModal" class="game-settings-modal">
+        <div class="modal-scrim"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Game Settings</h3>
+                <button id="closeSettingsBtn" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-container">
+                    <div class="setting-option">
+                        <label class="setting-label">
+                            <input type="checkbox" id="settingsEnableTimer" checked>
+                            <span class="setting-text"><i class="fas fa-clock"></i> Enable Turn Timer (2 mins)</span>
+                        </label>
+                    </div>
+                    <!-- More settings can be added here in the future -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>

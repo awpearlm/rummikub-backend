@@ -1020,6 +1020,136 @@ body {
     background: rgba(0, 0, 0, 0.5);
 }
 
+/* Game Settings Modal */
+.game-settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 2000;
+}
+
+.game-settings-modal.show {
+    display: flex;
+}
+
+.modal-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.game-settings-modal .modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.game-settings-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.game-settings-modal .modal-header h3 {
+    margin: 0;
+    color: #4a5568;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-settings-modal .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #718096;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.game-settings-modal .close-btn:hover {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.game-settings-modal .modal-body {
+    padding: 20px;
+}
+
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.setting-option {
+    padding: 12px;
+    border-radius: 6px;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+}
+
+.setting-option:hover {
+    background: #edf2f7;
+}
+
+.setting-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.setting-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #667eea;
+}
+
+.setting-text {
+    font-size: 1rem;
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.game-settings-modal .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.game-settings-modal .btn {
+    padding: 10px 20px;
+    font-size: 1rem;
+}
+
 .game-log {
     position: absolute;
     top: 50%;

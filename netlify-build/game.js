@@ -177,6 +177,16 @@ class RummikubClient {
         addSafeEventListener('sortByColorBtn', 'click', () => this.sortHandByColor());
         addSafeEventListener('sortByNumberBtn', 'click', () => this.sortHandByNumber());
         
+        // Game settings modal events
+        addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
+        addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
+        addSafeEventListener('createGameWithSettingsBtn', 'click', () => this.createGameWithSettings());
+        addSafeEventListener('gameSettingsModal', 'click', (event) => {
+            if (event.target.classList.contains('modal-scrim')) {
+                this.closeSettingsModal();
+            }
+        });
+        
         // Enter key events
         addSafeEventListener('playerName', 'keypress', (e) => {
             if (e.key === 'Enter') this.createGame();
@@ -703,52 +713,9 @@ class RummikubClient {
             return;
         }
         
-        // Debug mode is determined by using name "debug"
-        const isDebugMode = playerName.toLowerCase() === 'debug';
-        if (isDebugMode) {
-            console.log('🔧 Debug mode enabled! Game creator will get debug hand.');
-        }
-        
-        // Check if timer is enabled
-        const timerEnabled = document.getElementById('enableTimer').checked;
-        this.timerEnabled = timerEnabled;
-        console.log(`🕒 Turn timer: ${timerEnabled ? 'ENABLED' : 'disabled'}`);
-        
+        // Show the settings modal instead of creating the game immediately
         this.playerName = playerName;
-        this.showLoadingScreen();
-        
-        // Check if socket is connected
-        if (!this.socket.connected) {
-            console.log('🔌 Socket not connected, waiting...');
-            // Set a timeout for connection
-            const connectionTimeout = setTimeout(() => {
-                console.error('❌ Connection timeout');
-                this.showWelcomeScreen();
-                this.showNotification('Unable to connect to game server. Please try again in a moment.', 'error');
-            }, 15000); // 15 second timeout
-            
-            // Wait for connection
-            this.socket.once('connect', () => {
-                clearTimeout(connectionTimeout);
-                console.log('✅ Connected! Sending createGame...');
-                const isDebugMode = playerName.toLowerCase() === 'debug';
-                console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-                this.socket.emit('createGame', { 
-                    playerName, 
-                    isDebugMode,
-                    timerEnabled: this.timerEnabled
-                });
-            });
-        } else {
-            // Already connected
-            const isDebugMode = playerName.toLowerCase() === 'debug';
-            console.log('🔧 Debug mode:', isDebugMode ? 'ENABLED' : 'disabled');
-            this.socket.emit('createGame', { 
-                playerName, 
-                isDebugMode,
-                timerEnabled: this.timerEnabled
-            });
-        }
+        this.openSettingsModal();
     }
 
     showJoinForm() {
@@ -3767,6 +3734,75 @@ function closeGameLogModal() {
 // Add these methods to the RummikubClient prototype
 RummikubClient.prototype.openGameLogModal = openGameLogModal;
 RummikubClient.prototype.closeGameLogModal = closeGameLogModal;
+
+// Add the settings modal methods to the prototype
+RummikubClient.prototype.openSettingsModal = function() {
+    const modal = document.getElementById('gameSettingsModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Copy the current timer setting to the modal
+        const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
+        document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
+        // Prevent scrolling of background content
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+RummikubClient.prototype.closeSettingsModal = function() {
+    const modal = document.getElementById('gameSettingsModal');
+    if (modal) {
+        modal.classList.remove('show');
+        // Restore scrolling
+        document.body.style.overflow = '';
+    }
+};
+
+RummikubClient.prototype.createGameWithSettings = function() {
+    // Get settings from the modal
+    const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+    this.timerEnabled = timerEnabled;
+    console.log(`🕒 Turn timer: ${timerEnabled ? 'ENABLED' : 'disabled'}`);
+    
+    // Close the modal
+    this.closeSettingsModal();
+    
+    // Debug mode is determined by using name "debug"
+    const isDebugMode = this.playerName.toLowerCase() === 'debug';
+    if (isDebugMode) {
+        console.log('🔧 Debug mode enabled! Game creator will get debug hand.');
+    }
+    
+    this.showLoadingScreen();
+    
+    // Check if socket is connected
+    if (!this.socket.connected) {
+        console.log('🔌 Socket not connected, waiting...');
+        // Set a timeout for connection
+        const connectionTimeout = setTimeout(() => {
+            console.error('❌ Connection timeout');
+            this.showWelcomeScreen();
+            this.showNotification('Unable to connect to game server. Please try again in a moment.', 'error');
+        }, 15000); // 15 second timeout
+        
+        // Wait for connection
+        this.socket.once('connect', () => {
+            clearTimeout(connectionTimeout);
+            console.log('✅ Connected! Sending createGame...');
+            this.socket.emit('createGame', { 
+                playerName: this.playerName, 
+                isDebugMode,
+                timerEnabled: this.timerEnabled
+            });
+        });
+    } else {
+        // Already connected
+        this.socket.emit('createGame', { 
+            playerName: this.playerName, 
+            isDebugMode,
+            timerEnabled: this.timerEnabled
+        });
+    }
+};
 
 // Methods to save and restore game state
 RummikubClient.prototype.saveGameStateToStorage = function() {
