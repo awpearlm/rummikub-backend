@@ -19,7 +19,17 @@ const allowedOrigins = [
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? allowedOrigins : "*",
+    origin: function (origin, callback) {
+      // Allow all in development
+      if (process.env.NODE_ENV !== 'production') return callback(null, true);
+      
+      // In production, allow specified origins or Netlify domains
+      if (!origin || allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
+        return callback(null, true);
+      }
+      
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -30,7 +40,21 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? allowedOrigins : "*",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    
+    // In production, check against our allowed origins
+    if (allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
+      return callback(null, true);
+    }
+    
+    // If not allowed
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -2162,9 +2186,14 @@ app.get('/api/games/:gameId', (req, res) => {
 // New endpoint to list all available games
 app.get('/api/games', (req, res) => {
   // Set CORS headers explicitly for this endpoint
-  res.header('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' ? allowedOrigins : "*");
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  const origin = req.headers.origin;
+  
+  // Check if the origin is in our allowed list or if we're in development
+  if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin) || origin?.match(/\.netlify\.app$/)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+  }
   
   const availableGames = [];
   
