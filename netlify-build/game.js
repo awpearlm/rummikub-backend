@@ -513,6 +513,12 @@ class RummikubClient {
         // Reset all button states first
         document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
         
+        // Clear any existing games refresh interval when changing modes
+        if (this.gamesRefreshInterval) {
+            clearInterval(this.gamesRefreshInterval);
+            this.gamesRefreshInterval = null;
+        }
+        
         // Hide both option panels initially
         document.getElementById('multiplayerOptions').classList.add('hidden');
         document.getElementById('botGameOptions').classList.add('hidden');
@@ -533,21 +539,48 @@ class RummikubClient {
         const backendUrl = this.socket.io.uri;
         const gamesListContainer = document.getElementById('gamesList');
         
+        // Clear any existing auto-refresh interval
+        if (this.gamesRefreshInterval) {
+            clearInterval(this.gamesRefreshInterval);
+            this.gamesRefreshInterval = null;
+        }
+        
         if (gamesListContainer) {
             gamesListContainer.innerHTML = '<div class="loading-games"><i class="fas fa-spinner fa-spin"></i> Loading available games...</div>';
             
-            // Fetch the list of available games from the server
-            fetch(`${backendUrl}/api/games`)
-                .then(response => response.json())
-                .then(data => {
-                    // The server returns { games: [...] }, so we need to extract the games array
-                    const gamesList = data.games || [];
-                    this.renderGamesList(gamesList);
-                })
-                .catch(error => {
-                    console.error('Error fetching games:', error);
-                    gamesListContainer.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Could not load games. Please try again.</div>';
-                });
+            // Function to fetch and update the games list
+            const fetchAndUpdateGames = () => {
+                // Only fetch if the multiplayer options are still visible
+                if (document.getElementById('multiplayerOptions').classList.contains('hidden')) {
+                    if (this.gamesRefreshInterval) {
+                        clearInterval(this.gamesRefreshInterval);
+                        this.gamesRefreshInterval = null;
+                    }
+                    return;
+                }
+                
+                fetch(`${backendUrl}/api/games`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // The server returns { games: [...] }, so we need to extract the games array
+                        const gamesList = data.games || [];
+                        this.renderGamesList(gamesList);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching games:', error);
+                        // Only show error if this is the first load
+                        if (!this.hasLoadedGamesList) {
+                            gamesListContainer.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Could not load games. Please try again.</div>';
+                        }
+                    });
+            };
+            
+            // Initial fetch
+            fetchAndUpdateGames();
+            this.hasLoadedGamesList = true;
+            
+            // Set up auto-refresh every 10 seconds
+            this.gamesRefreshInterval = setInterval(fetchAndUpdateGames, 10000);
         }
     }
     
@@ -575,34 +608,53 @@ class RummikubClient {
             const createdTime = new Date(game.createdAt);
             const timeAgo = this.getTimeAgo(createdTime);
             
-            gameItem.innerHTML = `
+            // Check if the game is active
+            const isActiveGame = game.status === 'ACTIVE';
+            
+            // Build the game item HTML with conditional button/status based on game state
+            const itemHTML = `
                 <div class="game-item-info">
-                    <div class="game-host"><i class="fas fa-user"></i> ${game.host}</div>
+                    <div class="game-host">
+                        <i class="fas fa-user"></i> ${game.host}
+                        ${isActiveGame ? '<span class="game-status-badge active">Active</span>' : ''}
+                    </div>
                     <div class="game-details">
                         <span class="player-count"><i class="fas fa-users"></i> ${game.playerCount}/4</span>
                         <span class="game-time"><i class="fas fa-clock"></i> ${timeAgo}</span>
                     </div>
                 </div>
-                <button class="btn btn-join-game" data-game-id="${game.id}">
-                    <i class="fas fa-sign-in-alt"></i> Join
-                </button>
             `;
+            
+            gameItem.innerHTML = itemHTML;
+            
+            // Add join button only for games that aren't active
+            if (!isActiveGame) {
+                const joinButton = document.createElement('button');
+                joinButton.className = 'btn btn-join-game';
+                joinButton.setAttribute('data-game-id', game.id);
+                joinButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join';
+                
+                joinButton.addEventListener('click', (e) => {
+                    const gameId = e.currentTarget.getAttribute('data-game-id');
+                    // Auto-fill the game ID in the join form
+                    document.getElementById('gameId').value = gameId;
+                    this.joinGame();
+                });
+                
+                gameItem.appendChild(joinButton);
+            } else {
+                // For active games, show a disabled button with "In Progress" text
+                const statusButton = document.createElement('button');
+                statusButton.className = 'btn btn-secondary btn-in-progress';
+                statusButton.disabled = true;
+                statusButton.innerHTML = '<i class="fas fa-hourglass-half"></i> In Progress';
+                gameItem.appendChild(statusButton);
+            }
             
             gamesList.appendChild(gameItem);
         });
         
         gamesListContainer.appendChild(gamesList);
-        
-        // Add event listeners to join buttons
-        const joinButtons = gamesListContainer.querySelectorAll('.btn-join-game');
-        joinButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const gameId = e.currentTarget.getAttribute('data-game-id');
-                // Auto-fill the game ID in the join form
-                document.getElementById('gameId').value = gameId;
-                this.joinGame();
-            });
-        });
     }
     
     getTimeAgo(date) {
@@ -1325,6 +1377,12 @@ class RummikubClient {
         console.log('📺 Showing game screen...');
         document.getElementById('gameScreen').classList.add('active');
         console.log('📺 Game screen should now be visible');
+        
+        // Clear any existing games refresh interval when starting a game
+        if (this.gamesRefreshInterval) {
+            clearInterval(this.gamesRefreshInterval);
+            this.gamesRefreshInterval = null;
+        }
     }
 
     showLoadingScreen() {
