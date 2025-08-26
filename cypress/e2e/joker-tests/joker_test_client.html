@@ -1,0 +1,370 @@
+/**
+ * Joker Test Client
+ * 
+ * A minimal client page for testing joker validation with real socket.io communication
+ * to diagnose network serialization issues.
+ */
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rummikub Joker Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        
+        .info {
+            background-color: #d9edf7;
+            color: #31708f;
+            border: 1px solid #bce8f1;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .tile {
+            display: inline-block;
+            width: 40px;
+            height: 50px;
+            margin: 5px;
+            text-align: center;
+            line-height: 50px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .red { background-color: #f44336; }
+        .blue { background-color: #2196F3; }
+        .yellow { background-color: #FFC107; color: black; }
+        .black { background-color: #333; }
+        .joker { 
+            background-image: linear-gradient(45deg, #f44336, #2196F3, #FFC107, #333);
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Rummikub Joker Test Client</h1>
+        
+        <div class="status info" id="connectionStatus">
+            Not connected
+        </div>
+        
+        <div>
+            <button id="connectBtn">Connect to Server</button>
+            <button id="createGameBtn" disabled>Create Test Game</button>
+            <button id="testJokerGroupBtn" disabled>Test Joker Group</button>
+            <button id="testAllJokerCasesBtn" disabled>Test All Joker Cases</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+        
+        <h2>Current Test</h2>
+        <div id="currentTest" class="test-result">
+            No test running
+        </div>
+        
+        <h2>Test Tiles</h2>
+        <div id="tilesContainer"></div>
+        
+        <h2>Log</h2>
+        <pre id="logOutput"></pre>
+    </div>
+    
+    <!-- Include Socket.IO client -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- Include the Joker Network Test -->
+    <script src="joker_browser_network_test.js"></script>
+    
+    <script>
+        // DOM Elements
+        const connectBtn = document.getElementById('connectBtn');
+        const createGameBtn = document.getElementById('createGameBtn');
+        const testJokerGroupBtn = document.getElementById('testJokerGroupBtn');
+        const testAllJokerCasesBtn = document.getElementById('testAllJokerCasesBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const currentTest = document.getElementById('currentTest');
+        const tilesContainer = document.getElementById('tilesContainer');
+        const logOutput = document.getElementById('logOutput');
+        
+        // Socket.IO and test instance
+        let socket = null;
+        let networkTest = null;
+        
+        // Log function
+        function log(message) {
+            const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+            logOutput.innerHTML += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        // Update status
+        function updateStatus(message, type) {
+            connectionStatus.textContent = message;
+            connectionStatus.className = `status ${type}`;
+        }
+        
+        // Display tiles
+        function displayTiles(tiles) {
+            tilesContainer.innerHTML = '';
+            
+            tiles.forEach(tile => {
+                const tileElement = document.createElement('div');
+                tileElement.classList.add('tile');
+                
+                if (tile.isJoker) {
+                    tileElement.classList.add('joker');
+                    tileElement.textContent = 'J';
+                } else {
+                    tileElement.classList.add(tile.color);
+                    tileElement.textContent = tile.number;
+                }
+                
+                tileElement.title = tile.id;
+                tilesContainer.appendChild(tileElement);
+            });
+        }
+        
+        // Connect to server
+        connectBtn.addEventListener('click', async () => {
+            updateStatus('Connecting...', 'info');
+            
+            try {
+                networkTest = new JokerNetworkTest();
+                await networkTest.connect();
+                
+                updateStatus('Connected to server', 'success');
+                connectBtn.disabled = true;
+                createGameBtn.disabled = false;
+                disconnectBtn.disabled = false;
+                
+                log('Successfully connected to server');
+                
+            } catch (error) {
+                updateStatus(`Connection failed: ${error.message}`, 'error');
+                log(`Connection error: ${error.message}`);
+            }
+        });
+        
+        // Create game
+        createGameBtn.addEventListener('click', async () => {
+            updateStatus('Creating game...', 'info');
+            
+            try {
+                await networkTest.createGame();
+                
+                updateStatus(`Game created: ${networkTest.gameId}`, 'success');
+                createGameBtn.disabled = true;
+                testJokerGroupBtn.disabled = false;
+                testAllJokerCasesBtn.disabled = false;
+                
+                log(`Game created with ID: ${networkTest.gameId}`);
+                
+            } catch (error) {
+                updateStatus(`Game creation failed: ${error.message}`, 'error');
+                log(`Game creation error: ${error.message}`);
+            }
+        });
+        
+        // Test joker group
+        testJokerGroupBtn.addEventListener('click', async () => {
+            updateStatus('Testing joker group...', 'info');
+            currentTest.textContent = 'Testing: Joker, 13y, 13b';
+            
+            try {
+                // Prepare test tiles
+                const testTiles = networkTest.prepareTestTiles();
+                displayTiles(testTiles);
+                
+                // Attempt to play the set
+                const result = await networkTest.attemptPlaySet();
+                
+                if (result) {
+                    updateStatus('Joker group test PASSED ✅', 'success');
+                    currentTest.textContent = 'Test PASSED: Joker, 13y, 13b was accepted by the server';
+                } else {
+                    updateStatus('Joker group test FAILED ❌', 'error');
+                    currentTest.textContent = `Test FAILED: ${networkTest.testResults.errorMessage}`;
+                }
+                
+                log(`Joker group test result: ${result ? 'PASSED' : 'FAILED'}`);
+                if (!result && networkTest.testResults.errorMessage) {
+                    log(`Error: ${networkTest.testResults.errorMessage}`);
+                }
+                
+            } catch (error) {
+                updateStatus(`Test failed: ${error.message}`, 'error');
+                log(`Test error: ${error.message}`);
+            }
+        });
+        
+        // Test all joker cases
+        testAllJokerCasesBtn.addEventListener('click', async () => {
+            updateStatus('Running all joker tests...', 'info');
+            
+            // Define test cases
+            const testCases = [
+                {
+                    name: 'Standard Joker',
+                    tiles: [
+                        { id: 'joker_1', isJoker: true, color: null, number: null },
+                        { id: 'yellow_13', isJoker: false, color: 'yellow', number: 13 },
+                        { id: 'blue_13', isJoker: false, color: 'blue', number: 13 }
+                    ]
+                },
+                {
+                    name: 'Multiple Jokers',
+                    tiles: [
+                        { id: 'joker_1', isJoker: true, color: null, number: null },
+                        { id: 'joker_2', isJoker: true, color: null, number: null },
+                        { id: 'yellow_13', isJoker: false, color: 'yellow', number: 13 }
+                    ]
+                },
+                {
+                    name: 'Joker with String Properties',
+                    tiles: [
+                        { id: 'joker_1', isJoker: 'true', color: 'null', number: 'null' },
+                        { id: 'yellow_13', isJoker: false, color: 'yellow', number: 13 },
+                        { id: 'blue_13', isJoker: false, color: 'blue', number: 13 }
+                    ]
+                },
+                {
+                    name: 'Joker without isJoker Property',
+                    tiles: [
+                        { id: 'joker_1', color: null, number: null },
+                        { id: 'yellow_13', isJoker: false, color: 'yellow', number: 13 },
+                        { id: 'blue_13', isJoker: false, color: 'blue', number: 13 }
+                    ]
+                }
+            ];
+            
+            // Run each test case
+            for (let i = 0; i < testCases.length; i++) {
+                const testCase = testCases[i];
+                
+                currentTest.textContent = `Testing case ${i+1}/${testCases.length}: ${testCase.name}`;
+                log(`\n--- Test Case ${i+1}: ${testCase.name} ---`);
+                
+                // Override the test tiles
+                networkTest.testTiles = testCase.tiles;
+                displayTiles(testCase.tiles);
+                
+                // Add a short delay to make it visually clear that tests are running sequentially
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                try {
+                    // Attempt to play the set
+                    const result = await networkTest.attemptPlaySet();
+                    
+                    log(`Result: ${result ? 'PASSED ✅' : 'FAILED ❌'}`);
+                    if (!result && networkTest.testResults.errorMessage) {
+                        log(`Error: ${networkTest.testResults.errorMessage}`);
+                    }
+                    
+                } catch (error) {
+                    log(`Error: ${error.message}`);
+                }
+            }
+            
+            updateStatus('All joker tests completed', 'info');
+            currentTest.textContent = 'All test cases completed. Check the log for details.';
+        });
+        
+        // Disconnect
+        disconnectBtn.addEventListener('click', () => {
+            if (networkTest && networkTest.socket) {
+                networkTest.socket.disconnect();
+                updateStatus('Disconnected from server', 'info');
+                
+                // Reset buttons
+                connectBtn.disabled = false;
+                createGameBtn.disabled = true;
+                testJokerGroupBtn.disabled = true;
+                testAllJokerCasesBtn.disabled = true;
+                disconnectBtn.disabled = true;
+                
+                log('Disconnected from server');
+            }
+        });
+        
+        // Initial log message
+        log('Joker Test Client initialized');
+        log('Click "Connect to Server" to begin');
+    </script>
+</body>
+</html>

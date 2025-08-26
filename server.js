@@ -420,19 +420,19 @@ class RummikubGame {
     
     // Create a detailed log of the tiles being validated
     const tileDetails = tiles.map(t => {
-      if (t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker'))) return "JOKER";
+      if (t.isJoker === true || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))) return "JOKER";
       return `${t.number}${t.color.charAt(0)}`;
     }).join(", ");
     console.log(`Validating group with tiles: [${tileDetails}]`);
     
-    // Enhanced joker detection that checks either isJoker property or id
+    // Enhanced joker detection that checks isJoker property, null number, or id
     const jokerCount = tiles.filter(t => {
-      return t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker'));
+      return t.isJoker === true || t.number === null || (t.id && t.id.toLowerCase().includes('joker'));
     }).length;
     
     // Also update nonJokers filter to use the same enhanced detection
     const nonJokers = tiles.filter(t => {
-      return !(t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker')));
+      return !(t.isJoker === true || t.number === null || (t.id && t.id.toLowerCase().includes('joker')));
     });
     
     // If all jokers, it's valid (matching client-side behavior)
@@ -577,7 +577,7 @@ class RummikubGame {
     
     // Normalize joker properties to ensure consistency
     tiles.forEach(tile => {
-      if (tile.id && tile.id.toLowerCase().includes('joker')) {
+      if (tile.isJoker || tile.number === null || (tile.id && tile.id.toLowerCase().includes('joker'))) {
         // Ensure joker properties are set correctly
         tile.isJoker = true;
         tile.color = null;
@@ -647,7 +647,7 @@ class RummikubGame {
       
       // Normalize joker properties to ensure consistency
       tiles.forEach(tile => {
-        if (tile.id && tile.id.toLowerCase().includes('joker')) {
+        if (tile.isJoker || tile.number === null || (tile.id && tile.id.toLowerCase().includes('joker'))) {
           // Ensure joker properties are set correctly
           tile.isJoker = true;
           tile.color = null;
