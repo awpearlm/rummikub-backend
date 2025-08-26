@@ -42,6 +42,10 @@ Cypress.Commands.add('createGame', (playerName) => {
   // Wait for the game to be created and game screen to be visible
   cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
   
+  // Player should be listed in the players area
+  cy.get('#playersList', { timeout: 15000 }).should('be.visible')
+  cy.get('#playersList').should('contain', playerName)
+  
   // Get and return the game ID
   return cy.get('#currentGameId').invoke('text')
 })
