@@ -2458,6 +2458,12 @@ class RummikubClient {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             
+            // Check if it's not the player's turn and reject
+            if (!this.isMyTurn()) {
+                newSetZone.classList.add('drag-rejected');
+                return;
+            }
+            
             // Check if it's a hand tile and reject visually only if player needs initial play
             try {
                 const dragDataString = e.dataTransfer.getData('application/json');
@@ -2488,6 +2494,11 @@ class RummikubClient {
             newSetZone.classList.remove('drag-over');
             newSetZone.classList.remove('drag-rejected');
             
+            // Prevent drops if it's not the player's turn
+            if (!this.isMyTurn()) {
+                return;
+            }
+            
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
                 this.handleTileDrop(dragData, -1); // -1 indicates new set
@@ -2500,6 +2511,12 @@ class RummikubClient {
     setupBoardDropZone(placeholderElement) {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
+            
+            // Check if it's not the player's turn and reject
+            if (!this.isMyTurn()) {
+                placeholderElement.classList.add('drag-rejected');
+                return;
+            }
             
             // Check if it's a hand tile and reject visually only if player needs initial play
             try {
@@ -2530,6 +2547,11 @@ class RummikubClient {
             e.preventDefault();
             placeholderElement.classList.remove('drag-over');
             placeholderElement.classList.remove('drag-rejected');
+            
+            // Prevent drops if it's not the player's turn
+            if (!this.isMyTurn()) {
+                return;
+            }
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
