@@ -975,9 +975,32 @@ class RummikubClient {
             const multipleSets = this.detectMultipleSets(this.selectedTiles);
             
             if (multipleSets.length > 1) {
+                // Calculate the combined value of all sets for initial play
+                let totalValue = 0;
+                const setObjects = [];
+                
+                // For each detected set, get the tile objects and calculate the value
+                for (const setIds of multipleSets) {
+                    const setTiles = setIds.map(id => 
+                        this.gameState.playerHand.find(tile => tile.id === id)
+                    ).filter(Boolean);
+                    
+                    setObjects.push(setTiles);
+                    // Add the value of this set to the total
+                    totalValue += this.calculateSetValueClient(setTiles);
+                }
+                
+                console.log(`[INFO] Initial play with multiple sets - total value: ${totalValue} points`);
+                
+                // Check if the combined value meets the 30-point requirement
+                if (totalValue < 30) {
+                    this.showNotification(`Initial play must be at least 30 points (current: ${totalValue})`, 'error');
+                    return;
+                }
+                
                 // Show multiple sets detected notification
                 const tileCount = multipleSets.reduce((sum, set) => sum + set.length, 0);
-                this.showNotification(`Playing ${multipleSets.length} valid sets (${tileCount} tiles total) for initial play`, 'success');
+                this.showNotification(`Playing ${multipleSets.length} valid sets (${tileCount} tiles total, ${totalValue} points) for initial play`, 'success');
                 
                 // Send multiple sets for initial play validation
                 this.socket.emit('playSet', { setArrays: multipleSets });
@@ -995,6 +1018,29 @@ class RummikubClient {
             const multipleSets = this.detectMultipleSets(this.selectedTiles);
             
             if (multipleSets.length > 1) {
+                // Calculate the combined value of all sets for initial play
+                let totalValue = 0;
+                const setObjects = [];
+                
+                // For each detected set, get the tile objects and calculate the value
+                for (const setIds of multipleSets) {
+                    const setTiles = setIds.map(id => 
+                        this.gameState.playerHand.find(tile => tile.id === id)
+                    ).filter(Boolean);
+                    
+                    setObjects.push(setTiles);
+                    // Add the value of this set to the total
+                    totalValue += this.calculateSetValueClient(setTiles);
+                }
+                
+                console.log(`[INFO] Initial play with multiple sets - total value: ${totalValue} points`);
+                
+                // Check if the combined value meets the 30-point requirement
+                if (totalValue < 30) {
+                    this.showNotification(`Initial play must be at least 30 points (current: ${totalValue})`, 'error');
+                    return;
+                }
+                
                 // Send multiple sets for initial play validation
                 this.socket.emit('playSet', { setArrays: multipleSets });
                 console.log(`🎯 Playing ${multipleSets.length} sets for initial play:`, multipleSets);
