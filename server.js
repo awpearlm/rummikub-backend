@@ -93,6 +93,9 @@ class RummikubGame {
     const colors = ['red', 'blue', 'yellow', 'black'];
     const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
     
+    // Clear the deck first to ensure we start fresh
+    this.deck = [];
+    
     // Add numbered tiles (2 of each)
     for (let set = 0; set < 2; set++) {
       for (const color of colors) {
@@ -107,9 +110,17 @@ class RummikubGame {
       }
     }
     
-    // Add jokers
+    // Add jokers (exactly 2 as per standard Rummikub rules)
     this.deck.push({ id: 'joker_1', color: null, number: null, isJoker: true });
     this.deck.push({ id: 'joker_2', color: null, number: null, isJoker: true });
+    
+    // Validate that we have exactly 2 jokers
+    const jokerCount = this.deck.filter(tile => tile.isJoker).length;
+    if (jokerCount !== 2) {
+      console.error(`🔴 ERROR: Deck initialized with ${jokerCount} jokers instead of 2`);
+    } else {
+      console.log(`✅ Deck initialized with exactly 2 jokers (joker_1 and joker_2)`);
+    }
     
     // Shuffle deck
     this.shuffleDeck();
@@ -1228,11 +1239,23 @@ class RummikubGame {
       const setToPlay = this.chooseBestSet(validSets);
       console.log(`Attempting to play set:`, setToPlay?.map(t => `${t.color}_${t.number}`));
       
-      if (setToPlay && this.playSet(player.id, setToPlay.map(t => t.id))) {
-        console.log(`Bot successfully played set`);
-        return true;
-      } else {
-        console.log(`Bot failed to play set`);
+      // Validate that all tiles in the set exist in the player's hand (including jokers)
+      if (setToPlay) {
+        // Count jokers in the set
+        const jokersInSet = setToPlay.filter(t => t.isJoker).length;
+        const jokersInHand = player.hand.filter(t => t.isJoker).length;
+        
+        if (jokersInSet > jokersInHand) {
+          console.error(`Bot tried to play ${jokersInSet} jokers but only has ${jokersInHand} in hand!`);
+          return false;
+        }
+        
+        if (setToPlay && this.playSet(player.id, setToPlay.map(t => t.id))) {
+          console.log(`Bot successfully played set`);
+          return true;
+        } else {
+          console.log(`Bot failed to play set`);
+        }
       }
     }
     
@@ -1313,6 +1336,8 @@ class RummikubGame {
     // STRATEGY 1: Use jokers more aggressively
     const jokers = player.hand.filter(t => t.isJoker);
     const nonJokers = player.hand.filter(t => !t.isJoker);
+    
+    console.log(`Bot has ${jokers.length} jokers available for aggressive play`);
     
     if (jokers.length > 0 && this.board.length > 0 && player.hasPlayedInitial) {
       // Try to add jokers to existing sets
@@ -1399,9 +1424,17 @@ class RummikubGame {
       const tile = nonJokers[0];
       const testSet = [tile, jokers[0], jokers[1]];
       
-      console.log(`Bot making desperate play with 2 jokers and ${tile.color}_${tile.number}`);
-      if (this.playSet(player.id, testSet.map(t => t.id))) {
-        return true;
+      // Verify we actually have both jokers before trying to play them
+      const joker1 = player.hand.find(t => t.id === jokers[0].id);
+      const joker2 = player.hand.find(t => t.id === jokers[1].id);
+      
+      if (joker1 && joker2 && joker1.id !== joker2.id) {
+        console.log(`Bot making desperate play with 2 jokers and ${tile.color}_${tile.number}`);
+        if (this.playSet(player.id, testSet.map(t => t.id))) {
+          return true;
+        }
+      } else {
+        console.error(`Bot tried to play 2 jokers but doesn't have 2 unique jokers!`);
       }
     }
     
@@ -1700,12 +1733,12 @@ class RummikubGame {
     // Remove debug tiles from the deck by ID to prevent duplicates
     forcedDebugHand.forEach(debugTile => {
       const index = this.deck.findIndex(tile => 
-        debugTile.isJoker ? tile.isJoker : (tile.color === debugTile.color && tile.number === debugTile.number)
+        debugTile.isJoker ? (tile.isJoker && tile.id === debugTile.id) : (tile.color === debugTile.color && tile.number === debugTile.number)
       );
       
       if (index !== -1) {
         this.deck.splice(index, 1);
-        console.log(`🔧 Removed similar tile from deck: ${debugTile.color || 'joker'} ${debugTile.number || ''}`);
+        console.log(`🔧 Removed exact tile from deck: ${debugTile.id}`);
       }
     });
     
@@ -2102,15 +2135,21 @@ io.on('connection', (socket) => {
         if (game) {
           game.removePlayer(socket.id);
           
-          // Notify other players
-          io.to(playerData.gameId).emit('playerLeft', {
-            playerName: playerData.playerName,
-            gameState: game.getGameState(socket.id)
-          });
-          
-          // Clean up empty games
-          if (game.players.length === 0) {
+          // If it's a bot game and a human player disconnects, terminate the game immediately
+          if (game.isBotGame && !socket.id.startsWith('bot_')) {
+            console.log(`Human player left bot game ${playerData.gameId}, terminating game`);
             games.delete(playerData.gameId);
+          } else {
+            // For multiplayer games, notify other players
+            io.to(playerData.gameId).emit('playerLeft', {
+              playerName: playerData.playerName,
+              gameState: game.getGameState(socket.id)
+            });
+            
+            // Clean up empty games
+            if (game.players.length === 0) {
+              games.delete(playerData.gameId);
+            }
           }
         }
         
@@ -2375,6 +2414,11 @@ app.get('/api/games', (req, res) => {
   const availableGames = [];
   
   games.forEach((game, gameId) => {
+    // Skip bot games entirely - they shouldn't appear in the available games list
+    if (game.isBotGame) {
+      return;
+    }
+    
     // Only include games that haven't started and aren't full
     if (!game.started && game.players.length < 4) {
       availableGames.push({
