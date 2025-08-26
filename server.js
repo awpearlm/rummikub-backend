@@ -59,6 +59,7 @@ class RummikubGame {
     this.gameLog = [];
     this.isBotGame = isBotGame;
     this.botDifficulty = botDifficulty;
+    this.createdAt = Date.now(); // Add creation timestamp
     console.log(`🎮 Game ${gameId} created, isBotGame: ${isBotGame}`);
     this.initializeDeck();
   }
@@ -2156,6 +2157,40 @@ app.get('/api/games/:gameId', (req, res) => {
   } else {
     res.json({ exists: false });
   }
+});
+
+// New endpoint to list all available games
+app.get('/api/games', (req, res) => {
+  const availableGames = [];
+  
+  games.forEach((game, gameId) => {
+    // Only include games that haven't started and aren't full
+    if (!game.started && game.players.length < 4) {
+      availableGames.push({
+        id: gameId,
+        host: game.players[0]?.name || 'Unknown',
+        playerCount: game.players.length,
+        maxPlayers: 4,
+        status: game.started ? 'ACTIVE' : 'OPEN',
+        createdAt: game.createdAt
+      });
+    } else if (game.started && !game.winner) {
+      // Include active games (but not joinable)
+      availableGames.push({
+        id: gameId,
+        host: game.players[0]?.name || 'Unknown',
+        playerCount: game.players.length,
+        maxPlayers: 4,
+        status: 'ACTIVE',
+        createdAt: game.createdAt
+      });
+    }
+  });
+  
+  // Sort by creation time (newest first)
+  availableGames.sort((a, b) => b.createdAt - a.createdAt);
+  
+  res.json({ games: availableGames });
 });
 
 const PORT = process.env.PORT || 3000;

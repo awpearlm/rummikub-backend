@@ -1905,3 +1905,143 @@ body {
         transform: translateX(100vw);
     }
 }
+
+/* Game Lobby */
+.game-lobby-section {
+    margin: 20px 0;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+}
+
+.game-lobby-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: #4a5568;
+}
+
+.games-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+}
+
+.loading-games, .error-message, .no-games-message {
+    padding: 20px;
+    text-align: center;
+    color: #718096;
+}
+
+.loading-games i, .error-message i, .no-games-message i {
+    margin-right: 8px;
+}
+
+.error-message {
+    color: #e53e3e;
+}
+
+.games-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #edf2f7;
+    transition: background-color 0.2s;
+}
+
+.game-item:last-child {
+    border-bottom: none;
+}
+
+.game-item:hover {
+    background-color: #f1f5f9;
+}
+
+.game-item-info {
+    flex: 1;
+}
+
+.game-host {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 3px;
+}
+
+.game-details {
+    display: flex;
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.game-details span {
+    margin-right: 15px;
+}
+
+.game-details i {
+    margin-right: 5px;
+}
+
+.btn-join-game {
+    padding: 6px 12px;
+    background-color: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+}
+
+.btn-join-game:hover {
+    background-color: #3182ce;
+}
+
+.lobby-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.btn-refresh {
+    padding: 6px 12px;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-refresh:hover {
+    background-color: #cbd5e0;
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: #a0aec0;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.separator span {
+    padding: 0 10px;
+    font-size: 0.85rem;
+}

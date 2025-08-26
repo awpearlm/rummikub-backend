@@ -162,6 +162,7 @@ class RummikubClient {
         addSafeEventListener('leaveGameBtn', 'click', () => this.leaveGame());
         addSafeEventListener('playSetBtn', 'click', () => this.playSelectedTiles());
         addSafeEventListener('refreshGameBtn', 'click', () => this.refreshGameState());
+        addSafeEventListener('refreshGamesBtn', 'click', () => this.fetchAvailableGames());
         
         // Game log modal events
         addSafeEventListener('gameLogBtn', 'click', () => this.openGameLogModal());
@@ -522,7 +523,99 @@ class RummikubClient {
         } else if (mode === 'multiplayer') {
             document.getElementById('playWithFriendsBtn').classList.add('active');
             document.getElementById('multiplayerOptions').classList.remove('hidden');
+            
+            // Fetch available games when selecting multiplayer mode
+            this.fetchAvailableGames();
         }
+    }
+    
+    fetchAvailableGames() {
+        const backendUrl = this.socket.io.uri;
+        const gamesListContainer = document.getElementById('gamesList');
+        
+        if (gamesListContainer) {
+            gamesListContainer.innerHTML = '<div class="loading-games"><i class="fas fa-spinner fa-spin"></i> Loading available games...</div>';
+            
+            // Fetch the list of available games from the server
+            fetch(`${backendUrl}/api/games`)
+                .then(response => response.json())
+                .then(data => {
+                    this.renderGamesList(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching games:', error);
+                    gamesListContainer.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Could not load games. Please try again.</div>';
+                });
+        }
+    }
+    
+    renderGamesList(games) {
+        const gamesListContainer = document.getElementById('gamesList');
+        if (!gamesListContainer) return;
+        
+        // Clear previous content
+        gamesListContainer.innerHTML = '';
+        
+        if (games.length === 0) {
+            gamesListContainer.innerHTML = '<div class="no-games-message"><i class="fas fa-info-circle"></i> No games available. Create a new one!</div>';
+            return;
+        }
+        
+        // Create a list of games
+        const gamesList = document.createElement('ul');
+        gamesList.className = 'games-list';
+        
+        games.forEach(game => {
+            const gameItem = document.createElement('li');
+            gameItem.className = 'game-item';
+            
+            // Calculate time since creation
+            const createdTime = new Date(game.createdAt);
+            const timeAgo = this.getTimeAgo(createdTime);
+            
+            gameItem.innerHTML = `
+                <div class="game-item-info">
+                    <div class="game-host"><i class="fas fa-user"></i> ${game.host}</div>
+                    <div class="game-details">
+                        <span class="player-count"><i class="fas fa-users"></i> ${game.playerCount}/4</span>
+                        <span class="game-time"><i class="fas fa-clock"></i> ${timeAgo}</span>
+                    </div>
+                </div>
+                <button class="btn btn-join-game" data-game-id="${game.id}">
+                    <i class="fas fa-sign-in-alt"></i> Join
+                </button>
+            `;
+            
+            gamesList.appendChild(gameItem);
+        });
+        
+        gamesListContainer.appendChild(gamesList);
+        
+        // Add event listeners to join buttons
+        const joinButtons = gamesListContainer.querySelectorAll('.btn-join-game');
+        joinButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const gameId = e.currentTarget.getAttribute('data-game-id');
+                // Auto-fill the game ID in the join form
+                document.getElementById('gameId').value = gameId;
+                this.joinGame();
+            });
+        });
+    }
+    
+    getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        if (seconds < 60) return 'just now';
+        
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
     }
 
     startBotGame() {
