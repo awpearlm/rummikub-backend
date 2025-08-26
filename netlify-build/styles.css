@@ -1752,13 +1752,14 @@ body {
     animation: pulse 1.2s infinite;
     box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
     border-radius: 2px;
+    transform: translateY(0); /* Prevent any transform issues */
 }
 
 /* Add styles for the position indicator in the player hand */
 #playerHand .position-indicator {
     /* Ensure the indicator is properly centered in the tile space */
     height: 70px; /* Match the tile height */
-    top: 20px; /* Adjusted to better center the indicator between tiles */
+    top: 35px; /* Significantly lower position to center between tiles */
     margin-top: 0; /* Remove any additional margin */
 }
 
