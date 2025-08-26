@@ -181,8 +181,30 @@
   const clientValid = isValidGroupClient(tiles);
   console.log(`Client validation result: ${clientValid ? '✅ VALID' : '❌ INVALID'}`);
   
-  // Test server API validation using a direct socket request (recommended approach)
-  console.log('\n🧪 Testing server-side validation API...');
+  // Test set value calculation
+  console.log('\n🧪 Testing set value calculation...');
+  
+  // Client-side set value calculation (for comparison)
+  const calculateSetValueClient = (tiles) => {
+    // Check if it's a group (same number, different colors)
+    const nonJokers = tiles.filter(t => !t.isJoker);
+    const jokerCount = tiles.filter(t => t.isJoker).length;
+    
+    if (nonJokers.length === 0) return 0;
+    
+    // For groups, all tiles (including jokers) should have the same value
+    const groupNumber = nonJokers[0].number;
+    const totalValue = groupNumber * tiles.length;
+    
+    return totalValue;
+  };
+  
+  const clientSetValue = calculateSetValueClient(tiles);
+  console.log(`Client set value calculation: ${clientSetValue} points`);
+  console.log(`Expected value for initial play: 13 × 3 = 39 points (> 30 required)`);
+  
+  // Test server API validation for set value calculation
+  console.log('\n🧪 Testing server-side set value calculation...');
   
   // Create a variant of the joker with null number property but no isJoker property
   // This is to test the specific bug fix for tiles with number === null
@@ -196,60 +218,56 @@
   const testSet = [testJoker, testTiles.yellowThirteen, testTiles.blueThirteen];
   
   // Helper function to validate a set with the server
-  const validateServerSet = (set) => {
+  const testServerSetValue = (set) => {
     return new Promise(resolve => {
-      const validateHandler = (result) => {
-        rummikubClient.socket.off('setValidation', validateHandler);
+      const setValueHandler = (result) => {
+        rummikubClient.socket.off('setValueCalculated', setValueHandler);
         rummikubClient.socket.off('error', errorHandler);
-        resolve({ valid: result.valid, message: result.message });
+        resolve({ value: result.value, message: result.message });
       };
       
       const errorHandler = (error) => {
-        rummikubClient.socket.off('setValidation', validateHandler);
+        rummikubClient.socket.off('setValueCalculated', setValueHandler);
         rummikubClient.socket.off('error', errorHandler);
-        resolve({ valid: false, message: error.message });
+        resolve({ value: 0, message: error.message });
       };
       
-      rummikubClient.socket.on('setValidation', validateHandler);
+      rummikubClient.socket.on('setValueCalculated', setValueHandler);
       rummikubClient.socket.on('error', errorHandler);
       
-      console.log('Sending set validation request:', set);
+      console.log('Sending set value calculation request:', set);
       
-      // Send validation request - modify this based on your server API
-      // If your server doesn't have a dedicated validation endpoint, you can skip this test
+      // Send validation request - this endpoint might not exist on all servers
       try {
-        rummikubClient.socket.emit('validateSet', { tiles: set });
+        rummikubClient.socket.emit('calculateSetValue', { tiles: set });
       } catch (e) {
-        console.log('Error sending validation request:', e);
-        resolve({ valid: false, message: 'Error sending request' });
+        console.log('Error sending set value calculation request:', e);
+        resolve({ value: 0, message: 'Error sending request' });
       }
       
       // Timeout after 3 seconds
       setTimeout(() => {
-        rummikubClient.socket.off('setValidation', validateHandler);
+        rummikubClient.socket.off('setValueCalculated', setValueHandler);
         rummikubClient.socket.off('error', errorHandler);
-        resolve({ valid: false, message: 'Timeout - no response from server' });
+        resolve({ value: 0, message: 'Timeout - no response from server' });
       }, 3000);
     });
   };
   
   // Test directly with server if possible
   try {
-    const apiValidationResult = await validateServerSet(testSet);
-    console.log(`Server API validation result: ${apiValidationResult.valid ? '✅ VALID' : '❌ INVALID'}`);
+    const serverValueResult = await testServerSetValue(testSet);
     
-    if (apiValidationResult.message) {
-      console.log(`Server message: ${apiValidationResult.message}`);
-    }
-    
-    // If the server API validation isn't available, note that
-    if (apiValidationResult.message === 'Timeout - no response from server') {
-      console.log('⚠️ The server doesn\'t have a direct set validation API endpoint.');
-      console.log('This is normal - we\'ll need to test with a real game instead.');
+    if (serverValueResult.message === 'Timeout - no response from server') {
+      console.log('⚠️ The server doesn\'t have a direct set value calculation API endpoint.');
+      console.log('This is normal - we\'ll need to test in a real game scenario instead.');
+    } else {
+      console.log(`Server set value calculation: ${serverValueResult.value} points`);
+      console.log(`Is the value correct for initial play? ${serverValueResult.value >= 30 ? '✅ YES' : '❌ NO'}`);
     }
   } catch (e) {
-    console.log('⚠️ Error testing server API validation:', e);
-    console.log('This is normal if the server doesn\'t have a validation endpoint.');
+    console.log('⚠️ Error testing server set value calculation:', e);
+    console.log('This is normal if the server doesn\'t have a calculation endpoint.');
   }
   
   // Log serialization test
@@ -279,28 +297,48 @@
     console.log('- number:', typeof deserialized.number);
   }
   
+  // Test for initial play requirement
+  console.log('\n🧪 Testing initial play requirement...');
+  console.log(`Our joker group (JOKER + 13y + 13b) should be worth 39 points.`);
+  console.log(`The minimum for initial play is 30 points.`);
+  console.log(`Therefore, this set should be accepted for initial play.`);
+  
   // Final recommendation
   console.log('\n======= FIX RECOMMENDATION =======');
-  console.log('Based on our testing, the joker validation bug can be fixed by updating three key areas:');
+  console.log('To fix the joker value calculation bug in the calculateSetValue function:');
   
-  console.log('\n1. In isValidGroup function, update joker detection:');
-  console.log(`const jokerCount = tiles.filter(t => {
-  return t.isJoker === true || t.number === null || (t.id && t.id.toLowerCase().includes('joker'));
-}).length;`);
+  console.log(`
+  calculateSetValue(tiles) {
+    let totalValue = 0;
+    // Use enhanced joker detection for consistency
+    const nonJokerTiles = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+    const jokerCount = tiles.length - nonJokerTiles.length;
+    
+    if (this.isValidGroup(tiles)) {
+      // Group: same number, different colors
+      if (nonJokerTiles.length > 0) {
+        const groupNumber = nonJokerTiles[0].number;
+        // All tiles (including jokers) are worth the group number
+        totalValue = groupNumber * tiles.length;
+        console.log(\`Group value calculation: \${groupNumber} × \${tiles.length} = \${totalValue}\`);
+      }
+    } else if (this.isValidRun(tiles)) {
+      // Run: consecutive numbers, same color
+      // Need to determine what number each joker represents
+      totalValue = this.calculateRunValueWithJokers(tiles);
+      console.log(\`Run value calculation: \${totalValue}\`);
+    }
+    
+    return totalValue;
+  }`);
   
-  console.log('\n2. In playSet function, update joker normalization:');
-  console.log(`tiles.forEach(tile => {
-  if (tile.isJoker || tile.number === null || (tile.id && tile.id.toLowerCase().includes('joker'))) {
-    // Ensure joker properties are set correctly
-    tile.isJoker = true;
-    tile.color = null;
-    tile.number = null;
-  }
-});`);
+  console.log('\nThis fix ensures that jokers in groups are valued correctly for the initial 30-point play requirement.');
   
-  console.log('\n3. Apply the same normalization in playMultipleSets function');
-  
-  console.log('\nThis ensures that jokers are properly identified regardless of how they are represented in the data.');
+  console.log('\n======= HOW TO TEST THE FIX =======');
+  console.log('1. Start a game with bots in debug mode');
+  console.log('2. Try to play a set with: Joker + Yellow 13 + Blue 13');
+  console.log('3. The server should accept this as a valid initial play');
+  console.log('4. Check server logs for "Group value calculation: 13 × 3 = 39"');
   
   console.log('\n======= TEST COMPLETE =======');
 })();

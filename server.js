@@ -494,21 +494,40 @@ class RummikubGame {
     const nonJokerTiles = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
     const jokerCount = tiles.length - nonJokerTiles.length;
     
+    // Enhanced logging for debugging
+    console.log(`calculateSetValue called with ${tiles.length} tiles (${jokerCount} jokers)`);
+    const tileDetails = tiles.map(t => {
+      if (t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))) 
+        return "JOKER";
+      return `${t.color}-${t.number}`;
+    }).join(", ");
+    console.log(`Tiles: [${tileDetails}]`);
+    
     if (this.isValidGroup(tiles)) {
       // Group: same number, different colors
       if (nonJokerTiles.length > 0) {
         const groupNumber = nonJokerTiles[0].number;
         // All tiles (including jokers) are worth the group number
         totalValue = groupNumber * tiles.length;
-        console.log(`Group value calculation: ${groupNumber} × ${tiles.length} = ${totalValue}`);
+        console.log(`Group value calculation: ${groupNumber} points × ${tiles.length} tiles = ${totalValue} points`);
+        console.log(`Group breakdown: ${nonJokerTiles.length} regular tiles (${groupNumber} each) + ${jokerCount} jokers (${groupNumber} each)`);
+      } else if (jokerCount > 0) {
+        // Edge case: all jokers in a group (shouldn't happen in normal play)
+        // Assign a default value (this matches client behavior)
+        totalValue = 13 * tiles.length; // Maximum possible value
+        console.log(`All-joker group value calculation: 13 × ${tiles.length} = ${totalValue}`);
       }
     } else if (this.isValidRun(tiles)) {
       // Run: consecutive numbers, same color
       // Need to determine what number each joker represents
       totalValue = this.calculateRunValueWithJokers(tiles);
-      console.log(`Run value calculation: ${totalValue}`);
+      console.log(`Run value calculation: ${totalValue} points`);
+    } else {
+      console.log(`Set is neither a valid group nor run - no value calculated`);
     }
     
+    // Final value check for initial play requirement
+    console.log(`Final set value: ${totalValue} points ${totalValue >= 30 ? '(meets 30-point requirement)' : '(below 30-point requirement)'}`);
     return totalValue;
   }
 
@@ -517,15 +536,25 @@ class RummikubGame {
     const nonJokers = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
     const jokerCount = tiles.length - nonJokers.length;
     
+    // Enhanced logging for run calculation
+    console.log(`calculateRunValueWithJokers called with ${tiles.length} tiles (${jokerCount} jokers)`);
+    const nonJokerDetails = nonJokers.map(t => `${t.color}-${t.number}`).join(", ");
+    console.log(`Non-joker tiles: [${nonJokerDetails}]`);
+    
     if (jokerCount === 0) {
       // Simple case: just sum the tile values
-      return nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+      const simpleSum = nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+      console.log(`Simple run (no jokers): sum = ${simpleSum}`);
+      return simpleSum;
     }
     
     // Find the valid sequence that these tiles represent
     const sortedNumbers = nonJokers.map(t => t.number).sort((a, b) => a - b);
     const minNumber = sortedNumbers[0];
+    const maxNumber = sortedNumbers[sortedNumbers.length - 1];
     const totalTiles = tiles.length;
+    
+    console.log(`Run analysis - Min: ${minNumber}, Max: ${maxNumber}, Total tiles: ${totalTiles}, Jokers: ${jokerCount}`);
     
     // Try different starting positions to find the valid sequence
     for (let start = Math.max(1, minNumber - jokerCount); start <= minNumber; start++) {
@@ -537,13 +566,16 @@ class RummikubGame {
       let realTileIndex = 0;
       let valid = true;
       let sequenceValue = 0;
+      let sequenceDetails = [];
       
       for (let pos = start; pos <= end; pos++) {
         sequenceValue += pos; // Add this number to total value
         
         if (realTileIndex < sortedNumbers.length && sortedNumbers[realTileIndex] === pos) {
+          sequenceDetails.push(`${pos}(real)`);
           realTileIndex++;
         } else {
+          sequenceDetails.push(`${pos}(joker)`);
           jokersUsed++;
           if (jokersUsed > jokerCount) {
             valid = false;
@@ -553,7 +585,8 @@ class RummikubGame {
       }
       
       if (valid && realTileIndex === sortedNumbers.length && jokersUsed === jokerCount) {
-        console.log(`Run sequence with jokers: value = ${sequenceValue}`);
+        console.log(`Valid run sequence found: [${sequenceDetails.join(", ")}]`);
+        console.log(`Run value calculation: ${sequenceValue} points`);
         return sequenceValue;
       }
     }
@@ -602,7 +635,13 @@ class RummikubGame {
     // Check initial 30-point requirement
     if (!player.hasPlayedInitial) {
       const setValue = this.calculateSetValue(tiles);
-      console.log(`Initial play validation - Set value: ${setValue} points`);
+      console.log(`==========================================`);
+      console.log(`Initial play validation:`);
+      console.log(`Set value: ${setValue} points`);
+      console.log(`Required points: 30+`);
+      console.log(`Meets requirement: ${setValue >= 30 ? 'YES' : 'NO'}`);
+      console.log(`==========================================`);
+      
       if (setValue < 30) {
         console.log(`Initial play rejected: insufficient points (${setValue})`);
         return false; // Not enough points for initial play
@@ -647,9 +686,14 @@ class RummikubGame {
     const validatedSets = [];
     let totalValue = 0;
     
+    console.log(`playMultipleSets: Processing ${setArrays.length} sets from player ${player.name}`);
+    
     for (const tileIds of setArrays) {
       const tiles = tileIds.map(id => player.hand.find(t => t.id === id)).filter(Boolean);
-      if (tiles.length !== tileIds.length) return false;
+      if (tiles.length !== tileIds.length) {
+        console.log(`Set rejected: not all tiles found in player's hand`);
+        return false;
+      }
       
       // Normalize joker properties to ensure consistency
       tiles.forEach(tile => {
@@ -661,16 +705,38 @@ class RummikubGame {
         }
       });
       
-      if (!this.isValidSet(tiles)) return false;
+      // Debug log for set validation
+      const tileDetails = tiles.map(t => {
+        if (t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))) 
+          return "JOKER";
+        return `${t.color}-${t.number}`;
+      }).join(", ");
+      console.log(`Validating set: [${tileDetails}]`);
+      
+      if (!this.isValidSet(tiles)) {
+        console.log(`Set rejected: not a valid set`);
+        return false;
+      }
       
       const setValue = this.calculateSetValue(tiles);
       totalValue += setValue;
       validatedSets.push({ tiles, setValue });
+      console.log(`Set validated: worth ${setValue} points`);
     }
     
     // Check initial 30-point requirement for combined sets
-    if (!player.hasPlayedInitial && totalValue < 30) {
-      return false; // Combined sets don't meet 30-point requirement
+    if (!player.hasPlayedInitial) {
+      console.log(`==========================================`);
+      console.log(`Initial play validation (multiple sets):`);
+      console.log(`Total value of all sets: ${totalValue} points`);
+      console.log(`Required points: 30+`);
+      console.log(`Meets requirement: ${totalValue >= 30 ? 'YES' : 'NO'}`);
+      console.log(`==========================================`);
+      
+      if (totalValue < 30) {
+        console.log(`Initial play rejected: insufficient combined points (${totalValue})`);
+        return false; // Combined sets don't meet 30-point requirement
+      }
     }
     
     // All sets are valid, now execute the play
