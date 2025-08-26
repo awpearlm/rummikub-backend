@@ -2161,6 +2161,11 @@ app.get('/api/games/:gameId', (req, res) => {
 
 // New endpoint to list all available games
 app.get('/api/games', (req, res) => {
+  // Set CORS headers explicitly for this endpoint
+  res.header('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' ? allowedOrigins : "*");
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
   const availableGames = [];
   
   games.forEach((game, gameId) => {
