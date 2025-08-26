@@ -943,11 +943,34 @@ class RummikubClient {
             this.gameState.playerHand.find(tile => tile.id === id)
         ).filter(Boolean);
         
+        // Validate if this is a valid set on the client side first
+        const isRun = this.isValidRunClient(selectedTileObjects);
+        const isGroup = this.isValidGroupClient(selectedTileObjects);
+        const isValid = isRun || isGroup;
+
+        if (!isValid) {
+            this.validateAndDebugSet(selectedTileObjects);
+            console.log(`[ERROR] Invalid set rejected by client validation`);
+            return; // Don't send invalid sets to server
+        }
+        
         // Check if player hasn't played initial yet
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
         
-        // For initial play, try to detect multiple sets first
+        // For initial play, check if we need to meet the 30-point threshold
+        if (needsInitialPlay) {
+            // Calculate set value
+            const pointValue = this.calculateSetValueClient(selectedTileObjects);
+            console.log(`[INFO] Initial play set value: ${pointValue} points`);
+            
+            if (pointValue < 30) {
+                this.showNotification(`Initial play must be at least 30 points (current: ${pointValue})`, 'error');
+                return;
+            }
+        }
+        
+        // For initial play with 6+ tiles, try to detect multiple sets
         if (needsInitialPlay && selectedTileObjects.length >= 6) {
             const multipleSets = this.detectMultipleSets(this.selectedTiles);
             
@@ -991,11 +1014,29 @@ class RummikubClient {
         const isGroup = this.isValidGroupClient(tiles);
         const isValid = isRun || isGroup;
         
+        // Detailed diagnostic info for joker sets
+        const jokerCount = tiles.filter(t => t.isJoker).length;
+        const nonJokers = tiles.filter(t => !t.isJoker);
+        
         // Create detailed debug info
         const tileInfo = tiles.map(t => {
             if (t.isJoker) return "JOKER";
             return `${t.number}${t.color[0]}`;
         }).join(', ');
+        
+        // Log detailed diagnostic information for joker groups
+        if (jokerCount > 0 && isGroup) {
+            const numbers = nonJokers.map(t => t.number);
+            const colors = nonJokers.map(t => t.color);
+            console.log(`🃏 Joker group diagnostic:`, {
+                nonJokerNumbers: numbers,
+                nonJokerColors: colors,
+                jokerCount: jokerCount,
+                numbersSet: new Set(numbers).size,
+                colorsSet: new Set(colors).size,
+                isValidClientSide: isGroup
+            });
+        }
         
         // Check if this could be multiple sets instead
         if (!isValid && tiles.length >= 6) {
@@ -1181,6 +1222,41 @@ class RummikubClient {
         
         console.log(`Group valid with ${jokerCount} jokers and ${tiles.length - jokerCount} regular tiles`);
         return true;
+    }
+    
+    calculateSetValueClient(tiles) {
+        let totalValue = 0;
+        const nonJokerTiles = tiles.filter(t => !t.isJoker);
+        const jokerCount = tiles.filter(t => t.isJoker).length;
+        
+        if (this.isValidGroupClient(tiles)) {
+            // For a group, all tiles have the same number value (including jokers)
+            if (nonJokerTiles.length > 0) {
+                const groupNumber = nonJokerTiles[0].number;
+                // All tiles (including jokers) are worth the group number
+                totalValue = groupNumber * tiles.length;
+            }
+        } else if (this.isValidRunClient(tiles)) {
+            // For a run, add up all the numbers
+            // For jokers, estimate their values based on the sequence
+            const nonJokers = tiles.filter(t => !t.isJoker).sort((a, b) => a.number - b.number);
+            
+            if (jokerCount === 0) {
+                // Simple case - just sum the numbers
+                totalValue = nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+            } else {
+                // With jokers - need to estimate the joker values
+                // This is a simplified version for client-side estimation
+                if (nonJokers.length > 0) {
+                    // For runs with jokers, we'll use the average value of non-jokers as an estimate
+                    const nonJokerSum = nonJokers.reduce((sum, tile) => sum + tile.number, 0);
+                    const avgValue = nonJokerSum / nonJokers.length;
+                    totalValue = nonJokerSum + (jokerCount * Math.round(avgValue));
+                }
+            }
+        }
+        
+        return totalValue;
     }
 
     clearSelection() {
