@@ -668,8 +668,50 @@ class RummikubGame {
     
     console.log(`⏰ Time's up for ${currentPlayer.name}!`);
     
+    // Find tiles that need to be returned to the player's hand
+    // Compare current board with snapshot to find tiles that were moved from hand to board
+    const currentTileIds = new Set();
+    const snapshotTileIds = new Set();
+    
+    // Collect all tile IDs currently on the board
+    this.board.forEach(set => {
+      set.forEach(tile => {
+        currentTileIds.add(tile.id);
+      });
+    });
+    
+    // Collect all tile IDs that were on the board at the beginning of the turn
+    this.boardSnapshot.forEach(set => {
+      set.forEach(tile => {
+        snapshotTileIds.add(tile.id);
+      });
+    });
+    
+    // Find tiles that are on the board now but weren't in the snapshot
+    // These need to be returned to the player's hand
+    const tilesToReturn = [];
+    currentTileIds.forEach(tileId => {
+      if (!snapshotTileIds.has(tileId)) {
+        // Find the tile in the current board
+        for (const set of this.board) {
+          const tileIndex = set.findIndex(t => t.id === tileId);
+          if (tileIndex !== -1) {
+            tilesToReturn.push(set[tileIndex]);
+            break;
+          }
+        }
+      }
+    });
+    
     // Restore board to snapshot (undo any uncommitted moves)
     this.restoreBoardSnapshot();
+    
+    // Return the identified tiles to the player's hand
+    tilesToReturn.forEach(tile => {
+      currentPlayer.hand.push(tile);
+    });
+    
+    console.log(`🔄 Returned ${tilesToReturn.length} tiles to ${currentPlayer.name}'s hand after time up`);
     
     // Draw a tile for the player
     this.drawTileForPlayer(currentPlayer.id);
@@ -682,9 +724,34 @@ class RummikubGame {
     
     // Broadcast updated game state
     io.to(this.id).emit('turnEnded', {
-      gameState: this.getPublicGameState(),
+      gameState: this.getGameState(currentPlayer.id),
       message: `Time's up for ${currentPlayer.name}! Drew a tile and ended turn.`
     });
+  }
+  
+  // Get a version of the game state suitable for broadcasting to all players
+  getPublicGameState() {
+    return {
+      id: this.id,
+      players: this.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        handSize: p.hand.length,
+        hasPlayedInitial: p.hasPlayedInitial,
+        score: p.score,
+        isBot: p.isBot || false
+      })),
+      currentPlayerIndex: this.currentPlayerIndex,
+      board: this.board,
+      boardSnapshot: this.boardSnapshot,
+      started: this.started,
+      winner: this.winner,
+      chatMessages: this.chatMessages,
+      gameLog: this.gameLog,
+      deckSize: this.deck.length,
+      isBotGame: this.isBotGame,
+      timerEnabled: this.timerEnabled
+    };
   }
 
   addChatMessage(playerId, message) {
@@ -782,6 +849,17 @@ class RummikubGame {
     // Restore board to snapshot state
     this.board = JSON.parse(JSON.stringify(this.boardSnapshot));
     console.log(`🔄 Board restored from snapshot: ${this.board.length} sets`);
+  }
+
+  // Method to restore the board from snapshot (wrapper for restoreFromSnapshot)
+  restoreBoardSnapshot() {
+    this.restoreFromSnapshot();
+    console.log(`🔄 Board restored from snapshot using restoreBoardSnapshot`);
+  }
+
+  // Method to draw a tile for a player (wrapper for drawTile)
+  drawTileForPlayer(playerId) {
+    return this.drawTile(playerId);
   }
 
   updateBoard(newBoard) {
