@@ -1747,11 +1747,18 @@ body {
     width: 4px;
     height: 80%;
     background-color: #4CAF50;
-    top: 10%;
+    top: 10%; /* This keeps the indicator centered vertically */
     z-index: 10;
     animation: pulse 1.2s infinite;
     box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
     border-radius: 2px;
+}
+
+/* Add styles for the position indicator in the player hand */
+#playerHand .position-indicator {
+    /* Ensure the indicator is properly centered in the tile space */
+    height: 70px; /* Match the tile height */
+    top: 5px; /* Position with a small offset from the top of the grid cell */
 }
 
 @keyframes pulse {

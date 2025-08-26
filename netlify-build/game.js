@@ -1804,6 +1804,15 @@ class RummikubClient {
         const indicator = document.createElement('div');
         indicator.className = 'drop-indicator active';
         
+        // Check if we're in the player hand
+        const isPlayerHand = tile.closest('#playerHand') !== null;
+        
+        if (isPlayerHand) {
+            // Special positioning for player hand
+            indicator.style.height = '70px';
+            indicator.style.top = '5px';
+        }
+        
         if (isLeftHalf) {
             tile.parentNode.insertBefore(indicator, tile);
         } else {
@@ -2407,7 +2416,7 @@ class RummikubClient {
                 // Between tiles
                 const tile = tiles[insertPosition];
                 const tileRect = tile.getBoundingClientRect();
-                indicator.style.left = (tileRect.left - rect.left - 5) + 'px';
+                indicator.style.left = (tileRect.left - rect.left - 2) + 'px'; // Adjusted for better positioning
                 setElement.appendChild(indicator);
             }
             
