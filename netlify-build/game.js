@@ -540,7 +540,9 @@ class RummikubClient {
             fetch(`${backendUrl}/api/games`)
                 .then(response => response.json())
                 .then(data => {
-                    this.renderGamesList(data);
+                    // The server returns { games: [...] }, so we need to extract the games array
+                    const gamesList = data.games || [];
+                    this.renderGamesList(gamesList);
                 })
                 .catch(error => {
                     console.error('Error fetching games:', error);
