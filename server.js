@@ -490,8 +490,9 @@ class RummikubGame {
 
   calculateSetValue(tiles) {
     let totalValue = 0;
-    const nonJokerTiles = tiles.filter(t => !t.isJoker);
-    const jokerCount = tiles.filter(t => t.isJoker).length;
+    // Use enhanced joker detection for consistency
+    const nonJokerTiles = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+    const jokerCount = tiles.length - nonJokerTiles.length;
     
     if (this.isValidGroup(tiles)) {
       // Group: same number, different colors
@@ -499,19 +500,22 @@ class RummikubGame {
         const groupNumber = nonJokerTiles[0].number;
         // All tiles (including jokers) are worth the group number
         totalValue = groupNumber * tiles.length;
+        console.log(`Group value calculation: ${groupNumber} × ${tiles.length} = ${totalValue}`);
       }
     } else if (this.isValidRun(tiles)) {
       // Run: consecutive numbers, same color
       // Need to determine what number each joker represents
       totalValue = this.calculateRunValueWithJokers(tiles);
+      console.log(`Run value calculation: ${totalValue}`);
     }
     
     return totalValue;
   }
 
   calculateRunValueWithJokers(tiles) {
-    const nonJokers = tiles.filter(t => !t.isJoker);
-    const jokerCount = tiles.filter(t => t.isJoker).length;
+    // Use enhanced joker detection for consistency
+    const nonJokers = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+    const jokerCount = tiles.length - nonJokers.length;
     
     if (jokerCount === 0) {
       // Simple case: just sum the tile values
@@ -549,6 +553,7 @@ class RummikubGame {
       }
       
       if (valid && realTileIndex === sortedNumbers.length && jokersUsed === jokerCount) {
+        console.log(`Run sequence with jokers: value = ${sequenceValue}`);
         return sequenceValue;
       }
     }
@@ -560,6 +565,7 @@ class RummikubGame {
       const avgValue = fallbackValue / nonJokers.length;
       fallbackValue += jokerCount * Math.round(avgValue);
     }
+    console.log(`Run fallback value with jokers: ${fallbackValue}`);
     return fallbackValue;
   }
   playSet(playerId, tileIds, setIndex = null) {
