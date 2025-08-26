@@ -822,6 +822,12 @@ body {
     min-height: 70px; /* Match the height of board-set for visual consistency */
 }
 
+.new-set-drop-zone.drag-over {
+    background-color: rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
 /* Chat Panel */
 .chat-panel {
     background: #f7fafc;

@@ -1795,28 +1795,19 @@ class RummikubClient {
     showDropIndicator(targetElement, clientX) {
         this.clearDropIndicators();
         
+        // We're no longer showing the drop indicator as per requirements
+        // This method is kept for compatibility but doesn't create visual indicators
+        
         const tile = targetElement.closest('.tile');
         if (!tile) return;
         
         const rect = tile.getBoundingClientRect();
         const isLeftHalf = clientX < rect.left + rect.width / 2;
         
-        const indicator = document.createElement('div');
-        indicator.className = 'drop-indicator active';
-        
-        // Check if we're in the player hand
-        const isPlayerHand = tile.closest('#playerHand') !== null;
-        
-        if (isPlayerHand) {
-            // Special positioning for player hand
-            indicator.style.height = '70px';
-            indicator.style.top = '35px'; // Significantly lower position to match CSS
-        }
-        
-        if (isLeftHalf) {
-            tile.parentNode.insertBefore(indicator, tile);
-        } else {
-            tile.parentNode.insertBefore(indicator, tile.nextSibling);
+        // Add a class to the parent to show it's a drop target
+        const parent = tile.parentNode;
+        if (parent) {
+            parent.classList.add('drag-target');
         }
     }
 
@@ -2386,14 +2377,10 @@ class RummikubClient {
     setupSetDropZone(setElement, setIndex) {
         // Add visual indicators for drag over locations
         const addPositionIndicators = (e) => {
-            // Clear existing indicators
+            // Clear any existing indicators (though we don't add them anymore)
             setElement.querySelectorAll('.position-indicator').forEach(el => el.remove());
             
-            // Create position indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'position-indicator';
-            
-            // Determine where to show the indicator
+            // Determine insert position but don't show visual indicator
             const rect = setElement.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const tileWidth = 70; // Approximate tile width
@@ -2403,31 +2390,11 @@ class RummikubClient {
             // Clamp insert position to valid range
             insertPosition = Math.min(Math.max(0, insertPosition), tiles.length);
             
-            // Check if we're in the player hand
-            const isPlayerHand = setElement.closest('#playerHand') !== null;
+            // Store the insert position as data attribute (for functionality)
+            setElement.dataset.insertPosition = insertPosition;
             
-            // Apply player hand specific styling directly
-            if (isPlayerHand) {
-                indicator.style.top = '35px'; // Adjust vertical position for player hand
-                indicator.style.height = '70px';
-            }
-            
-            // Position indicator at insert position
-            if (insertPosition === 0) {
-                // Before first tile
-                indicator.style.left = '0px';
-                setElement.prepend(indicator);
-            } else if (insertPosition === tiles.length) {
-                // After last tile
-                indicator.style.right = '0px';
-                setElement.appendChild(indicator);
-            } else {
-                // Between tiles
-                const tile = tiles[insertPosition];
-                const tileRect = tile.getBoundingClientRect();
-                indicator.style.left = (tileRect.left - rect.left - 2) + 'px'; // Adjusted for better positioning
-                setElement.appendChild(indicator);
-            }
+            // We no longer create or append position indicators as per requirements
+            // The functionality is preserved but without the visual green line indicator
             
             // Store the insert position as data attribute
             setElement.dataset.insertPosition = insertPosition;
