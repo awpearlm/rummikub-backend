@@ -1810,7 +1810,7 @@ class RummikubClient {
         if (isPlayerHand) {
             // Special positioning for player hand
             indicator.style.height = '70px';
-            indicator.style.top = '5px';
+            indicator.style.top = '20px'; // Adjusted to better align with tiles
         }
         
         if (isLeftHalf) {
@@ -2402,6 +2402,9 @@ class RummikubClient {
             
             // Clamp insert position to valid range
             insertPosition = Math.min(Math.max(0, insertPosition), tiles.length);
+            
+            // Check if we're in the player hand
+            const isPlayerHand = setElement.closest('#playerHand') !== null;
             
             // Position indicator at insert position
             if (insertPosition === 0) {

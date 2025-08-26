@@ -1758,7 +1758,8 @@ body {
 #playerHand .position-indicator {
     /* Ensure the indicator is properly centered in the tile space */
     height: 70px; /* Match the tile height */
-    top: 5px; /* Position with a small offset from the top of the grid cell */
+    top: 20px; /* Adjusted to better center the indicator between tiles */
+    margin-top: 0; /* Remove any additional margin */
 }
 
 @keyframes pulse {
