@@ -1240,6 +1240,18 @@ class RummikubGame {
   }
   
   calculateSetValue(set) {
+    // This method is only used by the bot AI - for all other calculations we use the main calculateSetValue function
+    
+    if (this.isValidGroup(set)) {
+      // For groups, all tiles (including jokers) should have the value of the group number
+      const nonJokers = set.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+      if (nonJokers.length > 0) {
+        const groupNumber = nonJokers[0].number;
+        return groupNumber * set.length; // All tiles (including jokers) are worth the group number
+      }
+    }
+    
+    // For runs or default calculation
     return set.reduce((sum, tile) => sum + (tile.isJoker ? 0 : tile.number), 0);
   }
   
