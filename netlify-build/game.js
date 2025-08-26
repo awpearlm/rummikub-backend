@@ -1539,11 +1539,11 @@ class RummikubClient {
             
             // Dynamic grid sizing based on number of tiles
             const totalTiles = this.gameState.playerHand.length;
-            const tilesPerRow = 7;
+            const tilesPerRow = 10; // Updated from 7 to 10 tiles per row
             
-            // Calculate rows needed: start with 3 rows (21 slots), add more only when needed
-            let rowsNeeded = 3; // Default to 3 rows (21 slots)
-            if (totalTiles > 21) {
+            // Calculate rows needed: start with 3 rows (30 slots), add more only when needed
+            let rowsNeeded = 3; // Default to 3 rows (30 slots)
+            if (totalTiles > 30) {
                 rowsNeeded = Math.ceil(totalTiles / tilesPerRow);
             }
             
@@ -1615,17 +1615,17 @@ class RummikubClient {
     initializeGridLayout(maxSlots = null) {
         // Calculate dynamic grid size based on current hand
         const handSize = this.gameState?.playerHand?.length || 0;
-        const tilesPerRow = 7;
+        const tilesPerRow = 10; // Updated from 7 to 10 tiles per row
         
         console.log(`🔧 initializeGridLayout() called with handSize=${handSize}, maxSlots=${maxSlots}`);
         
         let gridSize;
         if (maxSlots) {
             gridSize = maxSlots;
-        } else if (handSize <= 21) {
-            gridSize = 21; // Start with 3 rows (21 slots) for normal gameplay
+        } else if (handSize <= 30) {
+            gridSize = 30; // Start with 3 rows (30 slots) for normal gameplay
         } else {
-            // Only expand beyond 21 when we actually have more than 21 tiles
+            // Only expand beyond 30 when we actually have more than 30 tiles
             gridSize = Math.ceil(handSize / tilesPerRow) * tilesPerRow;
         }
         

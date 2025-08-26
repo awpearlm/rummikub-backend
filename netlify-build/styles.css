@@ -399,7 +399,7 @@ body {
 
 /* Game Screen */
 .game-container {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
@@ -919,6 +919,10 @@ body {
     flex-direction: column;
     align-items: center;
     position: relative;
+    width: 90%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .hand-header {
@@ -1112,12 +1116,12 @@ body {
 
 .player-hand {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     grid-template-rows: repeat(3, 80px);
     gap: 2px;
     min-height: 280px;
     max-height: 280px;
-    width: 500px;
+    width: 720px;
     background: linear-gradient(135deg, #8b5a3c 0%, #6d4423 100%);
     border-radius: 12px;
     padding: 10px;
