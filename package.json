@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "start:auth": "node server-with-auth.js",
+    "dev:auth": "nodemon server-with-auth.js",
     "debug": "node debug-server.js",
     "build": "./build-frontend.sh",
     "test": "npx cypress run",
@@ -36,9 +38,13 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.19.2",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.6.3",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
