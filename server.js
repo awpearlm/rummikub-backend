@@ -420,13 +420,20 @@ class RummikubGame {
     
     // Create a detailed log of the tiles being validated
     const tileDetails = tiles.map(t => {
-      if (t.isJoker) return "JOKER";
+      if (t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker'))) return "JOKER";
       return `${t.number}${t.color.charAt(0)}`;
     }).join(", ");
     console.log(`Validating group with tiles: [${tileDetails}]`);
     
-    const jokerCount = tiles.filter(t => t.isJoker).length;
-    const nonJokers = tiles.filter(t => !t.isJoker);
+    // Enhanced joker detection that checks either isJoker property or id
+    const jokerCount = tiles.filter(t => {
+      return t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker'));
+    }).length;
+    
+    // Also update nonJokers filter to use the same enhanced detection
+    const nonJokers = tiles.filter(t => {
+      return !(t.isJoker === true || (t.id && t.id.toLowerCase().includes('joker')));
+    });
     
     // If all jokers, it's valid (matching client-side behavior)
     if (jokerCount === tiles.length) {
@@ -568,6 +575,16 @@ class RummikubGame {
       return false;
     }
     
+    // Normalize joker properties to ensure consistency
+    tiles.forEach(tile => {
+      if (tile.id && tile.id.toLowerCase().includes('joker')) {
+        // Ensure joker properties are set correctly
+        tile.isJoker = true;
+        tile.color = null;
+        tile.number = null;
+      }
+    });
+    
     // Debug log for set validation
     console.log(`Server validating set - Tiles:`, tiles.map(t => t.isJoker ? 'joker' : `${t.color}_${t.number}`));
     
@@ -627,6 +644,16 @@ class RummikubGame {
     for (const tileIds of setArrays) {
       const tiles = tileIds.map(id => player.hand.find(t => t.id === id)).filter(Boolean);
       if (tiles.length !== tileIds.length) return false;
+      
+      // Normalize joker properties to ensure consistency
+      tiles.forEach(tile => {
+        if (tile.id && tile.id.toLowerCase().includes('joker')) {
+          // Ensure joker properties are set correctly
+          tile.isJoker = true;
+          tile.color = null;
+          tile.number = null;
+        }
+      });
       
       if (!this.isValidSet(tiles)) return false;
       
