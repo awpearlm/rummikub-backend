@@ -8,6 +8,7 @@
     "dev": "node server.js",
     "start:auth": "node server-with-auth.js",
     "dev:auth": "nodemon server-with-auth.js",
+    "create-admin": "node scripts/create-admin.js",
     "debug": "node debug-server.js",
     "build": "./build-frontend.sh",
     "test": "npx cypress run",
