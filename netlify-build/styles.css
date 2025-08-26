@@ -543,8 +543,8 @@ body {
     display: grid;
     grid-template-columns: 1fr; /* Simplified to a single column without players panel and chat */
     gap: 20px;
-    padding: 30px;
-    height: 550px; /* Slightly increased to provide more space */
+    padding: 30px 30px 0px 30px;
+    height: 500px; /* Slightly increased to provide more space */
     overflow: hidden;
 }
 
@@ -707,7 +707,7 @@ body {
 .game-board {
     background: #f7fafc;
     border-radius: 15px;
-    padding: 20px;
+    padding: 20px 20px 0px 20px;
     width: 100%; /* Take full width now that we've removed other panels */
 }
 
