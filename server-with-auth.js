@@ -130,8 +130,17 @@ class RummikubGame {
     this.isBotGame = isBotGame;
     this.botDifficulty = botDifficulty;
     this.createdAt = Date.now(); // Add creation timestamp
+    
+    // Game lifecycle management
+    this.lastUserJoinTime = Date.now(); // When the last user joined
+    this.lastActivityTime = Date.now(); // When last meaningful action occurred
+    this.singlePlayerTimer = null; // Timer for single player timeout
+    this.unstartedGameTimer = null; // Timer for unstarted game timeout
+    this.inactivityTimer = null; // Timer for game inactivity
+    
     console.log(`🎮 Game ${gameId} created, isBotGame: ${isBotGame}`);
     this.initializeDeck();
+    this.startLifecycleManagement();
   }
 
   initializeDeck() {
@@ -193,6 +202,10 @@ class RummikubGame {
     };
     
     this.players.push(player);
+    
+    // Record that a user joined for lifecycle management
+    this.recordUserJoin();
+    
     return true;
   }
 
@@ -505,6 +518,9 @@ class RummikubGame {
     
     player.hasPlayedInitial = true;
     
+    // Record meaningful activity (playing sets)
+    this.recordActivity();
+    
     // Check for win
     if (player.hand.length === 0) {
       this.winner = player;
@@ -559,6 +575,9 @@ class RummikubGame {
     
     player.hasPlayedInitial = true;
     
+    // Record meaningful activity (playing multiple sets)
+    this.recordActivity();
+    
     // Check for win
     if (player.hand.length === 0) {
       this.winner = player;
@@ -603,6 +622,11 @@ class RummikubGame {
       details,
       timestamp: new Date().toISOString()
     });
+    
+    // Record meaningful activity for certain actions (not drawing tiles)
+    if (action === 'played_set' || action === 'ended_turn') {
+      this.recordActivity();
+    }
   }
 
   getGameState(playerId) {
@@ -718,6 +742,162 @@ class RummikubGame {
       this.turnTimerInterval = null;
     }
     this.turnStartTime = null;
+  }
+  
+  // Game Lifecycle Management Methods
+  
+  startLifecycleManagement() {
+    // Start checking for single player timeout
+    this.checkSinglePlayerTimeout();
+    // Start checking for unstarted game timeout
+    this.checkUnstartedGameTimeout();
+    // Start checking for inactivity timeout
+    this.checkInactivityTimeout();
+  }
+  
+  // Rule 1: If a game has only 1 user, close after 5 minutes if no one joins
+  checkSinglePlayerTimeout() {
+    this.singlePlayerTimer = setInterval(() => {
+      const activePlayerCount = this.getActivePlayerCount();
+      
+      if (activePlayerCount === 1 && !this.started) {
+        const timeSinceLastJoin = Date.now() - this.lastUserJoinTime;
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (timeSinceLastJoin >= fiveMinutes) {
+          console.log(`🕐 Game ${this.id} closing: Single player timeout (5 minutes)`);
+          this.closeGame('Single player timeout - no other players joined within 5 minutes');
+          return;
+        }
+      }
+    }, 30000); // Check every 30 seconds
+  }
+  
+  // Rule 2: Unstarted games close 5 minutes after last user joins
+  checkUnstartedGameTimeout() {
+    this.unstartedGameTimer = setInterval(() => {
+      if (!this.started) {
+        const timeSinceLastJoin = Date.now() - this.lastUserJoinTime;
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (timeSinceLastJoin >= fiveMinutes) {
+          console.log(`🕐 Game ${this.id} closing: Unstarted game timeout (5 minutes since last join)`);
+          this.closeGame('Game timeout - not started within 5 minutes of last player joining');
+          return;
+        }
+      }
+    }, 30000); // Check every 30 seconds
+  }
+  
+  // Rule 3: Games with no meaningful activity for 10 minutes close
+  checkInactivityTimeout() {
+    this.inactivityTimer = setInterval(() => {
+      if (this.started && !this.winner) {
+        const timeSinceActivity = Date.now() - this.lastActivityTime;
+        const tenMinutes = 10 * 60 * 1000;
+        
+        if (timeSinceActivity >= tenMinutes) {
+          console.log(`🕐 Game ${this.id} closing: Inactivity timeout (10 minutes)`);
+          this.closeGame('Game abandoned due to inactivity (10 minutes)');
+          return;
+        }
+      }
+    }, 60000); // Check every minute
+  }
+  
+  // Get count of active (non-disconnected) players
+  getActivePlayerCount() {
+    return this.players.filter(p => !p.disconnected).length;
+  }
+  
+  // Record meaningful activity (not just drawing tiles)
+  recordActivity() {
+    this.lastActivityTime = Date.now();
+  }
+  
+  // Record when a user joins
+  recordUserJoin() {
+    this.lastUserJoinTime = Date.now();
+  }
+  
+  // Close and cleanup the game
+  closeGame(reason) {
+    console.log(`🔚 Closing game ${this.id}: ${reason}`);
+    
+    // Clear all timers
+    if (this.singlePlayerTimer) {
+      clearInterval(this.singlePlayerTimer);
+      this.singlePlayerTimer = null;
+    }
+    if (this.unstartedGameTimer) {
+      clearInterval(this.unstartedGameTimer);
+      this.unstartedGameTimer = null;
+    }
+    if (this.inactivityTimer) {
+      clearInterval(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
+    this.clearTurnTimer();
+    
+    // Mark as ended in MongoDB
+    this.endGameInDB(reason);
+    
+    // This game should be removed from the games map by the caller
+    this.closed = true;
+    this.closeReason = reason;
+  }
+  
+  // End the game in MongoDB
+  async endGameInDB(reason) {
+    try {
+      const Game = require('./models/Game');
+      const gameDoc = await Game.findOne({ gameId: this.id });
+      
+      if (gameDoc && !gameDoc.endTime) {
+        gameDoc.endTime = new Date();
+        gameDoc.winner = reason;
+        await gameDoc.save();
+        console.log(`📝 Game ${this.id} marked as ended in MongoDB: ${reason}`);
+      }
+    } catch (error) {
+      console.error(`Error ending game ${this.id} in DB:`, error.message);
+    }
+  }
+  
+  // Override cleanup to also handle Rule 4: 0 users = close immediately
+  cleanupDisconnectedPlayers() {
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+    
+    // Filter out players who have been disconnected for over 30 minutes
+    const initialCount = this.players.length;
+    const removedPlayers = [];
+    
+    this.players = this.players.filter(player => {
+      // Keep connected players and recently disconnected players
+      const shouldKeep = !player.disconnected || player.disconnectedAt > thirtyMinutesAgo;
+      if (!shouldKeep) {
+        removedPlayers.push(player.name);
+      }
+      return shouldKeep;
+    });
+    
+    const removedCount = initialCount - this.players.length;
+    if (removedCount > 0) {
+      console.log(`Cleaned up ${removedCount} disconnected players from game ${this.id}: ${removedPlayers.join(', ')}`);
+      
+      // Update MongoDB to reflect the current player list
+      this.updateGamePlayersInDB();
+    }
+    
+    // Rule 4: If no active players remain, close the game immediately
+    const activePlayerCount = this.getActivePlayerCount();
+    if (activePlayerCount === 0) {
+      console.log(`🕐 Game ${this.id} closing: No active players remaining`);
+      this.closeGame('No active players remaining');
+      return true; // Signal that game should be removed
+    }
+    
+    return false;
   }
 }
 
@@ -1259,10 +1439,17 @@ io.on('connection', (socket) => {
             gameState: game.getGameState(socket.id)
           });
           
-          // Clean up empty games - but only if there are no players at all
-          if (game.players.length === 0) {
-            games.delete(playerData.gameId);
-          }
+          // Trigger immediate cleanup check for the game
+          setTimeout(() => {
+            if (games.has(playerData.gameId)) {
+              const currentGame = games.get(playerData.gameId);
+              const shouldClose = currentGame.cleanupDisconnectedPlayers();
+              if (shouldClose) {
+                // Game should be closed, trigger global cleanup
+                cleanupClosedGames();
+              }
+            }
+          }, 5000); // 5 seconds delay to allow for quick reconnections
         }
       }
       
@@ -1448,6 +1635,65 @@ io.on('connection', (socket) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
 });
+
+// Game Lifecycle Management - Global cleanup functions
+
+// Function to clean up closed games from the games map
+function cleanupClosedGames() {
+  const closedGames = [];
+  
+  for (const [gameId, game] of games.entries()) {
+    if (game.closed) {
+      closedGames.push(gameId);
+    } else {
+      // Also check if cleanup methods indicate the game should close
+      const shouldClose = game.cleanupDisconnectedPlayers();
+      if (shouldClose) {
+        closedGames.push(gameId);
+      }
+    }
+  }
+  
+  // Remove closed games from the map
+  closedGames.forEach(gameId => {
+    const game = games.get(gameId);
+    if (game) {
+      console.log(`🗑️ Removing closed game ${gameId} from memory: ${game.closeReason || 'Unknown reason'}`);
+      
+      // Notify any remaining players
+      game.players.forEach(player => {
+        if (!player.disconnected) {
+          const socket = io.sockets.sockets.get(player.id);
+          if (socket) {
+            socket.emit('gameEnded', {
+              reason: game.closeReason || 'Game closed',
+              message: 'This game has been closed due to inactivity or timeout.'
+            });
+          }
+        }
+      });
+      
+      // Remove from players map
+      players.forEach((playerData, socketId) => {
+        if (playerData.gameId === gameId) {
+          players.delete(socketId);
+        }
+      });
+    }
+    
+    games.delete(gameId);
+  });
+  
+  if (closedGames.length > 0) {
+    console.log(`🧹 Cleaned up ${closedGames.length} closed games`);
+  }
+}
+
+// Run cleanup every 2 minutes
+setInterval(cleanupClosedGames, 2 * 60 * 1000);
+
+// Also run cleanup when the disconnect handler is called
+const originalCleanupDisconnectedPlayers = RummikubGame.prototype.cleanupDisconnectedPlayers;
 
 // Helper functions
 function generateGameId() {
