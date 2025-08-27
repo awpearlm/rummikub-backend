@@ -3,6 +3,23 @@ const router = express.Router();
 const Game = require('../models/Game');
 const { authenticateToken } = require('../middleware/auth');
 
+// Get all active games (for lobby)
+router.get('/', async (req, res) => {
+  try {
+    // Find games that are active (have startTime but no endTime)
+    const activeGames = await Game.find({ 
+      startTime: { $exists: true }, 
+      endTime: { $exists: false },
+      isBotGame: { $ne: true } // Exclude bot games
+    }).sort({ startTime: -1 });
+    
+    res.status(200).json({ games: activeGames });
+  } catch (error) {
+    console.error('Get active games error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get all games for a user
 router.get('/my-games', authenticateToken, async (req, res) => {
   try {
