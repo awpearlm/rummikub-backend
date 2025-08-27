@@ -35,22 +35,29 @@ const allowedOrigins = [
   'http://localhost:5000', 
   'http://127.0.0.1:3000',
   'https://jkube.netlify.app',
-  'https://*.netlify.app'
+  'https://feature-user-authentication--jkube.netlify.app'
 ];
+
+// Helper function to check if origin is allowed
+const isOriginAllowed = (origin) => {
+  // Allow requests with no origin (like mobile apps or curl requests)
+  if (!origin) return true;
+  
+  // In development, allow all origins
+  if (process.env.NODE_ENV !== 'production') return true;
+  
+  // Check if origin is in our allowed list
+  if (allowedOrigins.includes(origin)) return true;
+  
+  // Check if origin is a Netlify domain
+  if (origin.endsWith('.netlify.app')) return true;
+  
+  return false;
+};
 
 const io = socketIo(server, {
   cors: {
-    origin: function (origin, callback) {
-      // Allow all in development
-      if (process.env.NODE_ENV !== 'production') return callback(null, true);
-      
-      // In production, allow specified origins or Netlify domains
-      if (!origin || allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
-        return callback(null, true);
-      }
-      
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: '*', // Allow all origins in development mode
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -61,29 +68,38 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Configure CORS simply
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
-    
-    // In development, allow all origins
-    if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    
-    // In production, check against our allowed origins
-    if (allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
-      return callback(null, true);
-    }
-    
-    // If not allowed
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'netlify-build')));
 
 // API Routes
+// Middleware to add CORS headers to all API responses
+app.use('/api', (req, res, next) => {
+  // Get the origin from the request
+  const origin = req.headers.origin;
+  
+  // If the origin is allowed, set the CORS headers
+  if (isOriginAllowed(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
@@ -577,7 +593,7 @@ function generateGameId() {
 }
 
 // Server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 8000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT} (http://0.0.0.0:${PORT})`);
 });
