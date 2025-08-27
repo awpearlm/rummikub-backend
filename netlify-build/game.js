@@ -75,9 +75,20 @@ class RummikubClient {
             this.hideConnectionLostOverlay();
             
             // If we're in a game, rejoin it
-            if (this.gameId && this.playerName) {
+            if (this.gameId && this.playerName && 
+                this.gameId !== 'UNDEFINED' && this.gameId !== 'undefined') {
                 console.log(`Rejoining game ${this.gameId} as ${this.playerName}`);
                 this.rejoinGame(this.gameId, this.playerName);
+            } else {
+                // Try to get game info from storage if current values are invalid
+                const gameInfo = this.getGameStateFromStorage();
+                if (gameInfo && gameInfo.gameId && gameInfo.playerName && 
+                    gameInfo.gameId !== 'UNDEFINED' && gameInfo.gameId !== 'undefined') {
+                    console.log(`Rejoining game from storage: ${gameInfo.gameId} as ${gameInfo.playerName}`);
+                    this.gameId = gameInfo.gameId;
+                    this.playerName = gameInfo.playerName;
+                    this.rejoinGame(gameInfo.gameId, gameInfo.playerName);
+                }
             }
         });
         
@@ -3472,6 +3483,22 @@ class RummikubClient {
     
     // Helper method to rejoin a game after reconnection
     rejoinGame(gameId, playerName) {
+        // Validate gameId and playerName
+        if (!gameId || gameId === "UNDEFINED" || gameId === "undefined") {
+            console.error("Invalid gameId for rejoin:", gameId);
+            // Try to get gameId from storage if current one is invalid
+            const gameInfo = this.getGameStateFromStorage();
+            if (gameInfo && gameInfo.gameId) {
+                gameId = gameInfo.gameId;
+                console.log("Retrieved gameId from storage:", gameId);
+            } else {
+                this.showNotification("Cannot rejoin game: invalid game ID", "error");
+                return;
+            }
+        }
+        
+        console.log(`Attempting to rejoin game ${gameId} as ${playerName}`);
+        
         // Emit event to server to rejoin the game
         this.socket.emit('rejoinGame', {
             gameId: gameId,
@@ -3867,7 +3894,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Instead of reloading, try to restore from saved state
             const gameInfo = window.game.getGameStateFromStorage();
             
-            if (gameInfo && gameInfo.gameId && gameInfo.playerName) {
+            if (gameInfo && gameInfo.gameId && gameInfo.playerName && 
+                gameInfo.gameId !== 'UNDEFINED' && gameInfo.gameId !== 'undefined') {
                 console.log('🔄 Attempting to rejoin game with saved info:', gameInfo);
                 window.game.showNotification('Attempting to reconnect to your game...', 'info');
                 

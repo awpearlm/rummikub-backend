@@ -1230,6 +1230,12 @@ io.on('connection', (socket) => {
   socket.on('rejoinGame', async (data) => {
     console.log(`Player ${socket.id} attempting to rejoin game ${data.gameId} as ${data.playerName}`);
     
+    // Validate that we have a proper gameId
+    if (!data.gameId || data.gameId === "UNDEFINED" || data.gameId === "undefined") {
+      socket.emit('error', { message: 'Invalid game ID for reconnection' });
+      return;
+    }
+    
     // First try to get the game from in-memory cache
     let game = games.get(data.gameId);
     
