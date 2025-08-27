@@ -141,9 +141,337 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id, socket.user?.isGuest ? '(Guest)' : `(${socket.user.username})`);
 
-  // [KEEP ALL EXISTING SOCKET HANDLERS HERE]
-  // This is where the original socket.io handlers would be
-  
+  // [ORIGINAL SOCKET HANDLERS FROM SERVER.JS]
+  socket.on('createGame', (data) => {
+    const gameId = generateGameId();
+    const game = new RummikubGame(gameId);
+    
+    // Set debug mode flag if provided
+    game.isDebugMode = data.isDebugMode || false;
+    
+    // Set timer option if provided
+    game.timerEnabled = data.timerEnabled || false;
+    
+    if (game.addPlayer(socket.id, data.playerName)) {
+      games.set(gameId, game);
+      players.set(socket.id, { 
+        gameId, 
+        playerName: data.playerName,
+        isDebugEnabled: data.isDebugMode || false
+      });
+      
+      socket.join(gameId);
+      socket.emit('gameCreated', { gameId, gameState: game.getGameState(socket.id) });
+      
+      console.log(`Game created: ${gameId} by ${data.playerName}, debug mode: ${game.isDebugMode}`);
+    } else {
+      socket.emit('error', { message: 'Failed to create game' });
+    }
+  });
+
+  socket.on('createBotGame', (data) => {
+    const gameId = generateGameId();
+    const botCount = data.botCount || 1; // Default to 1 bot if not specified
+    const game = new RummikubGame(gameId, true, data.difficulty);
+    
+    if (game.addPlayer(socket.id, data.playerName)) {
+      // Add the specified number of bot players
+      const addedBots = [];
+      for (let i = 0; i < botCount; i++) {
+        const bot = game.addBotPlayer();
+        if (bot) {
+          addedBots.push(bot);
+          console.log(`Successfully added bot ${i + 1}/${botCount}: ${bot.name}`);
+        } else {
+          console.log(`Failed to add bot ${i + 1}/${botCount}`);
+          break;
+        }
+      }
+      
+      console.log(`Total players in game: ${game.players.length} (1 human + ${addedBots.length} bots)`);
+      
+      games.set(gameId, game);
+      players.set(socket.id, { gameId, playerName: data.playerName });
+      
+      socket.join(gameId);
+      
+      // Auto-start bot game
+      if (game.startGame()) {
+        socket.emit('botGameCreated', { gameId, gameState: game.getGameState(socket.id) });
+        
+        // Add welcome message from bots
+        const botNames = addedBots.map(bot => bot.name);
+        if (addedBots.length === 1) {
+          game.addChatMessage('bot', `Hello ${data.playerName}! I'm ready to play. Good luck! 🤖`);
+        } else {
+          game.addChatMessage('bot', `Hello ${data.playerName}! We're ${botNames.join(', ')} and we're ready to play. Good luck! 🤖`);
+        }
+        
+        // Only start bot moves if it's the bot's turn
+        const currentPlayer = game.getCurrentPlayer();
+        if (currentPlayer && currentPlayer.isBot) {
+          game.scheduleNextBotMove(io, gameId, 5000);
+        }
+        
+        console.log(`Bot game created: ${gameId} by ${data.playerName} vs ${botNames.join(', ')} (${addedBots.length} bots)`);
+      }
+    } else {
+      socket.emit('error', { message: 'Failed to create bot game' });
+    }
+  });
+
+  socket.on('joinGame', (data) => {
+    const game = games.get(data.gameId);
+    if (!game) {
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+
+    if (game.addPlayer(socket.id, data.playerName)) {
+      players.set(socket.id, { gameId: data.gameId, playerName: data.playerName });
+      
+      socket.join(data.gameId);
+      socket.emit('gameJoined', { gameId: data.gameId, gameState: game.getGameState(socket.id) });
+      
+      // Notify all players in the game
+      io.to(data.gameId).emit('playerJoined', {
+        playerName: data.playerName,
+        gameState: game.getGameState(socket.id)
+      });
+      
+      console.log(`${data.playerName} joined game: ${data.gameId}`);
+    } else {
+      socket.emit('error', { message: 'Game is full or failed to join' });
+    }
+  });
+
+  socket.on('getGameState', (data) => {
+    console.log(`Player ${socket.id} requesting game state for game: ${data.gameId}`);
+    const game = games.get(data.gameId);
+    
+    if (!game) {
+      console.log(`Game not found for state request: ${data.gameId}`);
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+    
+    socket.emit('gameStateUpdate', { gameState: game.getGameState(socket.id) });
+    console.log(`Game state sent to player ${socket.id} for game ${data.gameId}`);
+  });
+
+  socket.on('startGame', () => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    if (game.startGame()) {
+      // Send personalized game state to each player
+      game.players.forEach(player => {
+        io.to(player.id).emit('gameStarted', {
+          gameState: game.getGameState(player.id)
+        });
+      });
+      
+      console.log(`Game started: ${playerData.gameId}`);
+    } else {
+      socket.emit('error', { message: 'Cannot start game (need at least 2 players)' });
+    }
+  });
+
+  socket.on('playSet', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Check if this is multiple sets for initial play
+    if (Array.isArray(data.setArrays)) {
+      const result = game.playMultipleSets(socket.id, data.setArrays);
+      if (result && result.success) {
+        // Send individual game states to each player
+        game.players.forEach(player => {
+          const playerSocket = io.sockets.sockets.get(player.id);
+          if (playerSocket) {
+            playerSocket.emit('setPlayed', {
+              gameState: game.getGameState(player.id)
+            });
+          }
+        });
+        
+        if (game.winner) {
+          io.to(playerData.gameId).emit('gameWon', {
+            winner: game.winner,
+            gameState: game.getGameState(socket.id)
+          });
+          return;
+        }
+      } else {
+        socket.emit('error', { message: 'Invalid sets or insufficient points for initial play' });
+      }
+    } else {
+      // Single set play (existing logic)
+      if (game.playSet(socket.id, data.tileIds, data.setIndex)) {
+        // Send individual game states to each player
+        game.players.forEach(player => {
+          const playerSocket = io.sockets.sockets.get(player.id);
+          if (playerSocket) {
+            playerSocket.emit('setPlayed', {
+              gameState: game.getGameState(player.id)
+            });
+          }
+        });
+        
+        if (game.winner) {
+          io.to(playerData.gameId).emit('gameWon', {
+            winner: game.winner,
+            gameState: game.getGameState(socket.id)
+          });
+          return;
+        }
+        
+        // Human players continue their turn after playing a set
+        // They must manually end their turn
+      } else {
+        socket.emit('error', { message: 'Invalid set' });
+      }
+    }
+  });
+
+  socket.on('drawTile', () => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    const tile = game.drawTile(socket.id);
+    if (tile) {
+      // Clear the current timer before changing turns
+      game.clearTurnTimer();
+      
+      // Always advance turn after drawing a tile (this ends the player's turn)
+      game.nextTurn();
+      
+      // Send individual game states to each player
+      game.players.forEach(player => {
+        const playerSocket = io.sockets.sockets.get(player.id);
+        if (playerSocket) {
+          playerSocket.emit('tileDrawn', {
+            gameState: game.getGameState(player.id),
+            currentPlayerId: game.getCurrentPlayer()?.id,
+            isYourTurn: player.id === game.getCurrentPlayer()?.id
+          });
+        }
+      });
+      
+      // Trigger bot move if it's a bot game and next player is bot
+      const nextPlayer = game.getCurrentPlayer();
+      if (game.isBotGame && nextPlayer && nextPlayer.isBot) {
+        console.log(`👤➡️🤖 Human drew tile, triggering bot move for ${nextPlayer.name}`);
+        game.scheduleNextBotMove(io, playerData.gameId, 4000);
+      } else {
+        console.log(`👤 Human drew tile, next player: ${nextPlayer?.name} (isBot: ${nextPlayer?.isBot})`);
+      }
+    } else {
+      socket.emit('error', { message: 'No tiles left to draw' });
+    }
+  });
+
+  socket.on('endTurn', () => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Only allow human players to manually end their turn
+    const currentPlayer = game.getCurrentPlayer();
+    if (!currentPlayer.isBot) {
+      // Validate board state before ending turn - strict validation with isEndTurn=true
+      const validation = game.validateBoardState(true);
+      if (!validation.valid) {
+        socket.emit('error', { 
+          message: `Cannot end turn - board has invalid sets. Check set ${validation.invalidSetIndex + 1}.`,
+          invalidSetIndex: validation.invalidSetIndex 
+        });
+        return;
+      }
+      
+      // Reset any turn-specific flags
+      currentPlayer.hasManipulatedJoker = false;
+      
+      // Clear the current timer before changing turns
+      game.clearTurnTimer();
+      
+      game.nextTurn();
+      
+      // Send individual game states to each player
+      game.players.forEach(player => {
+        const playerSocket = io.sockets.sockets.get(player.id);
+        if (playerSocket) {
+          // Send a more detailed turnEnded event with the current player info
+          playerSocket.emit('turnEnded', {
+            gameState: game.getGameState(player.id),
+            currentPlayerId: game.getCurrentPlayer()?.id,
+            isYourTurn: player.id === game.getCurrentPlayer()?.id
+          });
+        }
+      });
+      
+      // Trigger bot move if it's a bot game and we just advanced to bot
+      if (game.isBotGame) {
+        console.log(`👤➡️🤖 Human ended turn, triggering bot move`);
+        game.scheduleNextBotMove(io, playerData.gameId, 4000);
+      }
+    }
+  });
+
+  socket.on('sendMessage', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    game.addChatMessage(socket.id, data.message);
+    io.to(playerData.gameId).emit('messageReceived', {
+      chatMessages: game.chatMessages
+    });
+  });
+
+  socket.on('disconnect', () => {
+    const playerData = players.get(socket.id);
+    if (playerData) {
+      const game = games.get(playerData.gameId);
+      if (game) {
+        game.removePlayer(socket.id);
+        
+        // If it's a bot game and a human player disconnects, terminate the game immediately
+        if (game.isBotGame && !socket.id.startsWith('bot_')) {
+          console.log(`Human player left bot game ${playerData.gameId}, terminating game`);
+          games.delete(playerData.gameId);
+        } else {
+          // For multiplayer games, notify other players
+          io.to(playerData.gameId).emit('playerLeft', {
+            playerName: playerData.playerName,
+            gameState: game.getGameState(socket.id)
+          });
+          
+          // Clean up empty games
+          if (game.players.length === 0) {
+            games.delete(playerData.gameId);
+          }
+        }
+      }
+      
+      players.delete(socket.id);
+      console.log(`Player disconnected: ${playerData.playerName}`);
+    }
+  });
+
   // Additional handlers for authenticated users
   
   // Get user profile
@@ -242,6 +570,11 @@ io.on('connection', (socket) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
 });
+
+// Helper functions
+function generateGameId() {
+  return Math.random().toString(36).substr(2, 6).toUpperCase();
+}
 
 // Server
 const PORT = process.env.PORT || 3000;
