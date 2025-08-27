@@ -149,9 +149,19 @@
                 
                 try {
                     // Determine the API URL based on the environment
-                    const backendUrl = window.location.hostname === 'localhost' 
-                        ? 'http://localhost:3000' 
-                        : 'https://rummikub-backend.onrender.com';
+                    let backendUrl;
+                    
+                    if (window.location.hostname === 'localhost') {
+                        backendUrl = 'http://localhost:3000';
+                    } else if (window.location.hostname.includes('feature-user-authentication--jkube.netlify.app')) {
+                        // Feature branch deployment
+                        backendUrl = 'https://rummikub-backend.onrender.com';
+                    } else {
+                        // Main production deployment
+                        backendUrl = 'https://rummikub-backend.onrender.com';
+                    }
+                    
+                    console.log('Using backend URL:', backendUrl);
                     
                     const response = await fetch(`${backendUrl}/api/auth/login`, {
                         method: 'POST',
