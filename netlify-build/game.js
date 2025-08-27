@@ -273,6 +273,12 @@ class RummikubClient {
             this.showNotification(`${data.playerName} left the game`, 'info');
         });
         
+        this.socket.on('playerReconnected', (data) => {
+            this.gameState = data.gameState;
+            this.updateGameState();
+            this.showNotification(`${data.playerName} reconnected to the game`, 'success');
+        });
+        
         // Add explicit listener for gameStateUpdate events
         this.socket.on('gameStateUpdate', (data) => {
             // Store the previous board state before updating
@@ -3467,7 +3473,7 @@ class RummikubClient {
     // Helper method to rejoin a game after reconnection
     rejoinGame(gameId, playerName) {
         // Emit event to server to rejoin the game
-        this.socket.emit('joinGame', {
+        this.socket.emit('rejoinGame', {
             gameId: gameId,
             playerName: playerName
         });

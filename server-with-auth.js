@@ -57,10 +57,14 @@ const isOriginAllowed = (origin) => {
 
 const io = socketIo(server, {
   cors: {
-    origin: '*', // Allow all origins in development mode
+    origin: '*', // Allow all origins
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'], // Enable both transports
+  pingTimeout: 60000, // Increase ping timeout to 60 seconds
+  pingInterval: 25000, // More frequent pings to detect disconnections
+  connectTimeout: 30000 // Longer connection timeout
 });
 
 // Security and middleware
@@ -167,6 +171,15 @@ class RummikubGame {
   addPlayer(playerId, playerName) {
     if (this.players.length >= 4) return false;
     
+    // Check if player with this name already exists (for reconnection scenarios)
+    const existingPlayer = this.players.find(p => p.name === playerName);
+    if (existingPlayer) {
+      // Update the player's ID (socket ID) for reconnection
+      existingPlayer.id = playerId;
+      console.log(`Player ${playerName} reconnected with new socket ID: ${playerId}`);
+      return true;
+    }
+    
     const player = {
       id: playerId,
       name: playerName,
@@ -209,9 +222,50 @@ class RummikubGame {
   }
 
   removePlayer(playerId) {
-    this.players = this.players.filter(p => p.id !== playerId);
-    if (this.currentPlayerIndex >= this.players.length) {
-      this.currentPlayerIndex = 0;
+    const playerIndex = this.players.findIndex(p => p.id === playerId);
+    
+    if (playerIndex !== -1) {
+      // Store the player's name for logging
+      const playerName = this.players[playerIndex].name;
+      
+      // For multiplayer games, don't immediately remove the player on disconnect
+      // This allows them to reconnect with the same player data
+      if (!this.isBotGame) {
+        // Mark the player as disconnected but keep their data for potential reconnection
+        this.players[playerIndex].disconnected = true;
+        this.players[playerIndex].disconnectedAt = Date.now();
+        console.log(`Player ${playerName} temporarily disconnected, data preserved for reconnection`);
+      } else {
+        // For bot games, remove the player immediately
+        this.players.splice(playerIndex, 1);
+        console.log(`Player ${playerName} removed from bot game`);
+      }
+      
+      // If it was their turn, move to the next player
+      if (this.currentPlayerIndex >= this.players.length) {
+        this.currentPlayerIndex = 0;
+      } else if (playerIndex === this.currentPlayerIndex) {
+        this.nextTurn();
+      }
+    }
+    
+    // Clean up disconnected players that haven't reconnected within 30 minutes
+    this.cleanupDisconnectedPlayers();
+  }
+  
+  cleanupDisconnectedPlayers() {
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+    
+    // Filter out players who have been disconnected for over 30 minutes
+    const initialCount = this.players.length;
+    this.players = this.players.filter(player => {
+      // Keep connected players and recently disconnected players
+      return !player.disconnected || player.disconnectedAt > thirtyMinutesAgo;
+    });
+    
+    const removedCount = initialCount - this.players.length;
+    if (removedCount > 0) {
+      console.log(`Cleaned up ${removedCount} disconnected players from game ${this.id}`);
     }
   }
 
@@ -362,6 +416,17 @@ class RummikubGame {
     }
     
     return true;
+  }
+  
+  // Validate all sets on the board
+  validateBoardState(isEndTurn = false) {
+    for (let i = 0; i < this.board.length; i++) {
+      const set = this.board[i];
+      if (!this.isValidSet(set)) {
+        return { valid: false, invalidSetIndex: i };
+      }
+    }
+    return { valid: true };
   }
 
   playSet(playerId, tileIds, setIndex = null) {
@@ -542,6 +607,43 @@ class RummikubGame {
     // Restore board to snapshot state
     this.board = JSON.parse(JSON.stringify(this.boardSnapshot));
   }
+  
+  // Restore game state from MongoDB document
+  static async restoreFromMongoDB(gameId) {
+    try {
+      const dbGame = await Game.findOne({ gameId });
+      
+      if (!dbGame || dbGame.endTime) {
+        console.log(`Cannot restore game ${gameId}: not found or already ended`);
+        return null;
+      }
+      
+      const game = new RummikubGame(gameId);
+      game.isBotGame = dbGame.isBotGame || false;
+      
+      // Restore board state if available
+      if (dbGame.boardState && Array.isArray(dbGame.boardState)) {
+        game.board = dbGame.boardState;
+      }
+      
+      // Restore game log if available
+      if (dbGame.gameLog && Array.isArray(dbGame.gameLog)) {
+        game.gameLog = dbGame.gameLog;
+      }
+      
+      // Restore start time
+      game.createdAt = dbGame.startTime || Date.now();
+      
+      // Note: player hands, current player index, etc. will need to be
+      // re-established when players reconnect
+      
+      console.log(`Successfully restored game ${gameId} from MongoDB`);
+      return game;
+    } catch (error) {
+      console.error(`Error restoring game ${gameId} from MongoDB:`, error);
+      return null;
+    }
+  }
 
   // Schedule bot moves
   scheduleNextBotMove(io, gameId, delay = 4000) {
@@ -573,6 +675,15 @@ class RummikubGame {
         }
       }
     }, delay);
+  }
+  
+  // Clear the turn timer
+  clearTurnTimer() {
+    if (this.turnTimerInterval) {
+      clearInterval(this.turnTimerInterval);
+      this.turnTimerInterval = null;
+    }
+    this.turnStartTime = null;
   }
 }
 
@@ -614,12 +725,34 @@ io.use(async (socket, next) => {
   }
 });
 
-// Socket.IO event handlers
+  // Socket.IO event handlers
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id, socket.user?.isGuest ? '(Guest)' : `(${socket.user.username})`);
 
+  // Save game state to MongoDB periodically
+  const saveGameToMongoDB = async (gameId) => {
+    try {
+      const game = games.get(gameId);
+      if (!game) return;
+      
+      // Find the existing game document
+      const gameDoc = await Game.findOne({ gameId });
+      if (!gameDoc) return;
+      
+      // Update the game state
+      gameDoc.boardState = game.board;
+      gameDoc.gameLog = game.gameLog;
+      
+      // Save the updated document
+      await gameDoc.save();
+      console.log(`Game ${gameId} state saved to MongoDB`);
+    } catch (error) {
+      console.error(`Error saving game state to MongoDB: ${error.message}`);
+    }
+  };
+
   // [ORIGINAL SOCKET HANDLERS FROM SERVER.JS]
-  socket.on('createGame', (data) => {
+  socket.on('createGame', async (data) => {
     const gameId = generateGameId();
     const game = new RummikubGame(gameId);
     
@@ -637,6 +770,31 @@ io.on('connection', (socket) => {
         isDebugEnabled: data.isDebugMode || false
       });
       
+      // Also save to MongoDB for persistence
+      try {
+        // Create a MongoDB game document
+        const userId = socket.user && !socket.user.isGuest ? socket.user.id : null;
+        
+        const gameDocument = new Game({
+          gameId: gameId,
+          players: [{
+            userId: userId,
+            name: data.playerName,
+            isBot: false
+          }],
+          startTime: new Date(),
+          boardState: [],
+          gameLog: [],
+          isBotGame: false
+        });
+        
+        await gameDocument.save();
+        console.log(`Game ${gameId} saved to MongoDB`);
+      } catch (error) {
+        console.error('Error saving game to MongoDB:', error);
+        // Continue anyway - the game will work in memory even if DB save fails
+      }
+      
       socket.join(gameId);
       socket.emit('gameCreated', { gameId, gameState: game.getGameState(socket.id) });
       
@@ -646,7 +804,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('createBotGame', (data) => {
+  socket.on('createBotGame', async (data) => {
     const gameId = generateGameId();
     const botCount = data.botCount || 1; // Default to 1 bot if not specified
     const game = new RummikubGame(gameId, true, data.difficulty);
@@ -669,6 +827,41 @@ io.on('connection', (socket) => {
       
       games.set(gameId, game);
       players.set(socket.id, { gameId, playerName: data.playerName });
+      
+      // Also save to MongoDB for persistence
+      try {
+        // Create a MongoDB game document with bot players
+        const userId = socket.user && !socket.user.isGuest ? socket.user.id : null;
+        
+        const playerDocs = [{
+          userId: userId,
+          name: data.playerName,
+          isBot: false
+        }];
+        
+        // Add bot players to the document
+        addedBots.forEach(bot => {
+          playerDocs.push({
+            name: bot.name,
+            isBot: true
+          });
+        });
+        
+        const gameDocument = new Game({
+          gameId: gameId,
+          players: playerDocs,
+          startTime: new Date(),
+          boardState: [],
+          gameLog: [],
+          isBotGame: true
+        });
+        
+        await gameDocument.save();
+        console.log(`Bot game ${gameId} saved to MongoDB`);
+      } catch (error) {
+        console.error('Error saving bot game to MongoDB:', error);
+        // Continue anyway - the game will work in memory even if DB save fails
+      }
       
       socket.join(gameId);
       
@@ -697,8 +890,27 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('joinGame', (data) => {
-    const game = games.get(data.gameId);
+  socket.on('joinGame', async (data) => {
+    // First try to get the game from in-memory cache
+    let game = games.get(data.gameId);
+    
+    // If not found in memory, try to find it in MongoDB
+    if (!game) {
+      try {
+        // Try to restore the game from MongoDB
+        game = await RummikubGame.restoreFromMongoDB(data.gameId);
+        
+        if (game) {
+          // If successfully restored, add it to the in-memory cache
+          games.set(data.gameId, game);
+          console.log(`Restored game ${data.gameId} from MongoDB for player join`);
+        }
+      } catch (error) {
+        console.error(`Error loading game from MongoDB: ${error.message}`);
+      }
+    }
+    
+    // If still not found, return error
     if (!game) {
       socket.emit('error', { message: 'Game not found' });
       return;
@@ -706,6 +918,28 @@ io.on('connection', (socket) => {
 
     if (game.addPlayer(socket.id, data.playerName)) {
       players.set(socket.id, { gameId: data.gameId, playerName: data.playerName });
+      
+      // Update MongoDB record
+      try {
+        const userId = socket.user && !socket.user.isGuest ? socket.user.id : null;
+        
+        await Game.findOneAndUpdate(
+          { gameId: data.gameId },
+          { 
+            $push: { 
+              players: { 
+                userId: userId,
+                name: data.playerName,
+                isBot: false
+              } 
+            } 
+          },
+          { new: true }
+        );
+        console.log(`Added player ${data.playerName} to game ${data.gameId} in MongoDB`);
+      } catch (error) {
+        console.error(`Error updating MongoDB game: ${error.message}`);
+      }
       
       socket.join(data.gameId);
       socket.emit('gameJoined', { gameId: data.gameId, gameState: game.getGameState(socket.id) });
@@ -722,10 +956,29 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('getGameState', (data) => {
+  socket.on('getGameState', async (data) => {
     console.log(`Player ${socket.id} requesting game state for game: ${data.gameId}`);
-    const game = games.get(data.gameId);
     
+    // First try to get the game from in-memory cache
+    let game = games.get(data.gameId);
+    
+    // If not found in memory, try to find it in MongoDB
+    if (!game) {
+      try {
+        // Try to restore the game from MongoDB
+        game = await RummikubGame.restoreFromMongoDB(data.gameId);
+        
+        if (game) {
+          // If successfully restored, add it to the in-memory cache
+          games.set(data.gameId, game);
+          console.log(`Restored game ${data.gameId} from MongoDB for game state request`);
+        }
+      } catch (error) {
+        console.error(`Error loading game from MongoDB: ${error.message}`);
+      }
+    }
+    
+    // If still not found, return error
     if (!game) {
       console.log(`Game not found for state request: ${data.gameId}`);
       socket.emit('error', { message: 'Game not found' });
@@ -778,6 +1031,9 @@ io.on('connection', (socket) => {
           }
         });
         
+        // Save game state to MongoDB
+        saveGameToMongoDB(playerData.gameId);
+        
         if (game.winner) {
           io.to(playerData.gameId).emit('gameWon', {
             winner: game.winner,
@@ -800,6 +1056,9 @@ io.on('connection', (socket) => {
             });
           }
         });
+        
+        // Save game state to MongoDB
+        saveGameToMongoDB(playerData.gameId);
         
         if (game.winner) {
           io.to(playerData.gameId).emit('gameWon', {
@@ -843,6 +1102,9 @@ io.on('connection', (socket) => {
           });
         }
       });
+      
+      // Save game state to MongoDB
+      saveGameToMongoDB(playerData.gameId);
       
       // Trigger bot move if it's a bot game and next player is bot
       const nextPlayer = game.getCurrentPlayer();
@@ -898,6 +1160,9 @@ io.on('connection', (socket) => {
         }
       });
       
+      // Save game state to MongoDB
+      saveGameToMongoDB(playerData.gameId);
+      
       // Trigger bot move if it's a bot game and we just advanced to bot
       if (game.isBotGame) {
         console.log(`👤➡️🤖 Human ended turn, triggering bot move`);
@@ -924,29 +1189,107 @@ io.on('connection', (socket) => {
     if (playerData) {
       const game = games.get(playerData.gameId);
       if (game) {
-        game.removePlayer(socket.id);
-        
         // If it's a bot game and a human player disconnects, terminate the game immediately
         if (game.isBotGame && !socket.id.startsWith('bot_')) {
           console.log(`Human player left bot game ${playerData.gameId}, terminating game`);
           games.delete(playerData.gameId);
         } else {
-          // For multiplayer games, notify other players
+          // For multiplayer games, mark the player as disconnected but don't remove them
+          // This gives them a chance to reconnect
+          const player = game.players.find(p => p.id === socket.id);
+          if (player) {
+            console.log(`Player ${player.name} disconnected from game ${playerData.gameId}, marking as disconnected`);
+            player.disconnected = true;
+            player.disconnectedAt = Date.now();
+          }
+          
+          // Notify other players
           io.to(playerData.gameId).emit('playerLeft', {
             playerName: playerData.playerName,
             gameState: game.getGameState(socket.id)
           });
           
-          // Clean up empty games
+          // Clean up empty games - but only if there are no players at all
           if (game.players.length === 0) {
             games.delete(playerData.gameId);
           }
         }
       }
       
+      // Keep the player mapping for potential reconnection
+      console.log(`Player disconnected: ${playerData.playerName} (socket mapping will be removed)`);
       players.delete(socket.id);
-      console.log(`Player disconnected: ${playerData.playerName}`);
     }
+  });
+
+  // Handle reconnection attempts
+  socket.on('reconnect_attempt', async () => {
+    console.log(`Player ${socket.id} attempting to reconnect`);
+  });
+
+  socket.on('rejoinGame', async (data) => {
+    console.log(`Player ${socket.id} attempting to rejoin game ${data.gameId} as ${data.playerName}`);
+    
+    // First try to get the game from in-memory cache
+    let game = games.get(data.gameId);
+    
+    // If not found in memory, try to find it in MongoDB
+    if (!game) {
+      try {
+        const dbGame = await Game.findOne({ gameId: data.gameId });
+        
+        if (dbGame && !dbGame.endTime) {
+          // If found in DB and not ended, create a new in-memory game with the same ID
+          console.log(`Found game ${data.gameId} in MongoDB, restoring to memory for reconnection`);
+          game = new RummikubGame(data.gameId);
+          game.isBotGame = dbGame.isBotGame || false;
+          games.set(data.gameId, game);
+        }
+      } catch (error) {
+        console.error(`Error loading game from MongoDB for reconnection: ${error.message}`);
+      }
+    }
+    
+    // If still not found, return error
+    if (!game) {
+      socket.emit('error', { message: 'Game not found for reconnection' });
+      return;
+    }
+
+    // Check if player was already in the game
+    const existingPlayer = game.players.find(p => p.name === data.playerName);
+    
+    if (existingPlayer) {
+      // Update the player's socket ID
+      existingPlayer.id = socket.id;
+    } else {
+      // Add as a new player if not at capacity
+      if (!game.addPlayer(socket.id, data.playerName)) {
+        socket.emit('error', { message: 'Game is full, cannot rejoin' });
+        return;
+      }
+    }
+    
+    // Update player mapping
+    players.set(socket.id, { gameId: data.gameId, playerName: data.playerName });
+    
+    // Join the socket room
+    socket.join(data.gameId);
+    
+    // Send game state to the reconnected player
+    socket.emit('gameJoined', { 
+      gameId: data.gameId, 
+      gameState: game.getGameState(socket.id),
+      reconnected: true
+    });
+    
+    // Notify other players
+    socket.to(data.gameId).emit('playerReconnected', {
+      playerName: data.playerName,
+      gameState: game.getGameState(socket.id)
+    });
+    
+    console.log(`Player ${data.playerName} successfully rejoined game ${data.gameId}`);
   });
 
   // Additional handlers for authenticated users
