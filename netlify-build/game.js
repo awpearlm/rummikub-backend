@@ -713,25 +713,43 @@ class RummikubClient {
         gamesList.className = 'games-list';
         
         games.forEach(game => {
+            // Skip games with invalid data
+            if (!game.host || !game.id || !game.createdAt) {
+                console.warn('Skipping invalid game:', game);
+                return;
+            }
+            
             const gameItem = document.createElement('li');
             gameItem.className = 'game-item';
             
-            // Calculate time since creation
+            // Calculate time since creation with validation
             const createdTime = new Date(game.createdAt);
-            const timeAgo = this.getTimeAgo(createdTime);
+            let timeAgo;
+            
+            // Check if the date is valid
+            if (isNaN(createdTime.getTime())) {
+                timeAgo = 'unknown';
+                console.warn('Invalid createdAt date for game:', game.id);
+            } else {
+                timeAgo = this.getTimeAgo(createdTime);
+            }
             
             // Check if the game is active
             const isActiveGame = game.status === 'ACTIVE';
+            
+            // Sanitize display values
+            const hostName = game.host || 'Unknown';
+            const playerCount = Math.max(0, Math.min(4, game.playerCount || 0));
             
             // Build the game item HTML with conditional button/status based on game state
             const itemHTML = `
                 <div class="game-item-info">
                     <div class="game-host">
-                        <i class="fas fa-user"></i> ${game.host}
+                        <i class="fas fa-user"></i> ${hostName}
                         ${isActiveGame ? '<span class="game-status-badge active">Active</span>' : ''}
                     </div>
                     <div class="game-details">
-                        <span class="player-count"><i class="fas fa-users"></i> ${game.playerCount}/4</span>
+                        <span class="player-count"><i class="fas fa-users"></i> ${playerCount}/4</span>
                         <span class="game-time"><i class="fas fa-clock"></i> ${timeAgo}</span>
                     </div>
                 </div>
@@ -770,7 +788,17 @@ class RummikubClient {
     }
     
     getTimeAgo(date) {
+        // Validate the date first
+        if (!date || isNaN(date.getTime())) {
+            return 'unknown time';
+        }
+        
         const seconds = Math.floor((new Date() - date) / 1000);
+        
+        // Handle future dates or negative values
+        if (seconds < 0) {
+            return 'just now';
+        }
         
         if (seconds < 60) return 'just now';
         

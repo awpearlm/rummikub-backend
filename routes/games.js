@@ -13,7 +13,41 @@ router.get('/', async (req, res) => {
       isBotGame: { $ne: true } // Exclude bot games
     }).sort({ startTime: -1 });
     
-    res.status(200).json({ games: activeGames });
+    // Clean up stale games (older than 2 hours with no activity)
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await Game.updateMany(
+      { 
+        startTime: { $lt: twoHoursAgo },
+        endTime: { $exists: false }
+      },
+      { 
+        endTime: new Date(),
+        winner: 'Game abandoned due to inactivity'
+      }
+    );
+    
+    // Format games for frontend consumption, filtering out invalid ones
+    const formattedGames = activeGames
+      .filter(game => {
+        // Filter out games with invalid data
+        const players = game.players || [];
+        return players.length > 0 && players[0].name && game.startTime;
+      })
+      .map(game => {
+        const players = game.players || [];
+        const host = players.length > 0 ? players[0].name : 'Unknown';
+        
+        return {
+          id: game.gameId,
+          host: host,
+          playerCount: players.length,
+          createdAt: game.startTime,
+          status: 'WAITING', // Active games are waiting for players
+          isBotGame: game.isBotGame || false
+        };
+      });
+    
+    res.status(200).json({ games: formattedGames });
   } catch (error) {
     console.error('Get active games error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -109,6 +143,44 @@ router.get('/recent/public', async (req, res) => {
     res.status(200).json({ games: recentGames });
   } catch (error) {
     console.error('Get recent games error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Cleanup stale games (admin endpoint)
+router.post('/cleanup', async (req, res) => {
+  try {
+    // End games that are older than 2 hours and still active
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    
+    const result = await Game.updateMany(
+      { 
+        startTime: { $lt: twoHoursAgo },
+        endTime: { $exists: false }
+      },
+      { 
+        endTime: new Date(),
+        winner: 'Game abandoned due to inactivity'
+      }
+    );
+    
+    // Also remove games with invalid data (no players or no names)
+    const invalidGames = await Game.deleteMany({
+      $or: [
+        { players: { $size: 0 } },
+        { 'players.0.name': { $exists: false } },
+        { 'players.0.name': null },
+        { 'players.0.name': '' }
+      ]
+    });
+    
+    res.status(200).json({ 
+      message: 'Cleanup completed',
+      gamesEnded: result.modifiedCount,
+      invalidGamesRemoved: invalidGames.deletedCount
+    });
+  } catch (error) {
+    console.error('Cleanup games error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
