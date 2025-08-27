@@ -3,6 +3,15 @@ const router = express.Router();
 const Game = require('../models/Game');
 const { authenticateToken } = require('../middleware/auth');
 
+// We need access to the in-memory games map to get real-time player counts
+// This will be injected by the main server
+let inMemoryGames = null;
+
+// Function to set the in-memory games reference
+router.setInMemoryGames = (gamesMap) => {
+  inMemoryGames = gamesMap;
+};
+
 // Get all active games (for lobby)
 router.get('/', async (req, res) => {
   try {
@@ -37,10 +46,20 @@ router.get('/', async (req, res) => {
         const players = game.players || [];
         const host = players.length > 0 ? players[0].name : 'Unknown';
         
+        // Get real-time player count from in-memory game if available
+        let playerCount = players.length; // Default to MongoDB count
+        
+        if (inMemoryGames && inMemoryGames.has(game.gameId)) {
+          const inMemoryGame = inMemoryGames.get(game.gameId);
+          // Count only non-disconnected players in the in-memory game
+          const activePlayers = inMemoryGame.players.filter(p => !p.disconnected);
+          playerCount = activePlayers.length;
+        }
+        
         return {
           id: game.gameId,
           host: host,
-          playerCount: players.length,
+          playerCount: playerCount,
           createdAt: game.startTime,
           status: 'WAITING', // Active games are waiting for players
           isBotGame: game.isBotGame || false

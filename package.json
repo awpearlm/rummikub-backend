@@ -9,6 +9,8 @@
     "start:auth": "node server-with-auth.js",
     "dev:auth": "nodemon server-with-auth.js",
     "create-admin": "node scripts/create-admin.js",
+    "create-test-user": "node scripts/create-test-user.js",
+    "create-test-user-2": "node scripts/create-test-user-2.js",
     "test-db": "node scripts/test-mongodb-connection.js",
     "debug": "node debug-server.js",
     "build": "./build-frontend.sh",

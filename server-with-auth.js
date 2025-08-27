@@ -101,11 +101,14 @@ app.use('/api', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/games', gamesRoutes);
 
 // Game state management
 const games = new Map();
 const players = new Map();
+
+// Pass the in-memory games map to the games routes so it can get real-time player counts
+gamesRoutes.setInMemoryGames(games);
+app.use('/api/games', gamesRoutes);
 
 // Rummikub game logic
 class RummikubGame {
@@ -258,14 +261,45 @@ class RummikubGame {
     
     // Filter out players who have been disconnected for over 30 minutes
     const initialCount = this.players.length;
+    const removedPlayers = [];
+    
     this.players = this.players.filter(player => {
       // Keep connected players and recently disconnected players
-      return !player.disconnected || player.disconnectedAt > thirtyMinutesAgo;
+      const shouldKeep = !player.disconnected || player.disconnectedAt > thirtyMinutesAgo;
+      if (!shouldKeep) {
+        removedPlayers.push(player.name);
+      }
+      return shouldKeep;
     });
     
     const removedCount = initialCount - this.players.length;
     if (removedCount > 0) {
-      console.log(`Cleaned up ${removedCount} disconnected players from game ${this.id}`);
+      console.log(`Cleaned up ${removedCount} disconnected players from game ${this.id}: ${removedPlayers.join(', ')}`);
+      
+      // Update MongoDB to reflect the current player list
+      this.updateGamePlayersInDB();
+    }
+  }
+  
+  // Update the MongoDB game document to reflect current players
+  async updateGamePlayersInDB() {
+    try {
+      const Game = require('./models/Game');
+      const gameDoc = await Game.findOne({ gameId: this.id });
+      
+      if (gameDoc) {
+        // Update the players array to only include active (non-disconnected) players
+        const activePlayers = this.players.filter(p => !p.disconnected).map(p => ({
+          name: p.name,
+          isBot: p.isBot || false
+        }));
+        
+        gameDoc.players = activePlayers;
+        await gameDoc.save();
+        console.log(`Updated MongoDB game ${this.id} with ${activePlayers.length} active players`);
+      }
+    } catch (error) {
+      console.error(`Error updating game players in DB for ${this.id}:`, error.message);
     }
   }
 
@@ -1209,6 +1243,14 @@ io.on('connection', (socket) => {
             console.log(`Player ${player.name} disconnected from game ${playerData.gameId}, marking as disconnected`);
             player.disconnected = true;
             player.disconnectedAt = Date.now();
+            
+            // Update MongoDB after 30 seconds to reflect the disconnection in the available games list
+            setTimeout(() => {
+              if (games.has(playerData.gameId)) {
+                const currentGame = games.get(playerData.gameId);
+                currentGame.updateGamePlayersInDB();
+              }
+            }, 30000); // 30 seconds delay
           }
           
           // Notify other players

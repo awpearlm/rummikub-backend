@@ -8,14 +8,15 @@ connectDB();
 
 // Import User model
 const User = require('../models/User');
+const Stats = require('../models/Stats');
 
-async function createTestUser() {
+async function createSecondTestUser() {
   try {
-    console.log('=== Creating Test User ===');
+    console.log('=== Creating Second Test User for Multiplayer Testing ===');
     
-    // Test user details
-    const email = 'testuser@example.com';
-    const username = 'testuser';
+    // Second test user details
+    const email = 'testuser2@example.com';
+    const username = 'testuser2';
     const password = 'password123';
     
     // Check if user already exists
@@ -24,12 +25,12 @@ async function createTestUser() {
     });
     
     if (existingUser) {
-      console.log('\nA test user already exists with this email or username.');
+      console.log('\nSecond test user already exists!');
       console.log('Details:');
       console.log(`Email: ${existingUser.email}`);
       console.log(`Username: ${existingUser.username}`);
       console.log(`Is Admin: ${existingUser.isAdmin ? 'Yes' : 'No'}`);
-      console.log('\nYou can use these credentials for testing.');
+      console.log('\nYou can use these credentials for multiplayer testing.');
       
       mongoose.disconnect();
       return;
@@ -50,19 +51,37 @@ async function createTestUser() {
     
     await newUser.save();
     
-    console.log('\nTest user created successfully!');
+    // Create stats document for the user
+    const stats = new Stats({
+      userId: newUser._id,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      winPercentage: 0,
+      totalPoints: 0,
+      highestScore: 0,
+      avgPointsPerGame: 0,
+      totalPlayTime: 0
+    });
+    
+    await stats.save();
+    
+    console.log('\nSecond test user created successfully!');
     console.log(`Email: ${email}`);
     console.log(`Username: ${username}`);
     console.log(`Password: ${password}`);
-    console.log('You can now log in with these credentials for testing.');
+    console.log('\n=== Multiplayer Testing Setup ===');
+    console.log('You now have two test users for multiplayer testing:');
+    console.log('1. testuser@example.com / testuser / password123');
+    console.log('2. testuser2@example.com / testuser2 / password123');
+    console.log('\nOpen two browser windows/tabs and log in with different users to test multiplayer functionality!');
     
     mongoose.disconnect();
   } catch (error) {
-    console.error('Error creating test user:', error);
+    console.error('Error creating second test user:', error);
     mongoose.disconnect();
     process.exit(1);
   }
 }
 
 // Run the function
-createTestUser();
+createSecondTestUser();
