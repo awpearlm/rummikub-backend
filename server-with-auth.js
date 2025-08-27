@@ -762,11 +762,15 @@ io.on('connection', (socket) => {
     // Set timer option if provided
     game.timerEnabled = data.timerEnabled || false;
     
-    if (game.addPlayer(socket.id, data.playerName)) {
+    // Use authenticated username if available, otherwise use provided name
+    const playerName = (socket.user && !socket.user.isGuest) ? socket.user.username : data.playerName;
+    console.log(`Using player name for game: ${playerName} (authenticated: ${!socket.user.isGuest})`);
+    
+    if (game.addPlayer(socket.id, playerName)) {
       games.set(gameId, game);
       players.set(socket.id, { 
         gameId, 
-        playerName: data.playerName,
+        playerName: playerName,
         isDebugEnabled: data.isDebugMode || false
       });
       
@@ -916,8 +920,12 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (game.addPlayer(socket.id, data.playerName)) {
-      players.set(socket.id, { gameId: data.gameId, playerName: data.playerName });
+    // Use authenticated username if available, otherwise use provided name
+    const playerName = (socket.user && !socket.user.isGuest) ? socket.user.username : data.playerName;
+    console.log(`Player joining game: ${playerName} (authenticated: ${!socket.user.isGuest})`);
+
+    if (game.addPlayer(socket.id, playerName)) {
+      players.set(socket.id, { gameId: data.gameId, playerName: playerName });
       
       // Update MongoDB record
       try {
@@ -929,7 +937,7 @@ io.on('connection', (socket) => {
             $push: { 
               players: { 
                 userId: userId,
-                name: data.playerName,
+                name: playerName,
                 isBot: false
               } 
             } 
@@ -1228,7 +1236,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('rejoinGame', async (data) => {
-    console.log(`Player ${socket.id} attempting to rejoin game ${data.gameId} as ${data.playerName}`);
+    // Use authenticated username if available, otherwise use provided name
+    const playerName = (socket.user && !socket.user.isGuest) ? socket.user.username : data.playerName;
+    console.log(`Player ${socket.id} attempting to rejoin game ${data.gameId} as ${playerName}`);
     
     // Validate that we have a proper gameId
     if (!data.gameId || data.gameId === "UNDEFINED" || data.gameId === "undefined") {
@@ -1263,21 +1273,21 @@ io.on('connection', (socket) => {
     }
 
     // Check if player was already in the game
-    const existingPlayer = game.players.find(p => p.name === data.playerName);
+    const existingPlayer = game.players.find(p => p.name === playerName);
     
     if (existingPlayer) {
       // Update the player's socket ID
       existingPlayer.id = socket.id;
     } else {
       // Add as a new player if not at capacity
-      if (!game.addPlayer(socket.id, data.playerName)) {
+      if (!game.addPlayer(socket.id, playerName)) {
         socket.emit('error', { message: 'Game is full, cannot rejoin' });
         return;
       }
     }
     
     // Update player mapping
-    players.set(socket.id, { gameId: data.gameId, playerName: data.playerName });
+    players.set(socket.id, { gameId: data.gameId, playerName: playerName });
     
     // Join the socket room
     socket.join(data.gameId);

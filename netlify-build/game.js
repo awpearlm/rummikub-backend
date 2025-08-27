@@ -6,6 +6,10 @@ class RummikubClient {
             : 'https://rummikub-backend.onrender.com'; // Your deployed backend URL
         
         console.log('🌐 Connecting to:', backendUrl);
+        
+        // Check if user is authenticated
+        const token = localStorage.getItem('auth_token');
+        
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
@@ -13,7 +17,8 @@ class RummikubClient {
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+            transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+            auth: token ? { token } : {} // Pass auth token if available
         });
         
         // Add connection debugging
@@ -724,7 +729,18 @@ class RummikubClient {
     }
 
     createGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Get player name from input field or authentication data
+        const isAuthenticated = this.checkAuthenticationStatus();
+        let playerName;
+        
+        if (isAuthenticated) {
+            // Use the stored username if authenticated
+            playerName = this.playerName;
+        } else {
+            // Otherwise use the input field
+            playerName = document.getElementById('playerName').value.trim();
+        }
+        
         if (!playerName) {
             this.showNotification('Please enter your name', 'error');
             return;
@@ -744,7 +760,18 @@ class RummikubClient {
     }
 
     joinGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Get player name from input field or authentication data
+        const isAuthenticated = this.checkAuthenticationStatus();
+        let playerName;
+        
+        if (isAuthenticated) {
+            // Use the stored username if authenticated
+            playerName = this.playerName;
+        } else {
+            // Otherwise use the input field
+            playerName = document.getElementById('playerName').value.trim();
+        }
+        
         const gameId = document.getElementById('gameId').value.trim().toUpperCase();
         
         if (!playerName) {
@@ -3859,6 +3886,49 @@ RummikubClient.prototype.clearGameStateFromStorage = function() {
     }
 };
 
+// Check if the user is authenticated and update UI accordingly
+RummikubClient.prototype.checkAuthenticationStatus = function() {
+    // Check for authentication token in localStorage
+    const token = localStorage.getItem('auth_token');
+    const username = localStorage.getItem('username');
+    
+    console.log('🔐 Checking authentication status:', token ? 'Token found' : 'No token');
+    
+    if (token && username) {
+        console.log('👤 User is authenticated as:', username);
+        
+        // Update socket auth
+        this.socket.auth = { token };
+        
+        // Set player name from stored username
+        this.playerName = username;
+        
+        // Update UI - hide name input and show authenticated username
+        const nameInput = document.getElementById('playerName');
+        const nameLabel = document.querySelector('label[for="playerName"]');
+        
+        if (nameInput && nameLabel) {
+            nameInput.value = username;
+            nameInput.disabled = true;
+            nameInput.style.backgroundColor = '#f0f4f8';
+            nameInput.style.cursor = 'not-allowed';
+            nameLabel.textContent = 'Logged in as:';
+            
+            // Add a small info icon with tooltip
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'fas fa-info-circle';
+            infoIcon.style.marginLeft = '8px';
+            infoIcon.style.color = '#4299e1';
+            infoIcon.title = 'You are logged in. Your username will be used automatically.';
+            nameLabel.appendChild(infoIcon);
+        }
+        
+        return true;
+    }
+    
+    return false;
+};
+
 RummikubClient.prototype.getGameStateFromStorage = function() {
     try {
         const gameInfoStr = localStorage.getItem('rummikub_game_info');
@@ -3886,6 +3956,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 DOM loaded, initializing RummikubClient...');
     window.game = new RummikubClient();
     console.log('✅ RummikubClient initialized');
+    
+    // Check authentication status and update UI
+    window.game.checkAuthenticationStatus();
     
     // Set up manual reconnect button
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
