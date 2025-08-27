@@ -8,7 +8,8 @@ class RummikubClient {
         console.log('🌐 Connecting to:', backendUrl);
         
         // Check if user is authenticated
-        const token = localStorage.getItem('auth_token');
+        this.token = localStorage.getItem('auth_token');
+        this.username = localStorage.getItem('username');
         
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
@@ -18,7 +19,7 @@ class RummikubClient {
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
-            auth: token ? { token } : {} // Pass auth token if available
+            auth: this.token ? { token: this.token } : {} // Pass auth token if available
         });
         
         // Add connection debugging
@@ -143,7 +144,46 @@ class RummikubClient {
         this.initializeSocketListeners();
     }
 
+    // Check if user is authenticated and update UI accordingly
+    checkAuthenticationStatus() {
+        const loggedInStatus = document.getElementById('loggedInStatus');
+        const playerNameInput = document.getElementById('playerName');
+        
+        if (this.token && this.username) {
+            if (loggedInStatus) {
+                loggedInStatus.textContent = `Logged in as: ${this.username}`;
+            }
+            
+            // Pre-fill the player name input with the authenticated username
+            if (playerNameInput) {
+                playerNameInput.value = this.username;
+                playerNameInput.setAttribute('readonly', 'readonly');
+                playerNameInput.style.backgroundColor = '#f0f4f8';
+            }
+            
+            // Update the stored player name
+            this.playerName = this.username;
+            
+            return true;
+        } else {
+            if (loggedInStatus) {
+                loggedInStatus.textContent = 'Not logged in';
+            }
+            
+            // Make sure the input is editable if not logged in
+            if (playerNameInput) {
+                playerNameInput.removeAttribute('readonly');
+                playerNameInput.style.backgroundColor = '';
+            }
+            
+            return false;
+        }
+    }
+    
     initializeEventListeners() {
+        // Check authentication status on page load
+        this.checkAuthenticationStatus();
+        
         // Game mode selection
         addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
         addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
