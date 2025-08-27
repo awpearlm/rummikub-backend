@@ -40,7 +40,25 @@ router.get('/', async (req, res) => {
       .filter(game => {
         // Filter out games with invalid data
         const players = game.players || [];
-        return players.length > 0 && players[0].name && game.startTime;
+        const hasValidPlayers = players.length > 0 && players[0].name && game.startTime;
+        
+        // Also check if the game exists in memory and has active players
+        if (inMemoryGames && inMemoryGames.has(game.gameId)) {
+          const inMemoryGame = inMemoryGames.get(game.gameId);
+          const activePlayers = inMemoryGame.players.filter(p => !p.disconnected);
+          // Only show games that have active players in memory
+          return hasValidPlayers && activePlayers.length > 0;
+        }
+        
+        // If not in memory, it's likely a stale game from a server restart
+        // Only keep very recent games (less than 30 minutes old)
+        if (hasValidPlayers) {
+          const gameAge = Date.now() - new Date(game.startTime).getTime();
+          const thirtyMinutes = 30 * 60 * 1000;
+          return gameAge < thirtyMinutes;
+        }
+        
+        return false;
       })
       .map(game => {
         const players = game.players || [];
