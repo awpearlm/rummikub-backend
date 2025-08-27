@@ -11,6 +11,24 @@ class RummikubClient {
         this.token = localStorage.getItem('auth_token');
         this.username = localStorage.getItem('username');
         
+        // If not authenticated, redirect to login
+        if (!this.token || !this.username) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Display the username in the greeting
+        const loggedInUsername = document.getElementById('loggedInUsername');
+        if (loggedInUsername) {
+            loggedInUsername.textContent = this.username;
+        }
+        
+        // Set up logout button
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.logout());
+        }
+        
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
@@ -178,6 +196,28 @@ class RummikubClient {
             
             return false;
         }
+    }
+    
+    // Logout the user
+    logout() {
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('is_admin');
+        
+        // Reset client properties
+        this.token = null;
+        this.username = null;
+        
+        // Show a notification
+        this.showNotification('You have been logged out', 'info');
+        
+        // Redirect to login page
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1000);
     }
     
     initializeEventListeners() {
@@ -769,26 +809,28 @@ class RummikubClient {
     }
 
     createGame() {
-        // Get player name from input field or authentication data
-        const isAuthenticated = this.checkAuthenticationStatus();
-        let playerName;
-        
-        if (isAuthenticated) {
-            // Use the stored username if authenticated
-            playerName = this.playerName;
-        } else {
-            // Otherwise use the input field
-            playerName = document.getElementById('playerName').value.trim();
+        try {
+            // Use the authenticated username
+            const playerName = this.username;
+            
+            if (!playerName) {
+                this.showNotification('Authentication error. Please login again.', 'error');
+                this.logout();
+                return;
+            }
+            
+            // Get timer setting
+            this.timerEnabled = document.getElementById('enableTimer')?.checked ?? false;
+            
+            // Save player name
+            this.playerName = playerName;
+            
+            // Show settings modal
+            this.openSettingsModal();
+        } catch (error) {
+            console.error('Error in createGame:', error);
+            this.showNotification('An error occurred while creating the game', 'error');
         }
-        
-        if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
-            return;
-        }
-        
-        // Show the settings modal instead of creating the game immediately
-        this.playerName = playerName;
-        this.openSettingsModal();
     }
 
     showJoinForm() {
@@ -800,22 +842,13 @@ class RummikubClient {
     }
 
     joinGame() {
-        // Get player name from input field or authentication data
-        const isAuthenticated = this.checkAuthenticationStatus();
-        let playerName;
-        
-        if (isAuthenticated) {
-            // Use the stored username if authenticated
-            playerName = this.playerName;
-        } else {
-            // Otherwise use the input field
-            playerName = document.getElementById('playerName').value.trim();
-        }
-        
+        // Use the authenticated username
+        const playerName = this.username;
         const gameId = document.getElementById('gameId').value.trim().toUpperCase();
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Authentication error. Please login again.', 'error');
+            this.logout();
             return;
         }
         

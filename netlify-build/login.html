@@ -30,6 +30,11 @@
             margin-bottom: 1.5rem;
             color: #1e293b;
         }
+        .login-intro {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #4a5568;
+        }
         .form-group {
             margin-bottom: 1rem;
         }
@@ -91,6 +96,7 @@
 <body>
     <div class="login-container">
         <h1>J-kube Login</h1>
+        <p class="login-intro">Please log in to play J-kube!</p>
         
         <div id="login-form">
             <div class="form-group">
@@ -172,8 +178,15 @@
                     });
                     
                     if (!response.ok) {
-                        const data = await response.json();
-                        throw new Error(data.message || 'Login failed');
+                        // Better error handling with detailed logging
+                        try {
+                            const data = await response.json();
+                            console.error('Login error:', data);
+                            throw new Error(data.message || 'Login failed');
+                        } catch (jsonError) {
+                            console.error('Error parsing response:', response.status, response.statusText);
+                            throw new Error(`Login failed (${response.status}): ${response.statusText}`);
+                        }
                     }
                     
                     const data = await response.json();

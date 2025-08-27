@@ -32,14 +32,13 @@
             </div>
             
             <div class="welcome-form">
-                <div class="form-group">
-                    <label for="playerName">Your Name</label>
-                    <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+                <div class="user-greeting">
+                    <h2 id="userGreeting">Welcome!</h2>
+                    <p class="user-info">Ready to play, <span id="loggedInUsername"></span>?</p>
                 </div>
                 
                 <div class="form-group auth-links">
-                    <a href="login.html" class="login-link"><i class="fas fa-sign-in-alt"></i> Log in</a>
-                    <span id="loggedInStatus" class="logged-in-status"></span>
+                    <button id="logoutButton" class="btn btn-secondary"><i class="fas fa-sign-out-alt"></i> Log out</button>
                 </div>
             <!---
                 <div class="form-group game-options">
@@ -339,7 +338,18 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <script>
+        // Authentication check on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('auth_token');
+            const username = localStorage.getItem('username');
+            
+            if (!token || !username) {
+                // Not authenticated - redirect to login page
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="safe-events.js?v=1"></script>
     <script src="game.js?v=66"></script>

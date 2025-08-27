@@ -55,4 +55,32 @@ UserSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Method to generate signup token
+UserSchema.methods.generateSignupToken = async function() {
+  // Generate a random token
+  const token = Math.random().toString(36).substring(2, 15) + 
+               Math.random().toString(36).substring(2, 15);
+  
+  // Set token and expiry
+  this.signupToken = token;
+  this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  
+  await this.save();
+  return token;
+};
+
+// Method to generate reset token
+UserSchema.methods.generateResetToken = async function() {
+  // Generate a random token
+  const token = Math.random().toString(36).substring(2, 15) + 
+               Math.random().toString(36).substring(2, 15);
+  
+  // Set token and expiry
+  this.resetToken = token;
+  this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  
+  await this.save();
+  return token;
+};
+
 module.exports = mongoose.model('User', UserSchema);
