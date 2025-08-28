@@ -1576,6 +1576,69 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('updateBoard', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Only allow current player to update board
+    const currentPlayer = game.getCurrentPlayer();
+    if (currentPlayer.id !== socket.id) {
+      socket.emit('error', { message: 'Not your turn' });
+      return;
+    }
+    
+    // Check if this is the first board update in the turn and create a snapshot
+    // This ensures we always have a snapshot to compare against for undo
+    if (!game.boardSnapshot) {
+      game.boardSnapshot = JSON.parse(JSON.stringify(game.board));
+      console.log('🎮 Created initial board snapshot for this turn');
+    }
+    
+    // Find tiles that were moved from hand to board
+    // Instead of just looking at added tiles, we'll use an explicit approach
+    if (data.tilesFromHand && Array.isArray(data.tilesFromHand) && data.tilesFromHand.length > 0) {
+      console.log(`Player ${currentPlayer.name} moved tiles from hand to board:`, data.tilesFromHand);
+      
+      // Remove these specific tiles from the player's hand
+      data.tilesFromHand.forEach(tileId => {
+        const tileIndex = currentPlayer.hand.findIndex(t => t.id === tileId);
+        if (tileIndex !== -1) {
+          currentPlayer.hand.splice(tileIndex, 1);
+          console.log(`Removed tile ${tileId} from ${currentPlayer.name}'s hand`);
+        }
+      });
+    }
+    
+    // Check if joker manipulation is occurring
+    const jokerChange = game.checkJokerManipulation(game.board, data.board, currentPlayer);
+    
+    // Update the board with new arrangement
+    game.updateBoard(data.board);
+    
+    // Skip validation during the turn - only validate when ending turn
+    // This allows players to freely organize tiles during their turn
+    
+    // Mark that player has manipulated tiles this turn (necessary for end turn validation)
+    if (jokerChange.manipulated) {
+      currentPlayer.hasManipulatedJoker = true;
+    }
+    
+    // Send updated game state to all players
+    game.players.forEach(player => {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) {
+        // Send a complete game state update instead of just boardUpdated
+        // This ensures clients have the latest hand and board state
+        playerSocket.emit('gameStateUpdate', {
+          gameState: game.getGameState(player.id)
+        });
+      }
+    });
+  });
+
   socket.on('sendMessage', (data) => {
     const playerData = players.get(socket.id);
     if (!playerData) return;
