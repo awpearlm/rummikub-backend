@@ -1067,8 +1067,8 @@ class RummikubClient {
         // reset the hasPlayedTilesThisTurn flag to allow drawing again
         if (!hasChanged && this.hasPlayedTilesThisTurn) {
             this.hasPlayedTilesThisTurn = false;
-            // Update buttons since we've changed a flag that affects them
-            this.updateActionButtons();
+            // Don't call updateActionButtons here to prevent infinite loop
+            // The buttons will be updated on the next user action
         }
         
         return hasChanged;
