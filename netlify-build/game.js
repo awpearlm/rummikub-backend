@@ -442,6 +442,7 @@ class RummikubClient {
             this.remainingTime = data.remainingTime;
             
             console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
+            console.log(`⏰ Full timer data:`, data);
             
             // Update timer display
             this.updateTimerDisplay();
@@ -476,6 +477,10 @@ class RummikubClient {
                 })));
             }
             this.gameState = data.gameState;
+            
+            // Debug timer status
+            console.log(`⏰ Timer debug - Enabled: ${this.gameState.timerEnabled}, My turn: ${this.isMyTurn()}`);
+            
             this.updateGameState();
             this.showNotification('Game started!', 'success');
             document.getElementById('startGameBtn').classList.add('hidden');
@@ -4004,8 +4009,11 @@ RummikubClient.prototype.openSettingsModal = function() {
     if (modal) {
         modal.classList.add('show');
         // Copy the current timer setting to the modal
-        const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
+        const currentTimerSetting = document.getElementById('enableTimer')?.checked ?? true;
         document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
+        // Ensure this.timerEnabled is properly set
+        this.timerEnabled = currentTimerSetting;
+        console.log(`🕒 Settings modal opened - timer enabled: ${this.timerEnabled}`);
         // Prevent scrolling of background content
         document.body.style.overflow = 'hidden';
     }
