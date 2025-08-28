@@ -2546,6 +2546,11 @@ class RummikubClient {
     }
 
     updateActionButtons() {
+        // Add stack trace debugging to find what's calling this constantly
+        if (Math.random() < 0.001) { // Only log 0.1% of the time
+            console.log('🔍 updateActionButtons called from:', new Error().stack.split('\n')[2]);
+        }
+        
         const isMyTurn = this.isMyTurn();
         const gameStarted = this.gameState && this.gameState.started;
         const canAct = isMyTurn && gameStarted;
