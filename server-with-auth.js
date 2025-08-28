@@ -29,6 +29,21 @@ const Game = require('./models/Game');
 const app = express();
 const server = http.createServer(app);
 
+// Add CORS headers as early as possible
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // Configure CORS for production
 const allowedOrigins = [
   'http://localhost:3000',
@@ -61,10 +76,11 @@ const io = socketIo(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'], // Enable both transports
+  transports: ['polling', 'websocket'], // Try polling first
   pingTimeout: 60000, // Increase ping timeout to 60 seconds
   pingInterval: 25000, // More frequent pings to detect disconnections
-  connectTimeout: 30000 // Longer connection timeout
+  connectTimeout: 30000, // Longer connection timeout
+  allowEIO3: true // Allow older engine.io versions for compatibility
 });
 
 // Security and middleware
@@ -76,8 +92,17 @@ app.use(helmet({
 app.use(cors({
   origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
+  credentials: true
 }));
+
+// Handle preflight requests for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
+  res.sendStatus(200);
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'netlify-build')));
