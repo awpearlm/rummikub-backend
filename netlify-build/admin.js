@@ -275,6 +275,8 @@ class AdminDashboard {
             return;
         }
         
+        const baseUrl = window.location.origin;
+        
         tbody.innerHTML = invitations.map(invitation => `
             <tr>
                 <td>${invitation.email}</td>
@@ -288,13 +290,22 @@ class AdminDashboard {
                 <td>${this.formatDate(invitation.expiresAt)}</td>
                 <td>
                     ${invitation.status === 'pending' ? `
-                        <button class="btn btn-danger btn-sm" onclick="adminDashboard.cancelInvitation('${invitation._id}', '${invitation.email}')">
+                        <button class="btn btn-primary btn-sm" onclick="adminDashboard.copyInvitationLink('${invitation.token}')" title="Copy invitation link">
+                            <i class="fas fa-copy"></i> Copy Link
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="adminDashboard.cancelInvitation('${invitation._id}', '${invitation.email}')" title="Cancel invitation">
                             <i class="fas fa-times"></i> Cancel
                         </button>
                     ` : '-'}
                 </td>
             </tr>
         `).join('');
+    }
+
+    copyInvitationLink(token) {
+        const baseUrl = window.location.origin;
+        const invitationLink = `${baseUrl}/signup.html?token=${token}`;
+        this.copyToClipboard(invitationLink);
     }
     
     renderRecentActivity(activity) {
@@ -368,17 +379,69 @@ class AdminDashboard {
         }
         
         try {
-            await this.apiRequest('/api/admin/invitations', {
+            const response = await this.apiRequest('/api/admin/invitations', {
                 method: 'POST',
                 body: JSON.stringify({ email, message })
             });
             
-            this.showNotification('Invitation sent successfully!', 'success');
+            // Show invitation link
+            const baseUrl = window.location.origin;
+            const invitationLink = `${baseUrl}/signup.html?token=${response.invitation.token}`;
+            
+            this.showInvitationLink(invitationLink, email);
             this.toggleInviteForm(false);
             this.loadInvitations();
             this.loadDashboard(); // Refresh stats
         } catch (error) {
             this.showNotification('Failed to send invitation', 'error');
+        }
+    }
+
+    showInvitationLink(link, email) {
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-link"></i> Invitation Created</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Invitation link for <strong>${email}</strong>:</p>
+                    <div class="invitation-link-container">
+                        <input type="text" value="${link}" readonly class="invitation-link-input" id="invitationLinkInput">
+                        <button class="btn btn-primary btn-sm" onclick="adminDashboard.copyToClipboard('${link}')">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <p class="text-muted">Share this link with the person you want to invite. The link will expire in 7 days.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-select the link for easy copying
+        const linkInput = document.getElementById('invitationLinkInput');
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999); // For mobile devices
+    }
+
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showNotification('Link copied to clipboard!', 'success');
+        } catch (err) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showNotification('Link copied to clipboard!', 'success');
         }
     }
     

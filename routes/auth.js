@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Stats = require('../models/Stats');
+const Invitation = require('../models/Invitation');
 const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -84,6 +85,120 @@ router.get('/confirm/:token', async (req, res) => {
     res.status(200).json({ message: 'Email confirmed successfully' });
   } catch (error) {
     console.error('Confirmation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Validate invitation token
+router.get('/invitation/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Find invitation with this token
+    const invitation = await Invitation.findOne({ 
+      invitationToken: token,
+      status: 'pending',
+      expiresAt: { $gt: Date.now() }
+    }).populate('invitedBy', 'username email');
+    
+    if (!invitation) {
+      return res.status(400).json({ message: 'Invalid or expired invitation' });
+    }
+    
+    // Check if user already exists with this email
+    const existingUser = await User.findOne({ email: invitation.email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists with this email' });
+    }
+    
+    res.status(200).json({ 
+      valid: true,
+      email: invitation.email,
+      invitedBy: invitation.invitedBy.username,
+      message: invitation.message
+    });
+  } catch (error) {
+    console.error('Invitation validation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Register with invitation token
+router.post('/register-invitation', async (req, res) => {
+  try {
+    const { username, password, invitationToken } = req.body;
+    
+    if (!username || !password || !invitationToken) {
+      return res.status(400).json({ message: 'Username, password, and invitation token are required' });
+    }
+    
+    // Find and validate invitation
+    const invitation = await Invitation.findOne({ 
+      invitationToken,
+      status: 'pending',
+      expiresAt: { $gt: Date.now() }
+    });
+    
+    if (!invitation) {
+      return res.status(400).json({ message: 'Invalid or expired invitation' });
+    }
+    
+    // Check if user already exists with this email or username
+    const existingUser = await User.findOne({ 
+      $or: [{ email: invitation.email }, { username }] 
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: existingUser.email === invitation.email 
+          ? 'User already exists with this email' 
+          : 'Username already taken' 
+      });
+    }
+    
+    // Create new user
+    const user = new User({
+      email: invitation.email,
+      username,
+      password,
+      signupComplete: true, // Skip email confirmation for invited users
+      invitedBy: invitation.invitedBy,
+      invitationStatus: 'accepted'
+    });
+    
+    await user.save();
+    
+    // Create stats document for the user
+    const stats = new Stats({
+      userId: user._id
+    });
+    
+    await stats.save();
+    
+    // Mark invitation as accepted
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date();
+    await invitation.save();
+    
+    // Generate login token
+    const token = jwt.sign(
+      { id: user._id }, 
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+    
+    res.status(201).json({ 
+      message: 'Account created successfully',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin
+      }
+    });
+  } catch (error) {
+    console.error('Registration with invitation error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join J_kube - Complete Your Invitation</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#ffffff">
+    
+    <link rel="stylesheet" href="auth-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Header -->
+            <div class="auth-header">
+                <h1><i class="fas fa-chess-board"></i> J_kube</h1>
+                <h2>Complete Your Invitation</h2>
+                <p id="welcomeMessage">You've been invited to join J_kube!</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner"></div>
+                <p>Validating your invitation...</p>
+            </div>
+
+            <!-- Invalid Invitation State -->
+            <div id="invalidState" class="error-state" style="display: none;">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>Invalid or Expired Invitation</h3>
+                <p id="errorMessage">This invitation link is no longer valid.</p>
+                <div class="auth-actions">
+                    <a href="login.html" class="btn btn-secondary">
+                        <i class="fas fa-sign-in-alt"></i> Go to Login
+                    </a>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form" style="display: none;">
+                <div class="invitation-info">
+                    <div class="invited-by">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Invited by <strong id="inviterName"></strong></span>
+                    </div>
+                    <div class="invitation-email">
+                        <i class="fas fa-envelope"></i>
+                        <span id="invitationEmail"></span>
+                    </div>
+                    <div id="invitationMessage" class="invitation-message" style="display: none;">
+                        <i class="fas fa-comment"></i>
+                        <span id="messageText"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Choose a Username</label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="Enter your username" minlength="3" maxlength="20">
+                    <div class="form-help">3-20 characters, letters and numbers only</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Create Password</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Enter your password" minlength="6">
+                    <div class="form-help">At least 6 characters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required 
+                           placeholder="Confirm your password">
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="signupButton">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+
+                <div id="signupError" class="error-message" style="display: none;"></div>
+                <div id="signupSuccess" class="success-message" style="display: none;"></div>
+            </form>
+
+            <!-- Footer -->
+            <div class="auth-footer">
+                <p>Already have an account? <a href="login.html">Sign in here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SignupHandler {
+            constructor() {
+                this.backendUrl = window.location.hostname === 'localhost' 
+                    ? 'http://localhost:3000' 
+                    : 'https://rummikub-backend.onrender.com';
+                
+                this.invitationToken = this.getInvitationToken();
+                this.init();
+            }
+
+            getInvitationToken() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('token');
+            }
+
+            async init() {
+                if (!this.invitationToken) {
+                    this.showInvalidState('No invitation token provided');
+                    return;
+                }
+
+                await this.validateInvitation();
+                this.setupEventListeners();
+            }
+
+            async validateInvitation() {
+                try {
+                    const response = await fetch(`${this.backendUrl}/api/auth/invitation/${this.invitationToken}`);
+                    const data = await response.json();
+
+                    if (response.ok && data.valid) {
+                        this.showSignupForm(data);
+                    } else {
+                        this.showInvalidState(data.message || 'Invalid invitation');
+                    }
+                } catch (error) {
+                    console.error('Invitation validation error:', error);
+                    this.showInvalidState('Unable to validate invitation. Please try again.');
+                }
+            }
+
+            showSignupForm(invitationData) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'block';
+
+                // Populate invitation details
+                document.getElementById('inviterName').textContent = invitationData.invitedBy;
+                document.getElementById('invitationEmail').textContent = invitationData.email;
+                
+                if (invitationData.message && invitationData.message.trim()) {
+                    document.getElementById('messageText').textContent = invitationData.message;
+                    document.getElementById('invitationMessage').style.display = 'flex';
+                }
+
+                // Update welcome message
+                document.getElementById('welcomeMessage').textContent = 
+                    `${invitationData.invitedBy} has invited you to join J_kube!`;
+            }
+
+            showInvalidState(message) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('invalidState').style.display = 'block';
+                document.getElementById('errorMessage').textContent = message;
+            }
+
+            setupEventListeners() {
+                const form = document.getElementById('signupForm');
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('password');
+                const confirmPasswordInput = document.getElementById('confirmPassword');
+
+                // Username validation
+                usernameInput.addEventListener('input', () => {
+                    const username = usernameInput.value;
+                    const isValid = /^[a-zA-Z0-9_]{3,20}$/.test(username);
+                    usernameInput.setCustomValidity(isValid ? '' : 'Username must be 3-20 characters, letters, numbers, and underscores only');
+                });
+
+                // Password confirmation
+                confirmPasswordInput.addEventListener('input', () => {
+                    const password = passwordInput.value;
+                    const confirmPassword = confirmPasswordInput.value;
+                    confirmPasswordInput.setCustomValidity(
+                        password === confirmPassword ? '' : 'Passwords do not match'
+                    );
+                });
+
+                // Form submission
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSignup();
+                });
+            }
+
+            async handleSignup() {
+                const submitButton = document.getElementById('signupButton');
+                const errorDiv = document.getElementById('signupError');
+                const successDiv = document.getElementById('signupSuccess');
+
+                // Clear previous messages
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+
+                // Validate form
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (password !== confirmPassword) {
+                    this.showError('Passwords do not match');
+                    return;
+                }
+
+                // Show loading state
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+
+                try {
+                    const response = await fetch(`${this.backendUrl}/api/auth/register-invitation`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            username,
+                            password,
+                            invitationToken: this.invitationToken
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Store auth token and user info
+                        localStorage.setItem('auth_token', data.token);
+                        localStorage.setItem('username', data.user.username);
+                        localStorage.setItem('user_id', data.user.id);
+                        localStorage.setItem('user_email', data.user.email);
+                        localStorage.setItem('is_admin', data.user.isAdmin);
+
+                        this.showSuccess('Account created successfully! Redirecting to game...');
+                        
+                        // Redirect to game after short delay
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    } else {
+                        this.showError(data.message || 'Failed to create account');
+                    }
+                } catch (error) {
+                    console.error('Signup error:', error);
+                    this.showError('Network error. Please try again.');
+                } finally {
+                    // Reset button
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+                }
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('signupError');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+
+            showSuccess(message) {
+                const successDiv = document.getElementById('signupSuccess');
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new SignupHandler();
+        });
+    </script>
+</body>
+</html>
