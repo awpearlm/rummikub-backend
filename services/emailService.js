@@ -184,13 +184,13 @@ class EmailService {
         .cta-button {
             display: inline-block;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
             text-decoration: none;
             padding: 15px 30px;
             border-radius: 8px;
             font-weight: bold;
             font-size: 1.1em;
             text-align: center;
+            color: #FFFFFF;
             margin: 20px 0;
             transition: transform 0.2s;
         }
@@ -263,7 +263,7 @@ class EmailService {
 
         <div style="text-align: center;">
             <a href="${invitationLink}" class="cta-button">
-                🚀 Join J_kube Now!
+                🚀 Sign up for J Kube
             </a>
         </div>
 
