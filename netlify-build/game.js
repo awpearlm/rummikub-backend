@@ -1646,6 +1646,9 @@ class RummikubClient {
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
+        
+        // Load leaderboard when showing welcome screen
+        this.loadLeaderboard();
     }
 
     showGameScreen() {
@@ -1673,6 +1676,62 @@ class RummikubClient {
             screen.classList.remove('active');
             console.log('🫥 Removed active class from:', screen.id);
         });
+    }
+    
+    async loadLeaderboard() {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const leaderboardLoading = document.querySelector('.leaderboard-loading');
+        const leaderboardError = document.getElementById('leaderboardError');
+        
+        // Show loading state
+        leaderboardLoading.style.display = 'flex';
+        leaderboardList.style.display = 'none';
+        leaderboardError.style.display = 'none';
+        
+        try {
+            const backendUrl = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000' 
+                : 'https://rummikub-backend.onrender.com';
+            
+            const response = await fetch(`${backendUrl}/api/stats/leaderboard/public`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch leaderboard');
+            }
+            
+            const data = await response.json();
+            
+            // Hide loading and show list
+            leaderboardLoading.style.display = 'none';
+            leaderboardError.style.display = 'none';
+            leaderboardList.style.display = 'block';
+            
+            // Populate leaderboard
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                leaderboardList.innerHTML = data.leaderboard.map(player => `
+                    <div class="leaderboard-entry">
+                        <div class="leaderboard-rank">#${player.rank}</div>
+                        <div class="leaderboard-player">${player.username}</div>
+                        <div class="leaderboard-wins">${player.gamesWon} win${player.gamesWon !== 1 ? 's' : ''}</div>
+                    </div>
+                `).join('');
+            } else {
+                leaderboardList.innerHTML = `
+                    <div class="leaderboard-entry">
+                        <div style="text-align: center; width: 100%; opacity: 0.7;">
+                            No players yet. Be the first to win!
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading leaderboard:', error);
+            
+            // Show error state
+            leaderboardLoading.style.display = 'none';
+            leaderboardList.style.display = 'none';
+            leaderboardError.style.display = 'flex';
+        }
     }
     
     refreshGameState() {
@@ -4108,6 +4167,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check authentication status and update UI
     window.game.checkAuthenticationStatus();
+    
+    // Load leaderboard on initial page load
+    window.game.loadLeaderboard();
     
     // Set up manual reconnect button
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');

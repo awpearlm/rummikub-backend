@@ -1,9 +1,56 @@
 const express = require('express');
 const router = express.Router();
 const Stats = require('../models/Stats');
+const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
 
-// Apply authentication to all routes
+// Public leaderboard (no authentication required)
+router.get('/leaderboard/public', async (req, res) => {
+  try {
+    // Get top 5 users by wins, excluding test and admin users
+    const leaderboard = await Stats.find()
+      .populate({
+        path: 'userId',
+        select: 'username email isAdmin',
+        match: {
+          isAdmin: false,
+          email: { 
+            $not: { 
+              $regex: /test|example\.com/i 
+            } 
+          },
+          username: { 
+            $not: { 
+              $regex: /test|admin|bot/i 
+            } 
+          }
+        }
+      })
+      .sort({ gamesWon: -1 })
+      .limit(10); // Get a few extra in case some are filtered out
+
+    // Filter out entries where userId is null (due to match criteria)
+    const filteredLeaderboard = leaderboard
+      .filter(player => player.userId && player.gamesWon > 0)
+      .slice(0, 5) // Take top 5
+      .map((player, index) => ({
+        rank: index + 1,
+        username: player.userId.username,
+        gamesWon: player.gamesWon,
+        gamesPlayed: player.gamesPlayed,
+        winPercentage: player.winPercentage
+      }));
+
+    res.status(200).json({
+      leaderboard: filteredLeaderboard
+    });
+  } catch (error) {
+    console.error('Get public leaderboard error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Apply authentication to all routes below this point
 router.use(authenticateToken);
 
 // Get current user's stats
