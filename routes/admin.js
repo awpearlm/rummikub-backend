@@ -127,8 +127,49 @@ router.get('/invitations', async (req, res) => {
   }
 });
 
-// Cleanup endpoint - remove all cancelled invitations
-router.post('/invitations/cleanup', async (req, res) => {
+// Temporary cleanup endpoint - remove cancelled invitations
+// Note: This is unprotected for one-time cleanup, should be removed after use
+router.post('/cleanup-cancelled-public', async (req, res) => {
+  try {
+    console.log('🧹 Starting cleanup of cancelled invitations...');
+    
+    // Find all cancelled invitations
+    const cancelledInvitations = await Invitation.find({ status: 'cancelled' });
+    console.log(`📊 Found ${cancelledInvitations.length} cancelled invitations`);
+    
+    if (cancelledInvitations.length === 0) {
+      return res.status(200).json({ 
+        message: 'No cancelled invitations found',
+        deleted: 0
+      });
+    }
+    
+    // Log what will be deleted
+    cancelledInvitations.forEach((inv, index) => {
+      console.log(`   ${index + 1}. ${inv.email} (ID: ${inv._id})`);
+    });
+    
+    // Delete all cancelled invitations
+    const deleteResult = await Invitation.deleteMany({ status: 'cancelled' });
+    console.log(`✅ Deleted ${deleteResult.deletedCount} cancelled invitations`);
+    
+    res.status(200).json({ 
+      message: 'Cleanup completed successfully',
+      deleted: deleteResult.deletedCount,
+      deletedInvitations: cancelledInvitations.map(inv => ({
+        email: inv.email,
+        id: inv._id
+      }))
+    });
+    
+  } catch (error) {
+    console.error('❌ Cleanup failed:', error);
+    res.status(500).json({ message: 'Cleanup failed', error: error.message });
+  }
+});
+
+// Protected cleanup endpoint (requires admin auth)
+router.post('/cleanup-cancelled', async (req, res) => {
   try {
     console.log('🧹 Admin cleanup: Removing all cancelled invitations');
     
