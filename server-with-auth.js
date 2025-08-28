@@ -131,6 +131,26 @@ app.use('/api/stats', statsRoutes);
 const games = new Map();
 const players = new Map();
 
+// Helper function to check if a game was abandoned (not properly completed)
+function isGameAbandoned(winner) {
+  if (!winner) return true; // No winner means incomplete
+  
+  // Check for abandonment reasons
+  const abandonmentReasons = [
+    'Game abandoned due to inactivity',
+    'Single player timeout',
+    'Game timeout',
+    'No active players remaining',
+    'abandoned',
+    'timeout',
+    'inactivity'
+  ];
+  
+  return abandonmentReasons.some(reason => 
+    winner.toLowerCase().includes(reason.toLowerCase())
+  );
+}
+
 // Pass the in-memory games map to the games routes so it can get real-time player counts
 gamesRoutes.setInMemoryGames(games);
 app.use('/api/games', gamesRoutes);
@@ -1628,9 +1648,12 @@ io.on('connection', (socket) => {
       // Check if this is a bot game, either from data or from game record
       const isComputerGame = isBotGame || (game && game.isBotGame);
       
-      // Only update stats for multiplayer games (not bot games)
-      if (!isComputerGame) {
-        console.log(`Recording stats for multiplayer game ${gameId}`);
+      // Check if the game was properly completed (not abandoned)
+      const isGameCompleted = game && game.winner && !isGameAbandoned(game.winner);
+      
+      // Only update stats for properly completed multiplayer games
+      if (!isComputerGame && isGameCompleted) {
+        console.log(`Recording stats for completed multiplayer game ${gameId}`);
         
         // Update stats
         const stats = await Stats.findOne({ userId: socket.user.id });
@@ -1652,8 +1675,10 @@ io.on('connection', (socket) => {
           
           await newStats.save();
         }
-      } else {
+      } else if (isComputerGame) {
         console.log(`Skipping stats update for bot game ${gameId}`);
+      } else if (!isGameCompleted) {
+        console.log(`Skipping stats update for abandoned/incomplete game ${gameId}: ${game?.winner || 'no winner'}`);
       }
       
       // Always store the game record, whether it's a bot game or not

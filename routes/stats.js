@@ -102,7 +102,7 @@ router.get('/leaderboard', async (req, res) => {
 // Update stats after a game
 router.post('/update', async (req, res) => {
   try {
-    const { won, points, playTime, isBotGame } = req.body;
+    const { won, points, playTime, isBotGame, gameId } = req.body;
     
     // Skip stats update for bot games
     if (isBotGame) {
@@ -110,6 +110,20 @@ router.post('/update', async (req, res) => {
         message: 'Stats not updated for bot game',
         skipReason: 'bot game'
       });
+    }
+    
+    // Check if the game was properly completed (not abandoned)
+    if (gameId) {
+      const Game = require('../models/Game');
+      const game = await Game.findOne({ gameId });
+      
+      if (game && game.winner && isGameAbandoned(game.winner)) {
+        return res.status(200).json({
+          message: 'Stats not updated for abandoned game',
+          skipReason: 'game abandoned',
+          reason: game.winner
+        });
+      }
     }
     
     const stats = await Stats.findOne({ userId: req.user.id });
@@ -147,5 +161,25 @@ router.post('/update', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Helper function to check if a game was abandoned (not properly completed)
+function isGameAbandoned(winner) {
+  if (!winner) return true; // No winner means incomplete
+  
+  // Check for abandonment reasons
+  const abandonmentReasons = [
+    'Game abandoned due to inactivity',
+    'Single player timeout',
+    'Game timeout',
+    'No active players remaining',
+    'abandoned',
+    'timeout',
+    'inactivity'
+  ];
+  
+  return abandonmentReasons.some(reason => 
+    winner.toLowerCase().includes(reason.toLowerCase())
+  );
+}
 
 module.exports = router;
