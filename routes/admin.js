@@ -119,13 +119,43 @@ router.post('/invitations', async (req, res) => {
 // Get all invitations
 router.get('/invitations', async (req, res) => {
   try {
-    const invitations = await Invitation.find()
-      .populate('invitedBy', 'username email')
-      .sort({ sentAt: -1 });
-    
+    const invitations = await Invitation.find({}).sort({ sentAt: -1 });
     res.status(200).json({ invitations });
   } catch (error) {
     console.error('Get invitations error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Cleanup endpoint - remove all cancelled invitations
+router.post('/invitations/cleanup', async (req, res) => {
+  try {
+    console.log('🧹 Admin cleanup: Removing all cancelled invitations');
+    
+    // Find all cancelled invitations first
+    const cancelledInvitations = await Invitation.find({ status: 'cancelled' });
+    console.log(`📋 Found ${cancelledInvitations.length} cancelled invitations to remove`);
+    
+    // Log what's being removed
+    cancelledInvitations.forEach(inv => {
+      console.log(`   - ${inv.email} (ID: ${inv._id}, sent: ${inv.sentAt})`);
+    });
+    
+    // Delete all cancelled invitations
+    const deleteResult = await Invitation.deleteMany({ status: 'cancelled' });
+    console.log(`✅ Deleted ${deleteResult.deletedCount} cancelled invitations`);
+    
+    res.status(200).json({ 
+      message: 'Cleanup completed successfully',
+      deletedCount: deleteResult.deletedCount,
+      deletedInvitations: cancelledInvitations.map(inv => ({
+        email: inv.email,
+        id: inv._id,
+        sentAt: inv.sentAt
+      }))
+    });
+  } catch (error) {
+    console.error('Cleanup error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
