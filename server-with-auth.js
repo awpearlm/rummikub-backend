@@ -638,13 +638,104 @@ class RummikubGame {
   
   // Validate all sets on the board
   validateBoardState(isEndTurn = false) {
+    // Validate that all sets on the board are legal
     for (let i = 0; i < this.board.length; i++) {
       const set = this.board[i];
-      if (!this.isValidSet(set)) {
+      
+      // When ending a turn, enforce that sets must have 3+ tiles and be valid
+      // During a turn, allow partial sets with fewer than 3 tiles
+      if ((isEndTurn && set.length < 3) || !this.isValidPartialSet(set, isEndTurn)) {
+        console.log(`❌ Invalid set found at index ${i}:`, set.map(t => `${t.color || 'joker'}_${t.number || 'J'}`));
         return { valid: false, invalidSetIndex: i };
       }
     }
+    console.log(`✅ Board state is valid: ${this.board.length} sets`);
     return { valid: true };
+  }
+  
+  // Check if a set is valid or could become valid
+  isValidPartialSet(tiles, isEndTurn = true) {
+    // If ending turn, use the strict validation
+    if (isEndTurn) {
+      return this.isValidSet(tiles);
+    }
+    
+    // During turn, allow partial sets that could become valid
+    if (tiles.length === 0) return true; // Empty sets are allowed during manipulation
+    if (tiles.length === 1) return true; // Single tiles are allowed during manipulation
+    if (tiles.length === 2) return true; // Two tiles are allowed during manipulation
+    
+    // For 3+ tiles, they must form a valid set
+    return this.isValidSet(tiles);
+  }
+
+  // Check if a joker was taken and used in a new set
+  checkJokerManipulation(oldBoard, newBoard, player) {
+    let jokersRemoved = [];
+    let jokersAdded = [];
+    
+    // Find jokers removed from old board
+    oldBoard.forEach((set, setIndex) => {
+      set.forEach(tile => {
+        if (tile.isJoker) {
+          // Check if this joker still exists in the new board
+          let found = false;
+          for (const newSet of newBoard) {
+            for (const newTile of newSet) {
+              if (newTile.id === tile.id) {
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          if (!found) {
+            jokersRemoved.push(tile.id);
+          }
+        }
+      });
+    });
+    
+    // Find jokers added to new board
+    newBoard.forEach((set, setIndex) => {
+      set.forEach(tile => {
+        if (tile.isJoker) {
+          // Check if this joker existed in the old board
+          let found = false;
+          for (const oldSet of oldBoard) {
+            for (const oldTile of oldSet) {
+              if (oldTile.id === tile.id) {
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          if (!found) {
+            jokersAdded.push(tile.id);
+          }
+        }
+      });
+    });
+    
+    console.log(`Jokers removed: ${jokersRemoved.length}, Jokers added: ${jokersAdded.length}`);
+    return {
+      removed: jokersRemoved,
+      added: jokersAdded,
+      manipulated: jokersRemoved.length > 0 || jokersAdded.length > 0
+    };
+  }
+
+  restoreFromSnapshot() {
+    // Restore board to snapshot state
+    this.board = JSON.parse(JSON.stringify(this.boardSnapshot));
+    console.log(`🔄 Board restored from snapshot: ${this.board.length} sets`);
+  }
+
+  // Method to restore the board from snapshot (wrapper for restoreFromSnapshot)
+  restoreBoardSnapshot() {
+    this.restoreFromSnapshot();
+    console.log(`🔄 Board restored from snapshot using restoreBoardSnapshot`);
   }
 
   playSet(playerId, tileIds, setIndex = null) {
@@ -1639,6 +1730,47 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('updatePlayerHand', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Only allow current player to update their hand
+    const currentPlayer = game.getCurrentPlayer();
+    if (currentPlayer.id !== socket.id) {
+      socket.emit('error', { message: 'Not your turn' });
+      return;
+    }
+    
+    console.log(`🎮 ${currentPlayer.name} updated their hand - now has ${data.newHand.length} tiles`);
+    
+    // Update the player's hand
+    currentPlayer.hand = data.newHand;
+    
+    // If board data is provided, update the board too
+    if (data.board) {
+      game.updateBoard(data.board);
+      
+      // Ensure the board snapshot exists for the first move in a turn
+      if (!game.boardSnapshot) {
+        game.boardSnapshot = JSON.parse(JSON.stringify(game.board));
+        console.log('🎮 Created initial board snapshot for this turn');
+      }
+    }
+    
+    // Send updated game state to all players
+    game.players.forEach(player => {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) {
+        playerSocket.emit('gameStateUpdate', {
+          gameState: game.getGameState(player.id)
+        });
+      }
+    });
+  });
+
   socket.on('sendMessage', (data) => {
     const playerData = players.get(socket.id);
     if (!playerData) return;
@@ -1892,6 +2024,175 @@ io.on('connection', (socket) => {
       console.error('Record game result error:', error);
       socket.emit('error', { message: 'Failed to record game result' });
     }
+  });
+
+  socket.on('moveFromBoardToHand', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Check if it's the player's turn using getCurrentPlayer method
+    const currentPlayer = game.getCurrentPlayer();
+    const player = game.players.find(p => p.id === socket.id);
+    if (!player || currentPlayer.id !== player.id) {
+      socket.emit('error', { message: 'Not your turn!' });
+      return;
+    }
+
+    console.log(`🔄 ${player.name} moving tile from board to hand:`, data.tile);
+
+    // Make sure we're working with a valid tile and indices
+    if (!data.tile || data.sourceSetIndex === undefined || data.sourceTileIndex === undefined) {
+      socket.emit('error', { message: 'Invalid tile data!' });
+      return;
+    }
+
+    // Properly update the board by removing the tile at the specified position
+    try {
+      if (game.board[data.sourceSetIndex] && 
+          game.board[data.sourceSetIndex][data.sourceTileIndex]) {
+        
+        // Remove tile from specified position
+        game.board[data.sourceSetIndex].splice(data.sourceTileIndex, 1);
+        
+        // Clean up empty sets
+        game.board = game.board.filter(set => set.length > 0);
+        
+        // Add tile to player's hand (safe copy to prevent references)
+        const tileCopy = JSON.parse(JSON.stringify(data.tile));
+        player.hand.push(tileCopy);
+        
+        // Broadcast updated game state to each player with their respective game state
+        game.players.forEach(p => {
+          const playerSocket = io.sockets.sockets.get(p.id);
+          if (playerSocket) {
+            playerSocket.emit('gameStateUpdate', {
+              gameState: game.getGameState(p.id)
+            });
+          }
+        });
+      } else {
+        socket.emit('error', { message: 'Invalid board position!' });
+      }
+    } catch (err) {
+      console.error("Error in moveFromBoardToHand:", err);
+      socket.emit('error', { message: 'Error processing move!' });
+    }
+  });
+
+  socket.on('requestUndoTurn', () => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+    
+    // Only allow current player to undo
+    const currentPlayer = game.getCurrentPlayer();
+    if (currentPlayer.id !== socket.id) {
+      socket.emit('error', { message: 'Not your turn' });
+      return;
+    }
+    
+    // Track tiles that need to be returned to the player's hand
+    // Compare current board with snapshot to find tiles that were moved from hand to board
+    const currentTileIds = new Set();
+    const snapshotTileIds = new Set();
+    
+    // Collect all tile IDs currently on the board
+    game.board.forEach(set => {
+      set.forEach(tile => {
+        currentTileIds.add(tile.id);
+      });
+    });
+    
+    // Collect all tile IDs that were on the board at the beginning of the turn
+    game.boardSnapshot.forEach(set => {
+      set.forEach(tile => {
+        snapshotTileIds.add(tile.id);
+      });
+    });
+    
+    // Find tiles that are on the board now but weren't in the snapshot
+    // These need to be returned to the player's hand
+    const tilesToReturn = [];
+    currentTileIds.forEach(tileId => {
+      if (!snapshotTileIds.has(tileId)) {
+        // Find the tile in the current board
+        for (const set of game.board) {
+          const tileIndex = set.findIndex(t => t.id === tileId);
+          if (tileIndex !== -1) {
+            tilesToReturn.push(set[tileIndex]);
+            break;
+          }
+        }
+      }
+    });
+    
+    // Restore the board to the snapshot taken at the beginning of turn
+    game.restoreFromSnapshot();
+    
+    // Return the identified tiles to the player's hand
+    tilesToReturn.forEach(tile => {
+      currentPlayer.hand.push(tile);
+    });
+    
+    // Reset any turn-specific flags
+    currentPlayer.hasManipulatedJoker = false;
+    
+    // Send updated game state (including hand and board) to all players
+    game.players.forEach(player => {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) {
+        playerSocket.emit('gameStateUpdate', {
+          gameState: game.getGameState(player.id)
+        });
+      }
+    });
+    
+    console.log(`🔄 ${currentPlayer.name} undid their turn, returned ${tilesToReturn.length} tiles to hand`);
+  });
+  
+  socket.on('validateBoard', (data) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Use the appropriate validation mode - strict for end turn, relaxed during turn
+    const isEndTurn = data?.isEndTurn || false;
+    const validation = game.validateBoardState(isEndTurn);
+    socket.emit('boardValidation', validation);
+  });
+
+  socket.on('restoreBoard', () => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.gameId);
+    if (!game) return;
+
+    // Only allow current player to restore board
+    const currentPlayer = game.getCurrentPlayer();
+    if (currentPlayer.id !== socket.id) {
+      socket.emit('error', { message: 'Not your turn' });
+      return;
+    }
+
+    game.restoreFromSnapshot();
+    
+    // Send updated game state to all players
+    game.players.forEach(player => {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) {
+        playerSocket.emit('boardRestored', {
+          gameState: game.getGameState(player.id)
+        });
+      }
+    });
   });
 });
 
