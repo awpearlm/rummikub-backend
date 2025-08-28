@@ -1,10 +1,16 @@
 # 🎮 J_kube - Multiplayer Rummikub Online
 
-A beautiful, modern multiplayer Rummikub game that allows friends and family to play together from anywhere in the world. Perfect for staying connected across long distances!
+A beautiful, modern multiplayer Rummikub game with user authentication that allows friends and family to play together from anywhere in the world. Perfect for staying connected across long distances!
 
-![Rummikub Game](https://img.shields.io/badge/Game-Rummikub-blue) ![Multiplayer](https://img.shields.io/badge/Mode-Multiplayer-green) ![Real-time](https://img.shields.io/badge/Chat-Real--time-orange)
+![Rummikub Game](https://img.shields.io/badge/Game-Rummikub-blue) ![Multiplayer](https://img.shields.io/badge/Mode-Multiplayer-green) ![Real-time](https://img.shields.io/badge/Chat-Real--time-orange) ![Authentication](https://img.shields.io/badge/Auth-Secure-red)
 
 ## ✨ Features
+
+### 🔐 Authentication System
+- **User Registration & Login** - Secure JWT-based authentication
+- **Protected Game Access** - Must be logged in to play
+- **User Profile System** - Personalized profile with avatar and status
+- **Session Persistence** - Stay logged in across browser sessions
 
 ### 🎯 Core Gameplay
 - **Complete Rummikub Implementation** - All traditional rules and mechanics
@@ -28,16 +34,19 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
 
 ### 🎨 User Experience
 - **Beautiful Modern UI** - Clean, intuitive interface with smooth animations
+- **User Profile Bubble** - Avatar, username, and connection status in one place
 - **Color-coded Tiles** - Easy-to-read tiles with proper Rummikub colors
 - **Interactive Gameplay** - Click to select tiles, drag and drop coming soon
 - **Smart Sorting** - Auto-sort your hand by color and number
-- **Connection Recovery** - Robust reconnection system that preserves game state
+- **Intelligent Reconnection** - 10-second grace period before prompting manual refresh
+- **Stale Game Cleanup** - Automatic removal of inactive games
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js (v14 or higher)
 - npm (comes with Node.js)
+- MongoDB database (for user authentication)
 
 ### Installation
 
@@ -52,15 +61,27 @@ A beautiful, modern multiplayer Rummikub game that allows friends and family to 
    npm install
    ```
 
-3. **Start the server**
+3. **Set up environment variables**
+   Create a `.env` file with:
+   ```
+   MONGODB_URI=your_mongodb_connection_string
+   JWT_SECRET=your_jwt_secret_key
+   NODE_ENV=development
+   ```
+
+4. **Start the server**
    ```bash
    npm start
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    ```
    http://localhost:3000
    ```
+
+6. **Create your account**
+   - Register a new account or login with existing credentials
+   - Enjoy authenticated, secure gameplay!
 
 ## 🧪 Testing
 
@@ -120,9 +141,9 @@ For more details on testing, see [TESTING.md](TESTING.md).
 
 ## 🎮 How to Play
 
-### Game Mode Selection
-1. **Enter your name** on the welcome screen
-2. **Choose your game mode**:
+### Getting Started
+1. **Create an account** or **login** to access the game
+2. **Choose your game mode** from the authenticated dashboard:
    - **Play vs Computer**: Practice against AI opponents with adjustable difficulty
    - **Play with Friends**: Create or join multiplayer games for social play
 
@@ -156,7 +177,8 @@ For more details on testing, see [TESTING.md](TESTING.md).
 ## 🛠️ Technical Details
 
 ### Technology Stack
-- **Backend**: Node.js + Express
+- **Backend**: Node.js + Express + MongoDB
+- **Authentication**: JWT + bcryptjs
 - **Real-time**: Socket.IO
 - **Frontend**: Vanilla HTML, CSS, JavaScript
 - **Security**: Helmet.js + CORS
