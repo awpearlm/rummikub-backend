@@ -246,7 +246,7 @@ class EmailService {
 
         <div class="invitation-card">
             <h3>🎉 ${inviterName} has invited you to join J_kube!</h3>
-            <p>Get ready for hours of strategic fun with the classic tile-laying game Rummikub, now available online with friends around the world.</p>
+            <p>Get ready for hours of strategic fun with the classic tile-laying game Rummikub, complete with Jillian's rage all the way from the UK.</p>
             
             ${message ? `
             <div class="personal-message">
@@ -259,25 +259,6 @@ class EmailService {
         <div class="game-preview">
             <h3>🎮 What is J_kube?</h3>
             <p>J_kube is a multiplayer online version of the beloved Rummikub game. Create sets and runs with numbered tiles, use strategic thinking, and be the first to empty your hand!</p>
-        </div>
-
-        <div class="features">
-            <div class="feature">
-                <h4>🌍 Play Anywhere</h4>
-                <p>Connect with friends from around the world</p>
-            </div>
-            <div class="feature">
-                <h4>💬 Built-in Chat</h4>
-                <p>Chat with players during the game</p>
-            </div>
-            <div class="feature">
-                <h4>📱 Responsive</h4>
-                <p>Works on desktop, tablet, and mobile</p>
-            </div>
-            <div class="feature">
-                <h4>🎯 Classic Rules</h4>
-                <p>Traditional Rummikub gameplay</p>
-            </div>
         </div>
 
         <div style="text-align: center;">
@@ -293,7 +274,7 @@ class EmailService {
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
             <p style="font-size: 0.8em;">
                 🎮 J_kube - Bringing classic games to the digital world<br>
-                <a href="${invitationLink.replace(/\/signup\.html.*/, '')}" style="color: #667eea;">Visit J_kube</a>
+                <a href="${invitationLink.replace(/\/signup\.html.*/, '')}" style="color: #FFFFFF;">Sign up for J_kube</a>
             </p>
         </div>
     </div>
@@ -308,15 +289,6 @@ class EmailService {
 ${inviterName} has invited you to join J_kube, a multiplayer online Rummikub game!
 
 ${message ? `Personal message from ${inviterName}:\n"${message}"\n` : ''}
-
-What is J_kube?
-J_kube is a multiplayer online version of the beloved Rummikub game. Create sets and runs with numbered tiles, use strategic thinking, and be the first to empty your hand!
-
-Features:
-🌍 Play with friends from around the world
-💬 Built-in chat system
-📱 Works on desktop, tablet, and mobile
-🎯 Classic Rummikub rules
 
 Join now: ${invitationLink}
 
