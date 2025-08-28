@@ -151,7 +151,9 @@ class AdminDashboard {
     
     async apiRequest(endpoint, options = {}) {
         try {
-            const response = await fetch(`${this.backendUrl}${endpoint}`, {
+            const fullUrl = `${this.backendUrl}${endpoint}`;
+            console.log('🌐 API Request to:', fullUrl);
+            const response = await fetch(fullUrl, {
                 ...options,
                 headers: {
                     'Content-Type': 'application/json',
@@ -160,11 +162,15 @@ class AdminDashboard {
                 }
             });
             
+            console.log('📡 Response status:', response.status);
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
             
-            return await response.json();
+            const data = await response.json();
+            console.log('📦 Response data:', data);
+            return data;
         } catch (error) {
             console.error('API Request failed:', error);
             throw error;
@@ -207,7 +213,15 @@ class AdminDashboard {
     
     async loadInvitations() {
         try {
+            console.log('🔍 Loading invitations from:', this.backendUrl + '/api/admin/invitations');
             const data = await this.apiRequest('/api/admin/invitations');
+            console.log('📊 Received invitation data:', data);
+            console.log('📋 Number of invitations:', data.invitations ? data.invitations.length : 'undefined');
+            if (data.invitations) {
+                data.invitations.forEach((inv, index) => {
+                    console.log(`   ${index + 1}. ${inv.email} - ${inv.status} (ID: ${inv._id})`);
+                });
+            }
             this.renderInvitations(data.invitations);
         } catch (error) {
             console.error('Failed to load invitations:', error);
