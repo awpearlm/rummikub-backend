@@ -10,7 +10,10 @@ class AdminDashboard {
         this.backendUrl = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
             : 'https://rummikub-backend.onrender.com';
-        
+     cancelInvitation(invitationId, email) {
+        this.currentDeleteTarget = { type: 'invitation', id: invitationId };
+        this.showDeleteModal(`Are you sure you want to delete the invitation to "${email}"? This action cannot be undone.`);
+    }   
         this.currentDeleteTarget = null;
         
         // Initialize Socket.IO connection for online status tracking
@@ -293,8 +296,8 @@ class AdminDashboard {
                         <button class="btn btn-primary btn-sm" onclick="adminDashboard.copyInvitationLink('${invitation.token}')" title="Copy invitation link">
                             <i class="fas fa-copy"></i> Copy Link
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="adminDashboard.cancelInvitation('${invitation._id}', '${invitation.email}')" title="Cancel invitation">
-                            <i class="fas fa-times"></i> Cancel
+                        <button class="btn btn-danger btn-sm" onclick="adminDashboard.cancelInvitation('${invitation._id}', '${invitation.email}')" title="Delete invitation">
+                            <i class="fas fa-trash"></i> Delete
                         </button>
                     ` : '-'}
                 </td>
@@ -452,7 +455,7 @@ class AdminDashboard {
     
     async cancelInvitation(invitationId, email) {
         this.currentDeleteTarget = { type: 'invitation', id: invitationId };
-        this.showDeleteModal(`Are you sure you want to cancel the invitation to "${email}"?`);
+        this.showDeleteModal(`Are you sure you want to delete the invitation to "${email}"? This action cannot be undone.`);
     }
     
     async confirmDelete() {
@@ -467,7 +470,7 @@ class AdminDashboard {
                 this.loadUsers();
             } else if (type === 'invitation') {
                 await this.apiRequest(`/api/admin/invitations/${id}`, { method: 'DELETE' });
-                this.showNotification('Invitation cancelled successfully', 'success');
+                this.showNotification('Invitation deleted successfully', 'success');
                 this.loadInvitations();
             }
             

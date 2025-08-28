@@ -143,12 +143,14 @@ router.delete('/invitations/:id', async (req, res) => {
       return res.status(400).json({ message: 'Can only cancel pending invitations' });
     }
     
-    invitation.status = 'cancelled';
-    await invitation.save();
+    // Actually delete the invitation instead of just marking as cancelled
+    await Invitation.findByIdAndDelete(req.params.id);
     
-    res.status(200).json({ message: 'Invitation cancelled successfully' });
+    console.log(`📧 Invitation to ${invitation.email} deleted by admin`);
+    
+    res.status(200).json({ message: 'Invitation deleted successfully' });
   } catch (error) {
-    console.error('Cancel invitation error:', error);
+    console.error('Delete invitation error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
