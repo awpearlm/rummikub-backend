@@ -5,6 +5,7 @@ const Stats = require('../models/Stats');
 const Invitation = require('../models/Invitation');
 const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('../middleware/auth');
+const emailService = require('../services/emailService');
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -179,6 +180,21 @@ router.post('/register-invitation', async (req, res) => {
     invitation.status = 'accepted';
     invitation.acceptedAt = new Date();
     await invitation.save();
+    
+    // Send welcome email
+    try {
+      const emailResult = await emailService.sendWelcomeEmail(user.email, user.username);
+      if (emailResult.success) {
+        console.log(`📧 Welcome email sent to ${user.email}`);
+        if (emailResult.previewUrl) {
+          console.log(`🔗 Preview URL: ${emailResult.previewUrl}`);
+        }
+      } else {
+        console.log(`⚠️ Welcome email failed: ${emailResult.error}`);
+      }
+    } catch (emailError) {
+      console.error('❌ Welcome email service error:', emailError);
+    }
     
     // Generate login token
     const token = jwt.sign(

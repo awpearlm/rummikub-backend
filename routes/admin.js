@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Stats = require('../models/Stats');
 const Invitation = require('../models/Invitation');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
+const emailService = require('../services/emailService');
 
 // Apply authentication and admin check to all routes
 router.use(authenticateToken, isAdmin);
@@ -75,11 +76,30 @@ router.post('/invitations', async (req, res) => {
     
     await invitation.save();
     
-    // TODO: Send actual email here
-    // For now, we'll just log the invitation link
-    const invitationLink = `${process.env.FRONTEND_URL || 'https://jkube.netlify.app'}/signup?token=${invitation.invitationToken}`;
-    console.log(`📧 Invitation sent to ${email}:`);
-    console.log(`🔗 Invitation link: ${invitationLink}`);
+    // Send the actual invitation email
+    const invitationLink = `${process.env.FRONTEND_URL || 'https://jkube.netlify.app'}/signup.html?token=${invitation.invitationToken}`;
+    
+    try {
+      const emailResult = await emailService.sendInvitationEmail(
+        email,
+        req.user.username,
+        invitationLink,
+        message
+      );
+      
+      if (emailResult.success) {
+        console.log(`📧 Invitation email sent successfully to ${email}`);
+        if (emailResult.previewUrl) {
+          console.log(`🔗 Preview URL: ${emailResult.previewUrl}`);
+        }
+      } else {
+        console.log(`⚠️ Email sending failed: ${emailResult.error}`);
+        console.log(`🔗 Invitation link (for manual sharing): ${invitationLink}`);
+      }
+    } catch (emailError) {
+      console.error('❌ Email service error:', emailError);
+      console.log(`🔗 Invitation link (for manual sharing): ${invitationLink}`);
+    }
     
     res.status(201).json({ 
       message: 'Invitation sent successfully',
