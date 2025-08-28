@@ -3106,11 +3106,11 @@ class RummikubClient {
             }
             
             console.log('🎯 Table manipulation: Adding single tile to board');
-            // Tile from hand - add to existing set only (cannot create new sets with single tiles)
+            // Allow single tiles to create new sets or be added to existing sets
             if (targetSetIndex === -1) {
-                // Cannot create new set with single tile - must use "Play Selected" for new sets
-                this.showNotification('Cannot create new set with single tile. Use "Play Selected" for new sets or drag to existing set.', 'error');
-                return;
+                // Create new set with single tile - this is allowed in Rummikub
+                console.log('🎯 Creating new set with single tile');
+                newBoard.push([dragData.tile]);
             } else {
                 // Add to existing set - but intelligently position the tile
                 this.addTileToSetIntelligently(newBoard[targetSetIndex], dragData.tile);
