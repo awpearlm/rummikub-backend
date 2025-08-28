@@ -130,6 +130,28 @@ body {
     transform: scale(1.1);
 }
 
+.profile-admin-btn {
+    background: none;
+    border: none;
+    color: #ffd700;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.profile-admin-btn:hover {
+    background: rgba(255, 215, 0, 0.1);
+    color: #ffed4e;
+    transform: scale(1.1);
+}
+
 /* Mobile responsiveness for profile bubble */
 @media (max-width: 480px) {
     .profile-bubble {

@@ -931,6 +931,13 @@ io.use(async (socket, next) => {
       isGuest: false
     };
     
+    // Update user online status and last seen
+    await User.findByIdAndUpdate(user._id, {
+      isOnline: true,
+      lastSeen: new Date()
+    });
+    
+    console.log(`✅ Authenticated socket connection: ${user.username} (${socket.id})`);
     next();
   } catch (error) {
     // Allow connection even with invalid token, but as guest
@@ -1406,7 +1413,20 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
+    // Update user online status if they were authenticated
+    if (socket.user && !socket.user.isGuest) {
+      try {
+        await User.findByIdAndUpdate(socket.user.id, {
+          isOnline: false,
+          lastSeen: new Date()
+        });
+        console.log(`🔌 User ${socket.user.username} disconnected, updated online status`);
+      } catch (error) {
+        console.error('Error updating user offline status:', error);
+      }
+    }
+    
     const playerData = players.get(socket.id);
     if (playerData) {
       const game = games.get(playerData.gameId);

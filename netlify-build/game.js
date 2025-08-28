@@ -10,6 +10,7 @@ class RummikubClient {
         // Check if user is authenticated
         this.token = localStorage.getItem('auth_token');
         this.username = localStorage.getItem('username');
+        this.isAdmin = localStorage.getItem('is_admin') === 'true';
         
         // If not authenticated, redirect to login
         if (!this.token || !this.username) {
@@ -33,6 +34,19 @@ class RummikubClient {
         const logoutButton = document.getElementById('logoutButton');
         if (logoutButton) {
             logoutButton.addEventListener('click', () => this.logout());
+        }
+        
+        // Set up admin button (only for admins)
+        const adminButton = document.getElementById('adminButton');
+        if (adminButton) {
+            if (this.isAdmin) {
+                adminButton.style.display = 'inline-block';
+                adminButton.addEventListener('click', () => {
+                    window.location.href = 'admin.html';
+                });
+            } else {
+                adminButton.style.display = 'none';
+            }
         }
         
         this.socket = io(backendUrl, {

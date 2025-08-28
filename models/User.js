@@ -39,6 +39,24 @@ const UserSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now
+  },
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
+  invitedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  invitationStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'expired'],
+    default: 'accepted' // For existing users
   }
 });
 
