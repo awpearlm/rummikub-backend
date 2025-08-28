@@ -2570,6 +2570,8 @@ class RummikubClient {
             const hasTilesSelected = this.selectedTiles && this.selectedTiles.length > 0;
             const canDrawTile = canAct && !this.hasPlayedTilesThisTurn && !noTilesLeft && !hasTilesSelected;
             
+            console.log(`🎯 Draw button logic: canAct=${canAct}, hasPlayedTiles=${this.hasPlayedTilesThisTurn}, noTilesLeft=${noTilesLeft}, hasTilesSelected=${hasTilesSelected} (count=${this.selectedTiles?.length || 0}) -> canDraw=${canDrawTile}`);
+            
             // If no tiles are left, add a visual indication
             if (noTilesLeft) {
                 drawBtn.style.opacity = '0.5';
@@ -2647,7 +2649,11 @@ class RummikubClient {
             players: this.gameState?.players?.length,
             currentPlayerIndex: this.gameState?.currentPlayerIndex,
             currentPlayer: this.gameState?.players?.[this.gameState?.currentPlayerIndex]?.name,
-            mySocketId: this.socket?.id
+            mySocketId: this.socket?.id,
+            selectedTiles: this.selectedTiles?.length || 0,
+            hasPlayedTilesThisTurn: this.hasPlayedTilesThisTurn,
+            hasBoardChanged: this.hasBoardChanged,
+            deckSize: this.gameState?.deckSize
         });
     }
 
