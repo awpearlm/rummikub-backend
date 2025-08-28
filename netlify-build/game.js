@@ -72,17 +72,19 @@ class RummikubClient {
             console.log('🔌 Disconnected:', reason);
             
             // Update connection status
-            this.updateConnectionStatus('disconnected');
+            this.updateConnectionStatus('connecting'); // Show as "connecting" during automatic reconnection attempts
             
-            // Show user-friendly notification
-            this.showNotification(`Connection lost: ${reason}. Attempting to reconnect...`, 'error');
+            // Show a subtle notification without alarming the user
+            this.showNotification('Connection lost. Attempting to reconnect...', 'warning');
             
-            // Add a timer to show connection lost overlay if reconnection takes too long
-            setTimeout(() => {
+            // Start a 10-second timer before showing the manual refresh option
+            this.reconnectionTimer = setTimeout(() => {
                 if (!this.socket.connected) {
+                    // Only show the overlay if we're still disconnected after 10 seconds
+                    console.log('🔄 Still disconnected after 10 seconds, showing manual refresh option');
                     this.showConnectionLostOverlay();
                 }
-            }, 5000); // Wait 5 seconds before showing overlay
+            }, 10000); // Wait 10 seconds before showing manual refresh overlay
             
             // Handle server-initiated disconnects
             if (reason === 'io server disconnect') {
@@ -95,11 +97,22 @@ class RummikubClient {
         this.socket.on('reconnect_attempt', (attemptNumber) => {
             console.log(`🔄 Reconnection attempt #${attemptNumber}`);
             this.updateConnectionStatus('connecting');
-            this.updateReconnectionStatus(`Reconnection attempt ${attemptNumber}...`);
+            
+            // Only update status if we're showing the overlay, otherwise keep it quiet
+            if (document.getElementById('connectionLostOverlay')?.style.display === 'flex') {
+                this.updateReconnectionStatus(`Reconnection attempt ${attemptNumber}...`);
+            }
         });
         
         this.socket.on('reconnect', (attemptNumber) => {
             console.log(`✅ Reconnected after ${attemptNumber} attempts!`);
+            
+            // Clear the reconnection timer since we're connected now
+            if (this.reconnectionTimer) {
+                clearTimeout(this.reconnectionTimer);
+                this.reconnectionTimer = null;
+            }
+            
             this.showNotification('Reconnected successfully! Resuming game...', 'success');
             this.updateConnectionStatus('connected');
             this.hideConnectionLostOverlay();
@@ -129,10 +142,21 @@ class RummikubClient {
         });
         
         this.socket.on('reconnect_failed', () => {
-            console.error('❌ Failed to reconnect after all attempts');
-            this.showNotification('Failed to reconnect after multiple attempts. Please refresh the page.', 'error');
+            console.error('❌ Failed to reconnect after all automatic attempts');
+            
+            // Clear the timer since we've reached the final failure state
+            if (this.reconnectionTimer) {
+                clearTimeout(this.reconnectionTimer);
+                this.reconnectionTimer = null;
+            }
+            
+            // Update status but don't immediately panic the user
             this.updateConnectionStatus('disconnected');
-            this.updateReconnectionStatus('Automatic reconnection failed. Please refresh the game manually.');
+            this.showNotification('Unable to reconnect automatically. Manual refresh available.', 'error');
+            
+            // Show the connection lost overlay which gives options
+            this.showConnectionLostOverlay();
+            this.updateReconnectionStatus('Automatic reconnection attempts exhausted. You can try refreshing the page.');
         });
         
         this.gameState = null;
@@ -142,6 +166,7 @@ class RummikubClient {
         this.gameId = '';
         this.timerEnabled = false;
         this.turnTimeLimit = 120; // 2 minutes in seconds
+        this.reconnectionTimer = null; // Timer for delayed manual refresh prompt
         
         // Initialize activity tracking
         this.lastActivityTime = Date.now();
@@ -206,6 +231,12 @@ class RummikubClient {
     
     // Logout the user
     logout() {
+        // Clear any active reconnection timer
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
+        }
+        
         // Clear all auth-related data from localStorage
         localStorage.removeItem('auth_token');
         localStorage.removeItem('username');
@@ -4068,6 +4099,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
     if (manualReconnectBtn) {
         manualReconnectBtn.addEventListener('click', () => {
+            // Clear the reconnection timer since user is manually reconnecting
+            if (window.game.reconnectionTimer) {
+                clearTimeout(window.game.reconnectionTimer);
+                window.game.reconnectionTimer = null;
+            }
+            
             // Instead of reloading, try to restore from saved state
             const gameInfo = window.game.getGameStateFromStorage();
             
