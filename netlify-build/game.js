@@ -1554,25 +1554,19 @@ class RummikubClient {
 
     isMyTurn() {
         if (!this.gameState || !this.gameState.started || !this.socket) {
-            console.log(`❌ Not my turn: gameState=${!!this.gameState}, started=${this.gameState?.started}, socket=${!!this.socket}`);
             return false;
         }
         
         if (!this.gameState.players || this.gameState.players.length === 0) {
-            console.log(`❌ Not my turn: no players in game state`);
             return false;
         }
         
         const currentPlayer = this.gameState.players[this.gameState.currentPlayerIndex];
         if (!currentPlayer) {
-            console.log(`❌ Not my turn: no current player at index ${this.gameState.currentPlayerIndex}`);
             return false;
         }
         
-        const result = currentPlayer.id === this.socket.id;
-        console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
-        
-        return result;
+        return currentPlayer.id === this.socket.id;
     }
     
     // Show turn notification when it becomes the player's turn
@@ -2643,18 +2637,21 @@ class RummikubClient {
             debugElement.textContent = `MyTurn:${isMyTurn} Started:${gameStarted} Current:${currentPlayer?.name} MyId:${this.socket?.id} Buttons:${canAct ? 'ENABLED' : 'DISABLED'}`;
         }
         
-        console.log(`🎮 Action buttons updated: isMyTurn=${isMyTurn}, gameStarted=${gameStarted}, canAct=${canAct}`);
-        console.log(`🔍 Debug details:`, {
-            gameState: !!this.gameState,
-            players: this.gameState?.players?.length,
-            currentPlayerIndex: this.gameState?.currentPlayerIndex,
-            currentPlayer: this.gameState?.players?.[this.gameState?.currentPlayerIndex]?.name,
-            mySocketId: this.socket?.id,
-            selectedTiles: this.selectedTiles?.length || 0,
-            hasPlayedTilesThisTurn: this.hasPlayedTilesThisTurn,
-            hasBoardChanged: this.hasBoardChanged,
-            deckSize: this.gameState?.deckSize
-        });
+        // Reduced logging to avoid spam
+        if (Math.random() < 0.01) { // Only log 1% of the time
+            console.log(`🎮 Action buttons updated: isMyTurn=${isMyTurn}, gameStarted=${gameStarted}, canAct=${canAct}`);
+            console.log(`🔍 Debug details:`, {
+                gameState: !!this.gameState,
+                players: this.gameState?.players?.length,
+                currentPlayerIndex: this.gameState?.currentPlayerIndex,
+                currentPlayer: this.gameState?.players?.[this.gameState?.currentPlayerIndex]?.name,
+                mySocketId: this.socket?.id,
+                selectedTiles: this.selectedTiles?.length || 0,
+                hasPlayedTilesThisTurn: this.hasPlayedTilesThisTurn,
+                hasBoardChanged: this.hasBoardChanged,
+                deckSize: this.gameState?.deckSize
+            });
+        }
     }
 
     updateChat(messages) {
