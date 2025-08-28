@@ -2549,8 +2549,8 @@ class RummikubClient {
         const canAct = isMyTurn && gameStarted;
         const noTilesLeft = this.gameState && this.gameState.deckSize === 0;
         
-        // Always check if board state has changed
-        this.hasBoardStateChanged();
+        // Board state changes are checked elsewhere to prevent infinite loops
+        // The hasBoardChanged flag is updated by other methods when needed
         
         // Draw Tile button - disable if:
         // 1. Tiles have been played this turn
