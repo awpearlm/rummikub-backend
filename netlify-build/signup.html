@@ -67,21 +67,24 @@
                 <div class="form-group">
                     <label for="username">Choose a Username</label>
                     <input type="text" id="username" name="username" required 
-                           placeholder="Enter your username" minlength="3" maxlength="20">
+                           placeholder="Enter your username" minlength="3" maxlength="20"
+                           autocomplete="off" spellcheck="false">
                     <div class="form-help">3-20 characters, letters and numbers only</div>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Create Password</label>
                     <input type="password" id="password" name="password" required 
-                           placeholder="Enter your password" minlength="6">
+                           placeholder="Enter your password" minlength="6"
+                           autocomplete="new-password">
                     <div class="form-help">At least 6 characters</div>
                 </div>
 
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" required 
-                           placeholder="Confirm your password">
+                           placeholder="Confirm your password"
+                           autocomplete="new-password">
                 </div>
 
                 <button type="submit" class="btn btn-primary" id="signupButton">
@@ -170,6 +173,13 @@
                 const usernameInput = document.getElementById('username');
                 const passwordInput = document.getElementById('password');
                 const confirmPasswordInput = document.getElementById('confirmPassword');
+
+                // Clear any browser autofilled values
+                setTimeout(() => {
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                    confirmPasswordInput.value = '';
+                }, 100);
 
                 // Username validation
                 usernameInput.addEventListener('input', () => {
