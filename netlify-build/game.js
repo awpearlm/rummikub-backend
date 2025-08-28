@@ -24,7 +24,7 @@ class RummikubClient {
         }
         
         // Set the profile avatar initial (first letter of username)
-        const profileAvatar = document.getElementById('profileAvatar');
+        const profileAvatar = document.getElementById('profileInitial');
         if (profileAvatar) {
             profileAvatar.textContent = this.username.charAt(0).toUpperCase();
         }
