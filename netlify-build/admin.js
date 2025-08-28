@@ -13,7 +13,38 @@ class AdminDashboard {
         
         this.currentDeleteTarget = null;
         
+        // Initialize Socket.IO connection for online status tracking
+        this.initSocket();
+        
         this.init();
+    }
+    
+    initSocket() {
+        try {
+            // Initialize Socket.IO connection with authentication
+            this.socket = io(this.backendUrl, {
+                auth: {
+                    token: this.token
+                },
+                transports: ['websocket', 'polling']
+            });
+            
+            this.socket.on('connect', () => {
+                console.log('Admin dashboard connected to server');
+                // Refresh user data when connected to get latest online status
+                setTimeout(() => this.loadUsers(), 1000);
+            });
+            
+            this.socket.on('disconnect', () => {
+                console.log('Admin dashboard disconnected from server');
+            });
+            
+            this.socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+            });
+        } catch (error) {
+            console.error('Error initializing socket:', error);
+        }
     }
     
     init() {
@@ -36,6 +67,13 @@ class AdminDashboard {
         this.loadDashboard();
         this.loadUsers();
         this.loadInvitations();
+        
+        // Auto-refresh user list every 30 seconds to update online status
+        this.refreshInterval = setInterval(() => {
+            if (this.currentTab === 'users') {
+                this.loadUsers();
+            }
+        }, 30000);
     }
     
     setupEventListeners() {
