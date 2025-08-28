@@ -17,10 +17,16 @@ class RummikubClient {
             return;
         }
         
-        // Display the username in the greeting
-        const loggedInUsername = document.getElementById('loggedInUsername');
-        if (loggedInUsername) {
-            loggedInUsername.textContent = this.username;
+        // Display the username in the profile bubble
+        const profileUsername = document.getElementById('profileUsername');
+        if (profileUsername) {
+            profileUsername.textContent = this.username;
+        }
+        
+        // Set the profile avatar initial (first letter of username)
+        const profileAvatar = document.getElementById('profileAvatar');
+        if (profileAvatar) {
+            profileAvatar.textContent = this.username.charAt(0).toUpperCase();
         }
         
         // Set up logout button
@@ -3710,7 +3716,7 @@ class RummikubClient {
     
     // Connection status management
     updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
+        const statusElement = document.getElementById('profileConnectionStatus');
         if (!statusElement) return;
         
         // Remove all status classes
@@ -3720,15 +3726,15 @@ class RummikubClient {
         switch (status) {
             case 'connected':
                 statusElement.classList.add('connected');
-                statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <span>Connected</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Online';
                 break;
             case 'connecting':
                 statusElement.classList.add('connecting');
-                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Connecting...</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Connecting...';
                 break;
             case 'disconnected':
                 statusElement.classList.add('disconnected');
-                statusElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Disconnected</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Offline';
                 break;
         }
     }
