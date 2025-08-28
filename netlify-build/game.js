@@ -290,10 +290,6 @@ class RummikubClient {
         });
         
         // Enter key events
-        addSafeEventListener('playerName', 'keypress', (e) => {
-            if (e.key === 'Enter') this.createGame();
-        });
-        
         addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
@@ -820,11 +816,12 @@ class RummikubClient {
 
     startBotGame() {
         console.log('🎯 startBotGame() called');
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use authenticated username instead of form input
+        const playerName = this.username;
         console.log('👤 Player name:', playerName);
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('User not authenticated', 'error');
             return;
         }
         
