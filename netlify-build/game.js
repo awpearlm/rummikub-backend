@@ -6,6 +6,35 @@ class RummikubClient {
             : 'https://rummikub-backend.onrender.com'; // Your deployed backend URL
         
         console.log('🌐 Connecting to:', backendUrl);
+        
+        // Check if user is authenticated
+        this.token = localStorage.getItem('auth_token');
+        this.username = localStorage.getItem('username');
+        
+        // If not authenticated, redirect to login
+        if (!this.token || !this.username) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Display the username in the profile bubble
+        const profileUsername = document.getElementById('profileUsername');
+        if (profileUsername) {
+            profileUsername.textContent = this.username;
+        }
+        
+        // Set the profile avatar initial (first letter of username)
+        const profileAvatar = document.getElementById('profileInitial');
+        if (profileAvatar) {
+            profileAvatar.textContent = this.username.charAt(0).toUpperCase();
+        }
+        
+        // Set up logout button
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.logout());
+        }
+        
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
@@ -13,7 +42,8 @@ class RummikubClient {
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+            transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+            auth: this.token ? { token: this.token } : {} // Pass auth token if available
         });
         
         // Add connection debugging
@@ -42,17 +72,19 @@ class RummikubClient {
             console.log('🔌 Disconnected:', reason);
             
             // Update connection status
-            this.updateConnectionStatus('disconnected');
+            this.updateConnectionStatus('connecting'); // Show as "connecting" during automatic reconnection attempts
             
-            // Show user-friendly notification
-            this.showNotification(`Connection lost: ${reason}. Attempting to reconnect...`, 'error');
+            // Show a subtle notification without alarming the user
+            this.showNotification('Connection lost. Attempting to reconnect...', 'warning');
             
-            // Add a timer to show connection lost overlay if reconnection takes too long
-            setTimeout(() => {
+            // Start a 10-second timer before showing the manual refresh option
+            this.reconnectionTimer = setTimeout(() => {
                 if (!this.socket.connected) {
+                    // Only show the overlay if we're still disconnected after 10 seconds
+                    console.log('🔄 Still disconnected after 10 seconds, showing manual refresh option');
                     this.showConnectionLostOverlay();
                 }
-            }, 5000); // Wait 5 seconds before showing overlay
+            }, 10000); // Wait 10 seconds before showing manual refresh overlay
             
             // Handle server-initiated disconnects
             if (reason === 'io server disconnect') {
@@ -65,19 +97,41 @@ class RummikubClient {
         this.socket.on('reconnect_attempt', (attemptNumber) => {
             console.log(`🔄 Reconnection attempt #${attemptNumber}`);
             this.updateConnectionStatus('connecting');
-            this.updateReconnectionStatus(`Reconnection attempt ${attemptNumber}...`);
+            
+            // Only update status if we're showing the overlay, otherwise keep it quiet
+            if (document.getElementById('connectionLostOverlay')?.style.display === 'flex') {
+                this.updateReconnectionStatus(`Reconnection attempt ${attemptNumber}...`);
+            }
         });
         
         this.socket.on('reconnect', (attemptNumber) => {
             console.log(`✅ Reconnected after ${attemptNumber} attempts!`);
+            
+            // Clear the reconnection timer since we're connected now
+            if (this.reconnectionTimer) {
+                clearTimeout(this.reconnectionTimer);
+                this.reconnectionTimer = null;
+            }
+            
             this.showNotification('Reconnected successfully! Resuming game...', 'success');
             this.updateConnectionStatus('connected');
             this.hideConnectionLostOverlay();
             
             // If we're in a game, rejoin it
-            if (this.gameId && this.playerName) {
+            if (this.gameId && this.playerName && 
+                this.gameId !== 'UNDEFINED' && this.gameId !== 'undefined') {
                 console.log(`Rejoining game ${this.gameId} as ${this.playerName}`);
                 this.rejoinGame(this.gameId, this.playerName);
+            } else {
+                // Try to get game info from storage if current values are invalid
+                const gameInfo = this.getGameStateFromStorage();
+                if (gameInfo && gameInfo.gameId && gameInfo.playerName && 
+                    gameInfo.gameId !== 'UNDEFINED' && gameInfo.gameId !== 'undefined') {
+                    console.log(`Rejoining game from storage: ${gameInfo.gameId} as ${gameInfo.playerName}`);
+                    this.gameId = gameInfo.gameId;
+                    this.playerName = gameInfo.playerName;
+                    this.rejoinGame(gameInfo.gameId, gameInfo.playerName);
+                }
             }
         });
         
@@ -88,10 +142,21 @@ class RummikubClient {
         });
         
         this.socket.on('reconnect_failed', () => {
-            console.error('❌ Failed to reconnect after all attempts');
-            this.showNotification('Failed to reconnect after multiple attempts. Please refresh the page.', 'error');
+            console.error('❌ Failed to reconnect after all automatic attempts');
+            
+            // Clear the timer since we've reached the final failure state
+            if (this.reconnectionTimer) {
+                clearTimeout(this.reconnectionTimer);
+                this.reconnectionTimer = null;
+            }
+            
+            // Update status but don't immediately panic the user
             this.updateConnectionStatus('disconnected');
-            this.updateReconnectionStatus('Automatic reconnection failed. Please refresh the game manually.');
+            this.showNotification('Unable to reconnect automatically. Manual refresh available.', 'error');
+            
+            // Show the connection lost overlay which gives options
+            this.showConnectionLostOverlay();
+            this.updateReconnectionStatus('Automatic reconnection attempts exhausted. You can try refreshing the page.');
         });
         
         this.gameState = null;
@@ -101,6 +166,7 @@ class RummikubClient {
         this.gameId = '';
         this.timerEnabled = false;
         this.turnTimeLimit = 120; // 2 minutes in seconds
+        this.reconnectionTimer = null; // Timer for delayed manual refresh prompt
         
         // Initialize activity tracking
         this.lastActivityTime = Date.now();
@@ -127,7 +193,74 @@ class RummikubClient {
         this.initializeSocketListeners();
     }
 
+    // Check if user is authenticated and update UI accordingly
+    checkAuthenticationStatus() {
+        const loggedInStatus = document.getElementById('loggedInStatus');
+        const playerNameInput = document.getElementById('playerName');
+        
+        if (this.token && this.username) {
+            if (loggedInStatus) {
+                loggedInStatus.textContent = `Logged in as: ${this.username}`;
+            }
+            
+            // Pre-fill the player name input with the authenticated username
+            if (playerNameInput) {
+                playerNameInput.value = this.username;
+                playerNameInput.setAttribute('readonly', 'readonly');
+                playerNameInput.style.backgroundColor = '#f0f4f8';
+            }
+            
+            // Update the stored player name
+            this.playerName = this.username;
+            
+            return true;
+        } else {
+            if (loggedInStatus) {
+                loggedInStatus.textContent = 'Not logged in';
+            }
+            
+            // Make sure the input is editable if not logged in
+            if (playerNameInput) {
+                playerNameInput.removeAttribute('readonly');
+                playerNameInput.style.backgroundColor = '';
+            }
+            
+            return false;
+        }
+    }
+    
+    // Logout the user
+    logout() {
+        // Clear any active reconnection timer
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
+        }
+        
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('is_admin');
+        
+        // Reset client properties
+        this.token = null;
+        this.username = null;
+        
+        // Show a notification
+        this.showNotification('You have been logged out', 'info');
+        
+        // Redirect to login page
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1000);
+    }
+    
     initializeEventListeners() {
+        // Check authentication status on page load
+        this.checkAuthenticationStatus();
+        
         // Game mode selection
         addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
         addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
@@ -188,10 +321,6 @@ class RummikubClient {
         });
         
         // Enter key events
-        addSafeEventListener('playerName', 'keypress', (e) => {
-            if (e.key === 'Enter') this.createGame();
-        });
-        
         addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
@@ -271,6 +400,12 @@ class RummikubClient {
             this.gameState = data.gameState;
             this.updateGameState();
             this.showNotification(`${data.playerName} left the game`, 'info');
+        });
+        
+        this.socket.on('playerReconnected', (data) => {
+            this.gameState = data.gameState;
+            this.updateGameState();
+            this.showNotification(`${data.playerName} reconnected to the game`, 'success');
         });
         
         // Add explicit listener for gameStateUpdate events
@@ -611,25 +746,43 @@ class RummikubClient {
         gamesList.className = 'games-list';
         
         games.forEach(game => {
+            // Skip games with invalid data
+            if (!game.host || !game.id || !game.createdAt) {
+                console.warn('Skipping invalid game:', game);
+                return;
+            }
+            
             const gameItem = document.createElement('li');
             gameItem.className = 'game-item';
             
-            // Calculate time since creation
+            // Calculate time since creation with validation
             const createdTime = new Date(game.createdAt);
-            const timeAgo = this.getTimeAgo(createdTime);
+            let timeAgo;
+            
+            // Check if the date is valid
+            if (isNaN(createdTime.getTime())) {
+                timeAgo = 'unknown';
+                console.warn('Invalid createdAt date for game:', game.id);
+            } else {
+                timeAgo = this.getTimeAgo(createdTime);
+            }
             
             // Check if the game is active
             const isActiveGame = game.status === 'ACTIVE';
+            
+            // Sanitize display values
+            const hostName = game.host || 'Unknown';
+            const playerCount = Math.max(0, Math.min(4, game.playerCount || 0));
             
             // Build the game item HTML with conditional button/status based on game state
             const itemHTML = `
                 <div class="game-item-info">
                     <div class="game-host">
-                        <i class="fas fa-user"></i> ${game.host}
+                        <i class="fas fa-user"></i> ${hostName}
                         ${isActiveGame ? '<span class="game-status-badge active">Active</span>' : ''}
                     </div>
                     <div class="game-details">
-                        <span class="player-count"><i class="fas fa-users"></i> ${game.playerCount}/4</span>
+                        <span class="player-count"><i class="fas fa-users"></i> ${playerCount}/4</span>
                         <span class="game-time"><i class="fas fa-clock"></i> ${timeAgo}</span>
                     </div>
                 </div>
@@ -668,7 +821,17 @@ class RummikubClient {
     }
     
     getTimeAgo(date) {
+        // Validate the date first
+        if (!date || isNaN(date.getTime())) {
+            return 'unknown time';
+        }
+        
         const seconds = Math.floor((new Date() - date) / 1000);
+        
+        // Handle future dates or negative values
+        if (seconds < 0) {
+            return 'just now';
+        }
         
         if (seconds < 60) return 'just now';
         
@@ -684,11 +847,12 @@ class RummikubClient {
 
     startBotGame() {
         console.log('🎯 startBotGame() called');
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use authenticated username instead of form input
+        const playerName = this.username;
         console.log('👤 Player name:', playerName);
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('User not authenticated', 'error');
             return;
         }
         
@@ -707,15 +871,28 @@ class RummikubClient {
     }
 
     createGame() {
-        const playerName = document.getElementById('playerName').value.trim();
-        if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
-            return;
+        try {
+            // Use the authenticated username
+            const playerName = this.username;
+            
+            if (!playerName) {
+                this.showNotification('Authentication error. Please login again.', 'error');
+                this.logout();
+                return;
+            }
+            
+            // Get timer setting
+            this.timerEnabled = document.getElementById('enableTimer')?.checked ?? false;
+            
+            // Save player name
+            this.playerName = playerName;
+            
+            // Show settings modal
+            this.openSettingsModal();
+        } catch (error) {
+            console.error('Error in createGame:', error);
+            this.showNotification('An error occurred while creating the game', 'error');
         }
-        
-        // Show the settings modal instead of creating the game immediately
-        this.playerName = playerName;
-        this.openSettingsModal();
     }
 
     showJoinForm() {
@@ -727,11 +904,13 @@ class RummikubClient {
     }
 
     joinGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use the authenticated username
+        const playerName = this.username;
         const gameId = document.getElementById('gameId').value.trim().toUpperCase();
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Authentication error. Please login again.', 'error');
+            this.logout();
             return;
         }
         
@@ -3466,8 +3645,24 @@ class RummikubClient {
     
     // Helper method to rejoin a game after reconnection
     rejoinGame(gameId, playerName) {
+        // Validate gameId and playerName
+        if (!gameId || gameId === "UNDEFINED" || gameId === "undefined") {
+            console.error("Invalid gameId for rejoin:", gameId);
+            // Try to get gameId from storage if current one is invalid
+            const gameInfo = this.getGameStateFromStorage();
+            if (gameInfo && gameInfo.gameId) {
+                gameId = gameInfo.gameId;
+                console.log("Retrieved gameId from storage:", gameId);
+            } else {
+                this.showNotification("Cannot rejoin game: invalid game ID", "error");
+                return;
+            }
+        }
+        
+        console.log(`Attempting to rejoin game ${gameId} as ${playerName}`);
+        
         // Emit event to server to rejoin the game
-        this.socket.emit('joinGame', {
+        this.socket.emit('rejoinGame', {
             gameId: gameId,
             playerName: playerName
         });
@@ -3549,7 +3744,7 @@ class RummikubClient {
     
     // Connection status management
     updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
+        const statusElement = document.getElementById('profileConnectionStatus');
         if (!statusElement) return;
         
         // Remove all status classes
@@ -3559,15 +3754,15 @@ class RummikubClient {
         switch (status) {
             case 'connected':
                 statusElement.classList.add('connected');
-                statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <span>Connected</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Online';
                 break;
             case 'connecting':
                 statusElement.classList.add('connecting');
-                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Connecting...</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Connecting...';
                 break;
             case 'disconnected':
                 statusElement.classList.add('disconnected');
-                statusElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Disconnected</span>';
+                statusElement.innerHTML = '<span class="status-dot"></span>Offline';
                 break;
         }
     }
@@ -3826,6 +4021,49 @@ RummikubClient.prototype.clearGameStateFromStorage = function() {
     }
 };
 
+// Check if the user is authenticated and update UI accordingly
+RummikubClient.prototype.checkAuthenticationStatus = function() {
+    // Check for authentication token in localStorage
+    const token = localStorage.getItem('auth_token');
+    const username = localStorage.getItem('username');
+    
+    console.log('🔐 Checking authentication status:', token ? 'Token found' : 'No token');
+    
+    if (token && username) {
+        console.log('👤 User is authenticated as:', username);
+        
+        // Update socket auth
+        this.socket.auth = { token };
+        
+        // Set player name from stored username
+        this.playerName = username;
+        
+        // Update UI - hide name input and show authenticated username
+        const nameInput = document.getElementById('playerName');
+        const nameLabel = document.querySelector('label[for="playerName"]');
+        
+        if (nameInput && nameLabel) {
+            nameInput.value = username;
+            nameInput.disabled = true;
+            nameInput.style.backgroundColor = '#f0f4f8';
+            nameInput.style.cursor = 'not-allowed';
+            nameLabel.textContent = 'Logged in as:';
+            
+            // Add a small info icon with tooltip
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'fas fa-info-circle';
+            infoIcon.style.marginLeft = '8px';
+            infoIcon.style.color = '#4299e1';
+            infoIcon.title = 'You are logged in. Your username will be used automatically.';
+            nameLabel.appendChild(infoIcon);
+        }
+        
+        return true;
+    }
+    
+    return false;
+};
+
 RummikubClient.prototype.getGameStateFromStorage = function() {
     try {
         const gameInfoStr = localStorage.getItem('rummikub_game_info');
@@ -3854,14 +4092,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.game = new RummikubClient();
     console.log('✅ RummikubClient initialized');
     
+    // Check authentication status and update UI
+    window.game.checkAuthenticationStatus();
+    
     // Set up manual reconnect button
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
     if (manualReconnectBtn) {
         manualReconnectBtn.addEventListener('click', () => {
+            // Clear the reconnection timer since user is manually reconnecting
+            if (window.game.reconnectionTimer) {
+                clearTimeout(window.game.reconnectionTimer);
+                window.game.reconnectionTimer = null;
+            }
+            
             // Instead of reloading, try to restore from saved state
             const gameInfo = window.game.getGameStateFromStorage();
             
-            if (gameInfo && gameInfo.gameId && gameInfo.playerName) {
+            if (gameInfo && gameInfo.gameId && gameInfo.playerName && 
+                gameInfo.gameId !== 'UNDEFINED' && gameInfo.gameId !== 'undefined') {
                 console.log('🔄 Attempting to rejoin game with saved info:', gameInfo);
                 window.game.showNotification('Attempting to reconnect to your game...', 'info');
                 
