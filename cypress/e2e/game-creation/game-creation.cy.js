@@ -15,15 +15,25 @@ describe('Game Creation and Joining', () => {
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
     
-    // Login with existing test user
+    // Visit the site
     cy.visit('/')
-    cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
-    cy.get('#loginEmailInput').type('testuser@example.com')
-    cy.get('#loginPasswordInput').type('password123')
-    cy.get('#loginSubmitBtn').click()
     
-    // Wait for login to complete and welcome screen to show
-    cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
+    // Check if we're already on the welcome screen (already authenticated)
+    cy.get('body').then($body => {
+      if ($body.find('#welcomeScreen.active').length > 0) {
+        // Already authenticated, proceed
+        cy.log('Already authenticated, proceeding to tests')
+      } else {
+        // Need to login
+        cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
+        cy.get('#loginEmailInput').type('testuser@example.com')
+        cy.get('#loginPasswordInput').type('password123')
+        cy.get('#loginSubmitBtn').click()
+        
+        // Wait for login to complete and welcome screen to show
+        cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
+      }
+    })
   })
   
   it('should create a new game successfully', () => {
@@ -79,8 +89,12 @@ describe('Game Creation and Joining', () => {
       gameId = id
       cy.log(`Created game with ID: ${gameId}`)
       
-      // Now logout and login as second test user
+      // Clear session data and visit as second user
+      cy.clearCookies()
+      cy.clearLocalStorage()
       cy.visit('/')
+      
+      // Login as second test user
       cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
       cy.get('#loginEmailInput').type('testuser2@example.com')
       cy.get('#loginPasswordInput').type('password123')

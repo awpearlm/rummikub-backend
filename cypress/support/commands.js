@@ -63,11 +63,6 @@ Cypress.Commands.add('login', (email = 'testuser@example.com', password = 'testp
   })
 })
 
-// Alias for loginWithCredentials to match the test usage
-Cypress.Commands.add('loginWithCredentials', (email, password) => {
-  cy.login(email, password)
-})
-
 // Custom command to create a test user account (for use in beforeEach)
 Cypress.Commands.add('createTestUser', (email = 'testuser@example.com', password = 'testpass123') => {
   cy.getBackendUrl().then(backendUrl => {
