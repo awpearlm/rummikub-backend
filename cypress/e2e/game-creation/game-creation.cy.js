@@ -1,9 +1,6 @@
 /// <reference types="cypress" />
 
 describe('Game Creation and Joining', () => {
-  // Generate a unique player name for tests
-  const getPlayerName = (prefix = 'Player') => `${prefix}_${Date.now().toString().slice(-5)}`
-  
   beforeEach(() => {
     // Log environment info
     const environment = Cypress.env('environment') || 'local';
@@ -18,14 +15,19 @@ describe('Game Creation and Joining', () => {
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
     
-    // Ensure we have authentication before running tests
-    cy.ensureAuthenticated()
+    // Login with existing test user
+    cy.visit('/')
+    cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
+    cy.get('#loginEmailInput').type('testuser@example.com')
+    cy.get('#loginPasswordInput').type('password123')
+    cy.get('#loginSubmitBtn').click()
+    
+    // Wait for login to complete and welcome screen to show
+    cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
   })
   
   it('should create a new game successfully', () => {
-    const playerName = getPlayerName('Creator')
-    
-    // Click "Play with Friends" button (no playerName field needed with auth)
+    // Click "Play with Friends" button
     cy.get('#playWithFriendsBtn').click()
     
     // Create a new game
@@ -38,15 +40,13 @@ describe('Game Creation and Joining', () => {
     cy.get('#currentGameId').should('be.visible')
     cy.get('#currentGameId').invoke('text').should('match', /^[A-Z0-9]{6}$/)
     
-    // Player should be listed in the players area (using authenticated username)
+    // Player should be listed in the players area
     cy.get('#playersList').should('be.visible')
-    cy.get('#playersList').should('contain', 'TestUser') // This will be the authenticated username
+    cy.get('#playersList').should('contain', 'testuser') // Username from testuser@example.com
   })
   
   it('should start a bot game successfully', () => {
-    const playerName = getPlayerName('BotPlayer')
-    
-    // Click "Play with Bot" button (no playerName field needed with auth)
+    // Click "Play with Bot" button
     cy.get('#playWithBotBtn').click()
     
     // Start the bot game
@@ -60,20 +60,16 @@ describe('Game Creation and Joining', () => {
     
     // Check for players in the player list
     cy.get('#playersList', { timeout: 15000 }).should('be.visible')
-    cy.get('#playersList').should('contain', 'TestUser') // Authenticated username
+    cy.get('#playersList').should('contain', 'testuser') // Username from testuser@example.com
     
     // Bot player should also be listed
     cy.get('#playersList').should('contain', 'Bot')
   })
   
-  // Skip this test for now since it's more complex and may need separate sessions
-  it.skip('should join an existing game with a valid game code', () => {
-    // First create a game and get its ID
-    const hostName = getPlayerName('Host')
+  it('should join an existing game with a valid game code', () => {
     let gameId
     
-    // Create a new game first
-    cy.get('#playerName').clear().type(hostName)
+    // First, create a game with testuser@example.com
     cy.get('#playWithFriendsBtn').click()
     cy.get('#createGameBtn').click()
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
@@ -83,19 +79,18 @@ describe('Game Creation and Joining', () => {
       gameId = id
       cy.log(`Created game with ID: ${gameId}`)
       
-      // Now open a new session and join the game
-      cy.getFrontendUrl().then(url => {
-        cy.visit(url, { failOnStatusCode: false })
-        cy.log(`Visiting frontend URL: ${url} to join game`)
-      })
+      // Now logout and login as second test user
+      cy.visit('/')
+      cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
+      cy.get('#loginEmailInput').type('testuser2@example.com')
+      cy.get('#loginPasswordInput').type('password123')
+      cy.get('#loginSubmitBtn').click()
       
-      const joinerName = getPlayerName('Joiner')
+      // Wait for login to complete
+      cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
       
-      // Fill out joiner's player name
-      cy.get('#playerName').clear().type(joinerName)
+      // Join the game
       cy.get('#playWithFriendsBtn').click()
-      
-      // Click "Join Game" and enter the game ID
       cy.get('#joinGameBtn').click()
       cy.get('#gameId').clear().type(gameId)
       cy.get('#joinGameSubmit').click()
@@ -103,10 +98,10 @@ describe('Game Creation and Joining', () => {
       // Game screen should be visible
       cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
       
-      // Both players should be listed - using the correct selector
+      // Both players should be listed
       cy.get('#playersList', { timeout: 15000 }).should('be.visible')
-      cy.get('#playersList').should('contain', joinerName)
-      cy.get('#playersList').should('contain', hostName)
+      cy.get('#playersList').should('contain', 'testuser2')
+      cy.get('#playersList').should('contain', 'testuser')
     })
   })
 })

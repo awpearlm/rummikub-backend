@@ -36,17 +36,36 @@ Cypress.Commands.add('login', (email = 'testuser@example.com', password = 'testp
     cy.url().then(url => {
       if (url.includes('login.html')) {
         // We're on login page, proceed with login
-        cy.get('#email').type(email)
-        cy.get('#password').type(password)
-        cy.get('#login-button').click()
+        cy.get('#email', { timeout: 10000 }).should('be.visible').clear().type(email)
+        cy.get('#password', { timeout: 10000 }).should('be.visible').clear().type(password)
+        cy.get('#login-button').should('be.visible').click()
+        
+        // Wait for either redirect or error message
+        cy.get('body').then($body => {
+          // Check for error message first
+          if ($body.find('.error-message').length > 0) {
+            cy.get('.error-message').then($error => {
+              if ($error.is(':visible') && $error.text().trim() !== '') {
+                // Login failed, let the test fail with the error message
+                cy.log(`Login failed: ${$error.text()}`)
+                throw new Error(`Login failed: ${$error.text()}`)
+              }
+            })
+          }
+        })
         
         // Wait for redirect back to main page
-        cy.url({ timeout: 15000 }).should('not.include', 'login.html')
+        cy.url({ timeout: 20000 }).should('not.include', 'login.html')
         cy.url().should('include', 'index.html')
       }
       // If not redirected, we're already authenticated
     })
   })
+})
+
+// Alias for loginWithCredentials to match the test usage
+Cypress.Commands.add('loginWithCredentials', (email, password) => {
+  cy.login(email, password)
 })
 
 // Custom command to create a test user account (for use in beforeEach)
@@ -62,6 +81,12 @@ Cypress.Commands.add('createTestUser', (email = 'testuser@example.com', password
         password: password 
       },
       failOnStatusCode: false
+    }).then(response => {
+      cy.log(`User creation response: ${response.status} - ${response.body?.message || 'Success'}`)
+      // Don't fail if user already exists (status 400 with "already exists" message is ok)
+      if (response.status !== 201 && response.status !== 400) {
+        cy.log(`Unexpected status code during user creation: ${response.status}`)
+      }
     })
   })
 })
