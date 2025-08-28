@@ -441,9 +441,6 @@ class RummikubClient {
             // Update remaining time from server
             this.remainingTime = data.remainingTime;
             
-            console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
-            console.log(`⏰ Full timer data:`, data);
-            
             // Update timer display
             this.updateTimerDisplay();
             
@@ -487,6 +484,11 @@ class RummikubClient {
         });
 
         this.socket.on('setPlayed', (data) => {
+            // Store the previous board state before updating for animations
+            if (this.gameState && this.gameState.board) {
+                this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
+            }
+            
             // Store the last played set for detailed game log
             if (data.playedTiles && data.playedTiles.length > 0) {
                 this.lastPlayedSet = data.playedTiles;
@@ -501,6 +503,7 @@ class RummikubClient {
             
             this.gameState = data.gameState;
             this.hasPlayedTilesThisTurn = true; // Mark that tiles have been played this turn
+            this.hasBoardChanged = true; // Mark that the board has been changed to enable End Turn button
             this.updateGameState();
             this.clearSelection();
             this.showNotification('Set played successfully!', 'success');
