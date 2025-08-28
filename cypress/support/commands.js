@@ -26,6 +26,55 @@ Cypress.Commands.add('hasStoredGame', () => {
   })
 })
 
+// Custom command to handle authentication and login
+Cypress.Commands.add('login', (email = 'testuser@example.com', password = 'testpass123') => {
+  cy.getFrontendUrl().then(frontendUrl => {
+    // First try to visit the main page to see if we get redirected
+    cy.visit(frontendUrl, { failOnStatusCode: false })
+    
+    // Check if we're redirected to login page
+    cy.url().then(url => {
+      if (url.includes('login.html')) {
+        // We're on login page, proceed with login
+        cy.get('#email').type(email)
+        cy.get('#password').type(password)
+        cy.get('#login-button').click()
+        
+        // Wait for redirect back to main page
+        cy.url({ timeout: 15000 }).should('not.include', 'login.html')
+        cy.url().should('include', 'index.html')
+      }
+      // If not redirected, we're already authenticated
+    })
+  })
+})
+
+// Custom command to create a test user account (for use in beforeEach)
+Cypress.Commands.add('createTestUser', (email = 'testuser@example.com', password = 'testpass123') => {
+  cy.getBackendUrl().then(backendUrl => {
+    // Try to register the test user (will fail if already exists, that's ok)
+    cy.request({
+      method: 'POST',
+      url: `${backendUrl}/api/auth/register`,
+      body: { 
+        username: 'TestUser',
+        email: email, 
+        password: password 
+      },
+      failOnStatusCode: false
+    })
+  })
+})
+
+// Custom command to ensure authenticated session
+Cypress.Commands.add('ensureAuthenticated', (email = 'testuser@example.com', password = 'testpass123') => {
+  // Create test user first (idempotent)
+  cy.createTestUser(email, password)
+  
+  // Then login
+  cy.login(email, password)
+})
+
 // Custom command to create a new game
 Cypress.Commands.add('createGame', (playerName) => {
   // Visit the frontend URL

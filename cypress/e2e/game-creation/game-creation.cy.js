@@ -18,20 +18,14 @@ describe('Game Creation and Joining', () => {
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
     
-    // Visit the frontend URL
-    cy.getFrontendUrl().then(url => {
-      cy.visit(url, { failOnStatusCode: false })
-      cy.log(`Visiting frontend URL: ${url}`)
-    })
+    // Ensure we have authentication before running tests
+    cy.ensureAuthenticated()
   })
   
   it('should create a new game successfully', () => {
     const playerName = getPlayerName('Creator')
     
-    // Fill out player name
-    cy.get('#playerName').clear().type(playerName)
-    
-    // Click "Play with Friends" button
+    // Click "Play with Friends" button (no playerName field needed with auth)
     cy.get('#playWithFriendsBtn').click()
     
     // Create a new game
@@ -44,17 +38,15 @@ describe('Game Creation and Joining', () => {
     cy.get('#currentGameId').should('be.visible')
     cy.get('#currentGameId').invoke('text').should('match', /^[A-Z0-9]{6}$/)
     
-    // Player should be listed in the players area - but using the right selector
-    cy.get('#playersList').should('contain', playerName)
+    // Player should be listed in the players area (using authenticated username)
+    cy.get('#playersList').should('be.visible')
+    cy.get('#playersList').should('contain', 'TestUser') // This will be the authenticated username
   })
   
   it('should start a bot game successfully', () => {
     const playerName = getPlayerName('BotPlayer')
     
-    // Fill out player name
-    cy.get('#playerName').clear().type(playerName)
-    
-    // Click "Play with Bot" button
+    // Click "Play with Bot" button (no playerName field needed with auth)
     cy.get('#playWithBotBtn').click()
     
     // Start the bot game
@@ -66,9 +58,9 @@ describe('Game Creation and Joining', () => {
     // Game should be started and player hand should be visible
     cy.get('#playerHand .tile', { timeout: 20000 }).should('have.length.at.least', 1)
     
-    // Check for players in the player list - but using the right selector
+    // Check for players in the player list
     cy.get('#playersList', { timeout: 15000 }).should('be.visible')
-    cy.get('#playersList').should('contain', playerName)
+    cy.get('#playersList').should('contain', 'TestUser') // Authenticated username
     
     // Bot player should also be listed
     cy.get('#playersList').should('contain', 'Bot')
