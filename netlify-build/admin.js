@@ -10,10 +10,7 @@ class AdminDashboard {
         this.backendUrl = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
             : 'https://rummikub-backend.onrender.com';
-     cancelInvitation(invitationId, email) {
-        this.currentDeleteTarget = { type: 'invitation', id: invitationId };
-        this.showDeleteModal(`Are you sure you want to delete the invitation to "${email}"? This action cannot be undone.`);
-    }   
+        
         this.currentDeleteTarget = null;
         
         // Initialize Socket.IO connection for online status tracking
