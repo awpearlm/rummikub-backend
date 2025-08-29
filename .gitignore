@@ -6,3 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 dist/
+
+# Local analysis files
+STABLE_BUILD_ANALYSIS.md
