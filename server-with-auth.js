@@ -50,6 +50,7 @@ const allowedOrigins = [
   'http://localhost:5000', 
   'http://127.0.0.1:3000',
   'https://jkube.netlify.app',
+  'https://debug-drag-drop-work--jkube.netlify.app',
   'https://feature-user-authentication--jkube.netlify.app'
 ];
 
