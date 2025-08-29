@@ -3093,6 +3093,14 @@ class RummikubClient {
         // Get current player status
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+        
+        console.log('🔍 DEBUG: Drag and drop debug info:', {
+            currentPlayerId: this.socket.id,
+            currentPlayer: currentPlayer,
+            hasPlayedInitial: currentPlayer?.hasPlayedInitial,
+            needsInitialPlay: needsInitialPlay,
+            dragType: dragData.type
+        });
 
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
@@ -3101,10 +3109,12 @@ class RummikubClient {
         if (dragData.type === 'hand-tile') {
             // Only prevent single tile drops from hand to board if player needs initial play
             if (needsInitialPlay) {
+                console.log('❌ DEBUG: Blocking drag because player needs initial play');
                 this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
                 return;
             }
             
+            console.log('✅ DEBUG: Allowing drag because player has completed initial play');
             console.log('🎯 Table manipulation: Adding single tile to board');
             // Allow single tiles to create new sets or be added to existing sets
             if (targetSetIndex === -1) {
