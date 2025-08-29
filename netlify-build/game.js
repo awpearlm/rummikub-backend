@@ -3162,6 +3162,8 @@ class RummikubClient {
         // Get current player status
         const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
         const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
+        
+        console.log(`🎯 Debug: needsInitialPlay=${needsInitialPlay}, hasPlayedInitial=${currentPlayer?.hasPlayedInitial}, board.length=${this.gameState.board.length}`);
 
         // Create a copy of the current board for manipulation
         let newBoard = JSON.parse(JSON.stringify(this.gameState.board));
