@@ -1,0 +1,2 @@
+Force deployment rebuild - timestamp: 2024-12-19 17:30:00
+This file is used to trigger a new deployment when Netlify isn't picking up changes properly.
