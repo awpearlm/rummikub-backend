@@ -15,33 +15,38 @@ describe('Game Creation and Joining', () => {
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
     
-    // Visit the site
+    // Clear all state first
+    cy.clearCookies()
+    cy.clearLocalStorage()
+    
+    // Visit the site - this will redirect to login.html if not authenticated
     cy.visit('/')
     
-    // Check if we're already on the welcome screen (already authenticated)
-    cy.get('body').then($body => {
-      if ($body.find('#welcomeScreen.active').length > 0) {
-        // Already authenticated, proceed
-        cy.log('Already authenticated, proceeding to tests')
-      } else {
-        // Need to login
-        cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
-        cy.get('#loginEmailInput').type('testuser@example.com')
-        cy.get('#loginPasswordInput').type('password123')
-        cy.get('#loginSubmitBtn').click()
-        
-        // Wait for login to complete and welcome screen to show
-        cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
-      }
-    })
+    // Wait for redirect to login page and login
+    cy.url({ timeout: 10000 }).should('include', 'login.html')
+    
+    // Use the correct selectors from login.html
+    cy.get('#email', { timeout: 10000 }).should('be.visible')
+    cy.get('#email').type('testuser@example.com')
+    cy.get('#password').type('password123')
+    cy.get('#login-button').click()
+    
+    // Wait for redirect back to index.html and welcome screen
+    cy.url({ timeout: 15000 }).should('include', 'index.html')
+    cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
   })
   
   it('should create a new game successfully', () => {
-    // Click "Play with Friends" button
-    cy.get('#playWithFriendsBtn').click()
+    // Click "Play with Friends" to show multiplayer options
+    cy.get('#playWithFriendsBtn').should('be.visible').click()
+    cy.get('#multiplayerOptions').should('not.have.class', 'hidden')
     
     // Create a new game
     cy.get('#createGameBtn').click()
+    
+    // Wait for settings modal to appear and click create
+    cy.get('#gameSettingsModal', { timeout: 5000 }).should('be.visible')
+    cy.get('#createGameWithSettingsBtn').should('be.visible').click()
     
     // Game screen should be visible
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
@@ -58,6 +63,7 @@ describe('Game Creation and Joining', () => {
   it('should start a bot game successfully', () => {
     // Click "Play with Bot" button
     cy.get('#playWithBotBtn').click()
+    cy.get('#botGameOptions').should('not.have.class', 'hidden')
     
     // Start the bot game
     cy.get('#startBotGameBtn').click()
@@ -81,7 +87,12 @@ describe('Game Creation and Joining', () => {
     
     // First, create a game with testuser@example.com
     cy.get('#playWithFriendsBtn').click()
+    cy.get('#multiplayerOptions').should('not.have.class', 'hidden')
     cy.get('#createGameBtn').click()
+    
+    // Wait for settings modal and create game
+    cy.get('#gameSettingsModal', { timeout: 5000 }).should('be.visible')
+    cy.get('#createGameWithSettingsBtn').should('be.visible').click()
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
     
     // Get the game ID
@@ -94,17 +105,22 @@ describe('Game Creation and Joining', () => {
       cy.clearLocalStorage()
       cy.visit('/')
       
-      // Login as second test user
-      cy.get('#loginEmailInput', { timeout: 10000 }).should('be.visible')
-      cy.get('#loginEmailInput').type('testuser2@example.com')
-      cy.get('#loginPasswordInput').type('password123')
-      cy.get('#loginSubmitBtn').click()
+      // Wait for redirect to login page
+      cy.url({ timeout: 10000 }).should('include', 'login.html')
+      
+      // Login as second test user with correct selectors
+      cy.get('#email', { timeout: 10000 }).should('be.visible')
+      cy.get('#email').type('testuser2@example.com')
+      cy.get('#password').type('password123')
+      cy.get('#login-button').click()
       
       // Wait for login to complete
+      cy.url({ timeout: 15000 }).should('include', 'index.html')
       cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
       
       // Join the game
       cy.get('#playWithFriendsBtn').click()
+      cy.get('#multiplayerOptions').should('not.have.class', 'hidden')
       cy.get('#joinGameBtn').click()
       cy.get('#gameId').clear().type(gameId)
       cy.get('#joinGameSubmit').click()

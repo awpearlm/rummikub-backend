@@ -67,6 +67,8 @@ const players = new Map();
 // Rummikub game logic
 class RummikubGame {
   constructor(gameId, isBotGame = false, botDifficulty = 'medium') {
+    console.log(`🔧 DEBUG: RummikubGame constructor - gameId: ${gameId}, isBotGame: ${isBotGame}, botDifficulty: "${botDifficulty}"`);
+    
     this.id = gameId;
     this.players = [];
     this.currentPlayerIndex = 0;
@@ -226,6 +228,7 @@ class RummikubGame {
     console.log(`🔧 Debug player found:`, debugPlayer ? debugPlayer.name : "NONE");
     
     // Deal tiles based on bot difficulty or debug player
+    console.log(`🔧 DEBUG: About to check debug conditions - isBotGame: ${this.isBotGame}, botDifficulty: "${this.botDifficulty}"`);
     if (this.isBotGame && this.botDifficulty === 'debug') {
       console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
       // Debug mode: Give human player a preset hand for testing
@@ -1799,6 +1802,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('createBotGame', (data) => {
+      console.log(`🔧 DEBUG: createBotGame received data:`, data);
+      console.log(`🔧 DEBUG: data.difficulty = "${data.difficulty}"`);
+      
       const gameId = generateGameId();
       const botCount = data.botCount || 1; // Default to 1 bot if not specified
       const game = new RummikubGame(gameId, true, data.difficulty);

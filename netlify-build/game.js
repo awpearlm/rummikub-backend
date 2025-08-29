@@ -2932,15 +2932,10 @@ class RummikubClient {
                     const dragData = JSON.parse(dragDataString);
                     const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
                     const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    const hasBoardTiles = this.gameState.board && this.gameState.board.length > 0;
                     
-                    // Allow drag if player has played initial OR if there are tiles on board
-                    if (dragData.type === 'hand-tile' && needsInitialPlay && !hasBoardTiles) {
-                        console.log('🚫 [SET ELEMENT] Blocking hand tile drag - needs initial play and no board tiles');
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
                         setElement.classList.add('drag-rejected');
                         return;
-                    } else {
-                        console.log('✅ [SET ELEMENT] Allowing hand tile drag - hasPlayedInitial:', !needsInitialPlay, 'hasBoardTiles:', hasBoardTiles);
                     }
                 }
             } catch (error) {
@@ -2998,15 +2993,10 @@ class RummikubClient {
                     const dragData = JSON.parse(dragDataString);
                     const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
                     const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    const hasBoardTiles = this.gameState.board && this.gameState.board.length > 0;
                     
-                    // Allow drag if player has played initial OR if there are tiles on board
-                    if (dragData.type === 'hand-tile' && needsInitialPlay && !hasBoardTiles) {
-                        console.log('🚫 [BOARD SET DROP] Blocking hand tile drag - needs initial play and no board tiles');
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
                         newSetZone.classList.add('drag-rejected');
                         return;
-                    } else {
-                        console.log('✅ [BOARD SET DROP] Allowing hand tile drag - hasPlayedInitial:', !needsInitialPlay, 'hasBoardTiles:', hasBoardTiles);
                     }
                 }
             } catch (error) {
@@ -3057,15 +3047,10 @@ class RummikubClient {
                     const dragData = JSON.parse(dragDataString);
                     const currentPlayer = this.gameState.players.find(p => p.id === this.socket.id);
                     const needsInitialPlay = currentPlayer && !currentPlayer.hasPlayedInitial;
-                    const hasBoardTiles = this.gameState.board && this.gameState.board.length > 0;
                     
-                    // Allow drag if player has played initial OR if there are tiles on board (indicating game has progressed)
-                    if (dragData.type === 'hand-tile' && needsInitialPlay && !hasBoardTiles) {
-                        console.log('🚫 [NEW SET DROP] Blocking hand tile drag - needs initial play and no board tiles');
+                    if (dragData.type === 'hand-tile' && needsInitialPlay) {
                         placeholderElement.classList.add('drag-rejected');
                         return;
-                    } else {
-                        console.log('✅ [NEW SET DROP] Allowing hand tile drag - hasPlayedInitial:', !needsInitialPlay, 'hasBoardTiles:', hasBoardTiles);
                     }
                 }
             } catch (error) {
@@ -3122,19 +3107,16 @@ class RummikubClient {
         let tilesFromHand = [];  // Track tiles moved from hand to board
 
         if (dragData.type === 'hand-tile') {
-            // Only prevent single tile drops from hand to board if player needs initial play AND the board is empty
-            if (needsInitialPlay && this.gameState.board.length === 0) {
-                console.log('❌ DEBUG: Blocking drag because player needs initial play and board is empty');
+            // Only prevent single tile drops from hand to board if player needs initial play
+            if (needsInitialPlay) {
                 this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
                 return;
             }
             
-            console.log('✅ DEBUG: Allowing drag because player has completed initial play');
             console.log('🎯 Table manipulation: Adding single tile to board');
-            // Allow single tiles to create new sets or be added to existing sets
+            // Tile from hand - add to existing set or create new set
             if (targetSetIndex === -1) {
-                // Create new set with single tile - this is allowed in Rummikub
-                console.log('🎯 Creating new set with single tile');
+                // Create new set
                 newBoard.push([dragData.tile]);
             } else {
                 // Add to existing set - but intelligently position the tile

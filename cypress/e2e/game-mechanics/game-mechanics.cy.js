@@ -1,9 +1,6 @@
 /// <reference types="cypress" />
 
 describe('Game Mechanics', () => {
-  // Generate a unique player name for tests
-  const getPlayerName = (prefix = 'Player') => `${prefix}_${Date.now().toString().slice(-5)}`
-  
   beforeEach(() => {
     // Log environment info
     const environment = Cypress.env('environment') || 'local';
@@ -17,19 +14,32 @@ describe('Game Mechanics', () => {
     cy.log(`Testing Environment: ${environment}`);
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
+    
+    // Clear all state first
+    cy.clearCookies()
+    cy.clearLocalStorage()
+    
+    // Visit the site - this will redirect to login.html if not authenticated
+    cy.visit('/')
+    
+    // Wait for redirect to login page and login
+    cy.url({ timeout: 10000 }).should('include', 'login.html')
+    
+    // Use the correct selectors from login.html
+    cy.get('#email', { timeout: 10000 }).should('be.visible')
+    cy.get('#email').type('testuser@example.com')
+    cy.get('#password').type('password123')
+    cy.get('#login-button').click()
+    
+    // Wait for redirect back to index.html and welcome screen
+    cy.url({ timeout: 15000 }).should('include', 'index.html')
+    cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
   })
   
   it('should deal tiles correctly at game start', () => {
-    const playerName = getPlayerName('TileTest')
-    
-    // Visit the frontend URL
-    cy.getFrontendUrl().then(url => {
-      cy.visit(url, { failOnStatusCode: false })
-    })
-    
     // Start a bot game to test tile dealing
-    cy.get('#playerName').clear().type(playerName)
     cy.get('#playWithBotBtn').click()
+    cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
     // Game screen should be visible
@@ -43,16 +53,9 @@ describe('Game Mechanics', () => {
   })
   
   it('should allow drawing a tile from the pool', () => {
-    const playerName = getPlayerName('DrawTest')
-    
-    // Visit the frontend URL
-    cy.getFrontendUrl().then(url => {
-      cy.visit(url, { failOnStatusCode: false })
-    })
-    
     // Start a bot game to test drawing tiles
-    cy.get('#playerName').clear().type(playerName)
     cy.get('#playWithBotBtn').click()
+    cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
     // Game screen should be visible
@@ -69,16 +72,9 @@ describe('Game Mechanics', () => {
   })
   
   it('should show whose turn it is correctly', () => {
-    const playerName = getPlayerName('TurnTest')
-    
-    // Visit the frontend URL
-    cy.getFrontendUrl().then(url => {
-      cy.visit(url, { failOnStatusCode: false })
-    })
-    
     // Start a bot game to test turn management
-    cy.get('#playerName').clear().type(playerName)
     cy.get('#playWithBotBtn').click()
+    cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
     // Game screen should be visible

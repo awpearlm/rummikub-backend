@@ -1,9 +1,6 @@
 /// <reference types="cypress" />
 
 describe('Game Logic Integration Tests', () => {
-  // Generate a unique player name for tests
-  const getPlayerName = (prefix = 'Player') => `${prefix}_${Date.now().toString().slice(-5)}`
-  
   beforeEach(() => {
     // Log environment info
     const environment = Cypress.env('environment') || 'local';
@@ -18,15 +15,29 @@ describe('Game Logic Integration Tests', () => {
     cy.log(`Frontend URL: ${frontendUrl}`);
     cy.log(`Backend URL: ${backendUrl}`);
     
-    // Visit the frontend URL
-    cy.getFrontendUrl().then(url => {
-      cy.visit(url, { failOnStatusCode: false })
-    })
+    // Clear all state first
+    cy.clearCookies()
+    cy.clearLocalStorage()
+    
+    // Visit the site - this will redirect to login.html if not authenticated
+    cy.visit('/')
+    
+    // Wait for redirect to login page and login
+    cy.url({ timeout: 10000 }).should('include', 'login.html')
+    
+    // Use the correct selectors from login.html
+    cy.get('#email', { timeout: 10000 }).should('be.visible')
+    cy.get('#email').type('testuser@example.com')
+    cy.get('#password').type('password123')
+    cy.get('#login-button').click()
+    
+    // Wait for redirect back to index.html and welcome screen
+    cy.url({ timeout: 15000 }).should('include', 'index.html')
+    cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
     
     // Start a bot game for all tests
-    const playerName = getPlayerName('IntegTest')
-    cy.get('#playerName').clear().type(playerName)
     cy.get('#playWithBotBtn').click()
+    cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
     // Game screen should be visible
