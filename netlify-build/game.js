@@ -1660,6 +1660,9 @@ class RummikubClient {
         document.getElementById('gameScreen').classList.add('active');
         console.log('📺 Game screen should now be visible');
         
+        // Setup hand drop zone (only once)
+        this.setupHandDropZone();
+        
         // Clear any existing games refresh interval when starting a game
         if (this.gamesRefreshInterval) {
             clearInterval(this.gamesRefreshInterval);
@@ -2091,7 +2094,7 @@ class RummikubClient {
                     tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
                     
                     // Add drag and drop functionality
-                    this.addDragAndDropToTile(tileElement, tile, i);
+                    this.addDragAndDropToTile(tileElement, tile, this.isMyTurn());
                     
                     // Calculate grid position
                     const row = Math.floor(i / tilesPerRow) + 1;
@@ -2173,61 +2176,38 @@ class RummikubClient {
         this.gameState.playerHand = this.tileGridLayout.filter(tile => tile !== null);
     }
 
-    addDragAndDropToTile(tileElement, tile, index) {
+    addDragAndDropToTile(tileElement, tile, isDraggable = true) {
+        if (!isDraggable) return;
+        
         tileElement.draggable = true;
-        tileElement.dataset.tileIndex = index;
         
         tileElement.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', index);
-            e.dataTransfer.setData('application/tile-id', tile.id);
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'hand-tile',
-                tile: tile,
-                sourceIndex: index
+                tile: tile
             }));
             tileElement.classList.add('dragging');
             
             // Play tile pickup sound when starting to drag
             this.playSound('pickupTile');
-            
-            // Store the original index for reordering
-            this.draggedTileIndex = index;
         });
         
         tileElement.addEventListener('dragend', (e) => {
             tileElement.classList.remove('dragging');
-            this.clearDropIndicators();
             
             // Play placement sound on drop if not handled elsewhere
-            // (This ensures sound plays even if drop isn't on a valid target)
             if (!e.dataTransfer.dropEffect || e.dataTransfer.dropEffect === 'none') {
                 this.playSound('placeTile');
             }
         });
-        
-        tileElement.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            tileElement.style.backgroundColor = 'rgba(102, 126, 234, 0.2)';
-        });
-        
-        tileElement.addEventListener('dragleave', (e) => {
-            tileElement.style.backgroundColor = '';
-        });
-        
-        tileElement.addEventListener('drop', (e) => {
-            e.preventDefault();
-            tileElement.style.backgroundColor = '';
-            
-            const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            const targetIndex = parseInt(e.target.closest('.tile').dataset.tileIndex);
-            
-            if (draggedIndex !== targetIndex) {
-                this.reorderTiles(draggedIndex, targetIndex);
-            }
-        });
-        
-        // Add drop functionality to the hand container
+    }
+
+    setupHandDropZone() {
         const handElement = document.getElementById('playerHand');
+        if (!handElement || handElement.dataset.dropZoneSetup) return; // Prevent duplicate setup
+        
+        handElement.dataset.dropZoneSetup = 'true';
+        
         handElement.addEventListener('dragover', (e) => {
             e.preventDefault();
             handElement.classList.add('drag-over');
@@ -2249,12 +2229,12 @@ class RummikubClient {
                 
                 if (dragData.type === 'board-tile') {
                     this.handleBoardTileToHand(dragData);
-                    // Note: handleBoardTileToHand already plays the pickupTile sound
                 }
             } catch (error) {
                 console.log('No drag data or non-board tile dropped on hand');
             }
-        });    }
+        });
+    }
 
     addDropFunctionalityToSlot(slotElement, slotIndex) {
         slotElement.addEventListener('dragover', (e) => {
