@@ -2448,6 +2448,21 @@ app.get('/api/games', (req, res) => {
   res.json({ games: availableGames });
 });
 
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
+});
+
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    activeGames: games.size,
+    activePlayers: players.size
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🎮 Rummikub game server running on port ${PORT}`);
