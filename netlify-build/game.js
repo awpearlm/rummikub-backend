@@ -6,6 +6,49 @@ class RummikubClient {
             : 'https://rummikub-backend.onrender.com'; // Your deployed backend URL
         
         console.log('🌐 Connecting to:', backendUrl);
+        
+        // Check if user is authenticated
+        this.token = localStorage.getItem('auth_token');
+        this.username = localStorage.getItem('username');
+        this.isAdmin = localStorage.getItem('is_admin') === 'true';
+        
+        // If not authenticated, redirect to login
+        if (!this.token || !this.username) {
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Display the username in the profile bubble
+        const profileUsername = document.getElementById('profileUsername');
+        if (profileUsername) {
+            profileUsername.textContent = this.username;
+        }
+        
+        // Set the profile avatar initial (first letter of username)
+        const profileAvatar = document.getElementById('profileInitial');
+        if (profileAvatar) {
+            profileAvatar.textContent = this.username.charAt(0).toUpperCase();
+        }
+        
+        // Set up logout button
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.logout());
+        }
+        
+        // Set up admin button (only for admins)
+        const adminButton = document.getElementById('adminButton');
+        if (adminButton) {
+            if (this.isAdmin) {
+                adminButton.style.display = 'block';
+                adminButton.addEventListener('click', () => {
+                    window.open('/admin.html', '_blank');
+                });
+            } else {
+                adminButton.style.display = 'none';
+            }
+        }
+        
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
@@ -13,7 +56,8 @@ class RummikubClient {
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+            transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+            auth: this.token ? { token: this.token } : {}
         });
         
         // Add connection debugging
@@ -127,7 +171,57 @@ class RummikubClient {
         this.initializeSocketListeners();
     }
 
+    // Check if user is authenticated and update UI accordingly
+    checkAuthenticationStatus() {
+        const loggedInStatus = document.getElementById('loggedInStatus');
+        const playerNameInput = document.getElementById('playerName');
+        
+        if (this.token && this.username) {
+            // User is authenticated
+            if (loggedInStatus) {
+                loggedInStatus.style.display = 'block';
+                loggedInStatus.innerHTML = `<i class="fas fa-user-check"></i> Logged in as: <strong>${this.username}</strong>`;
+            }
+            if (playerNameInput) {
+                playerNameInput.style.display = 'none';
+            }
+        } else {
+            // User is not authenticated, redirect to login
+            window.location.href = '/login.html';
+        }
+    }
+    
+    // Logout the user
+    logout() {
+        // Clear any active reconnection timer
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
+        }
+        
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('is_admin');
+        
+        // Reset client properties
+        this.token = null;
+        this.username = null;
+        
+        // Show a notification
+        this.showNotification('You have been logged out', 'info');
+        
+        // Redirect to login page
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 1000);
+    }
+    
     initializeEventListeners() {
+        // Check authentication status on page load
+        this.checkAuthenticationStatus();
         // Game mode selection
         addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
         addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
@@ -684,11 +778,12 @@ class RummikubClient {
 
     startBotGame() {
         console.log('🎯 startBotGame() called');
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use authenticated username instead of form input
+        const playerName = this.username;
         console.log('👤 Player name:', playerName);
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in to play', 'error');
             return;
         }
         
@@ -727,11 +822,12 @@ class RummikubClient {
     }
 
     joinGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use the authenticated username
+        const playerName = this.username;
         const gameId = document.getElementById('gameId').value.trim().toUpperCase();
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in to play', 'error');
             return;
         }
         
@@ -3899,3 +3995,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.game.showNotification(`You have a saved game (${savedGameInfo.gameId}). You can rejoin it from the connection panel if disconnected.`, 'info', 8000);
     }
 });
+
+// Check if the user is authenticated and update UI accordingly
+RummikubClient.prototype.checkAuthenticationStatus = function() {
+    // Check for authentication token in localStorage
+    const token = localStorage.getItem('auth_token');
+    const username = localStorage.getItem('username');
+    
+    console.log('🔐 Checking authentication status:', token ? 'Token found' : 'No token');
+    
+    if (token && username) {
+        return true;
+    }
+    
+    return false;
+};
