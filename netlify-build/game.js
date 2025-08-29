@@ -3709,7 +3709,13 @@ class RummikubClient {
         leaderboardList.innerHTML = '';
         
         if (data.length === 0) {
-            leaderboardList.innerHTML = '<div class="leaderboard-empty">No players yet</div>';
+            leaderboardList.innerHTML = `
+                <div class="leaderboard-placeholder">
+                    <i class="fas fa-users"></i>
+                    <p>No players on the leaderboard yet</p>
+                    <p>Be the first to complete a game!</p>
+                </div>
+            `;
         } else {
             // Display top players
             data.slice(0, 10).forEach((player, index) => {

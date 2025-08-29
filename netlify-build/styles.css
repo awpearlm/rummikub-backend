@@ -594,6 +594,28 @@ body {
     color: #CD7F32;
 }
 
+.leaderboard-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.leaderboard-placeholder i {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    opacity: 0.6;
+}
+
+.leaderboard-placeholder p {
+    margin: 0;
+    font-style: italic;
+    opacity: 0.8;
+}
+
 /* Game Rules */
 .game-rules {
     margin-top: 30px;
