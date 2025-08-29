@@ -364,11 +364,20 @@ class RummikubGame {
   startGame() {
     if (this.players.length < 2) return false;
     
-    // Deal 14 tiles to each player
-    for (const player of this.players) {
-      for (let i = 0; i < 14; i++) {
-        if (this.deck.length > 0) {
-          player.hand.push(this.deck.pop());
+    // Deal tiles based on bot difficulty or debug player
+    console.log(`🔧 DEBUG: About to check debug conditions - isBotGame: ${this.isBotGame}, botDifficulty: "${this.botDifficulty}"`);
+    if (this.isBotGame && this.botDifficulty === 'debug') {
+      console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
+      // Debug mode: Give human player a preset hand for testing
+      this.dealDebugHand();
+    } else {
+      console.log(`🎲 Normal mode: dealing random tiles`);
+      // Normal mode: Deal 14 tiles to each player
+      for (const player of this.players) {
+        for (let i = 0; i < 14; i++) {
+          if (this.deck.length > 0) {
+            player.hand.push(this.deck.pop());
+          }
         }
       }
     }
@@ -386,6 +395,76 @@ class RummikubGame {
     
     console.log(`✅ Game ${this.id} started successfully`);
     return true;
+  }
+
+  dealDebugHand() {
+    console.log(`🔧 dealDebugHand called! Looking for players...`);
+    
+    // Find human player (non-bot)
+    const humanPlayer = this.players.find(p => !p.isBot);
+    const botPlayer = this.players.find(p => p.isBot);
+    
+    console.log(`🔧 Found players - Human: ${humanPlayer?.name}, Bot: ${botPlayer?.name}`);
+    
+    if (!humanPlayer || !botPlayer) {
+      console.log(`🔧 ERROR: Missing players! Human: ${!!humanPlayer}, Bot: ${!!botPlayer}`);
+      return;
+    }
+    
+    // Create debug hand that can go out completely (win immediately) with a joker
+    const debugTiles = [
+      // First set: Three 13s in different colors (39 points - satisfies initial play requirement)
+      { id: 'red_13_0', color: 'red', number: 13, isJoker: false },
+      { id: 'blue_13_0', color: 'blue', number: 13, isJoker: false },
+      { id: 'yellow_13_0', color: 'yellow', number: 13, isJoker: false },
+      
+      // Second set: Run in red (1-2-3)
+      { id: 'red_1_0', color: 'red', number: 1, isJoker: false },
+      { id: 'red_2_0', color: 'red', number: 2, isJoker: false },
+      { id: 'red_3_0', color: 'red', number: 3, isJoker: false },
+      
+      // Third set: Run in blue (4-5-6)
+      { id: 'blue_4_0', color: 'blue', number: 4, isJoker: false },
+      { id: 'blue_5_0', color: 'blue', number: 5, isJoker: false },
+      { id: 'blue_6_0', color: 'blue', number: 6, isJoker: false },
+      
+      // Fourth set: Three 7s in different colors
+      { id: 'red_7_0', color: 'red', number: 7, isJoker: false },
+      { id: 'blue_7_0', color: 'blue', number: 7, isJoker: false },
+      { id: 'yellow_7_0', color: 'yellow', number: 7, isJoker: false },
+      
+      // Fifth set: Two 10s + joker (can represent any 10)
+      { id: 'red_10_0', color: 'red', number: 10, isJoker: false },
+      { id: 'blue_10_0', color: 'blue', number: 10, isJoker: false },
+    ];
+    
+    console.log(`🔧 Created debug tiles: ${debugTiles.length} tiles`);
+    
+    // Remove these specific tiles from deck to avoid duplicates
+    debugTiles.forEach(debugTile => {
+      const index = this.deck.findIndex(tile => tile.id === debugTile.id);
+      if (index !== -1) {
+        this.deck.splice(index, 1);
+        console.log(`🔧 Removed ${debugTile.id} from deck`);
+      }
+    });
+    
+    // Give debug tiles to human player (exactly 14 tiles for perfect win)
+    humanPlayer.hand = [...debugTiles];
+    console.log(`🔧 Gave debug tiles to ${humanPlayer.name}: ${humanPlayer.hand.length} tiles`);
+    
+    console.log(`🔧 Final human hand size: ${humanPlayer.hand.length}`);
+    console.log(`🔧 Human hand sets: 3×13s (${debugTiles.slice(0,3).map(t => t.color).join(', ')}), red 1-2-3, blue 4-5-6, 3×7s, 2×10s`);
+    
+    // Give bot normal random hand
+    for (let i = 0; i < 14; i++) {
+      if (this.deck.length > 0) {
+        botPlayer.hand.push(this.deck.pop());
+      }
+    }
+    
+    console.log(`🔧 Bot ${botPlayer.name} hand size: ${botPlayer.hand.length}`);
+    console.log(`🔧 Deck remaining: ${this.deck.length} tiles`);
   }
 
   // Start the turn timer on the server
