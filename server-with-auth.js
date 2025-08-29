@@ -612,6 +612,105 @@ class RummikubGame {
     return isGroup;
   }
 
+  calculateSetValue(tiles) {
+    let totalValue = 0;
+    // Use enhanced joker detection for consistency
+    const nonJokerTiles = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+    const jokerCount = tiles.length - nonJokerTiles.length;
+    
+    // Enhanced logging for debugging
+    console.log(`calculateSetValue called with ${tiles.length} tiles (${jokerCount} jokers)`);
+    const tileDetails = tiles.map(t => {
+      if (t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))) 
+        return "JOKER";
+      return `${t.color}-${t.number}`;
+    }).join(", ");
+    console.log(`Tiles: [${tileDetails}]`);
+    
+    if (this.isValidGroup(tiles)) {
+      // Group: same number, different colors
+      if (nonJokerTiles.length > 0) {
+        const groupNumber = nonJokerTiles[0].number;
+        // All tiles (including jokers) are worth the group number
+        totalValue = groupNumber * tiles.length;
+        console.log(`Group value calculation: ${groupNumber} points × ${tiles.length} tiles = ${totalValue} points`);
+        console.log(`Group breakdown: ${nonJokerTiles.length} regular tiles (${groupNumber} each) + ${jokerCount} jokers (${groupNumber} each)`);
+      } else if (jokerCount > 0) {
+        // Edge case: all jokers in a group (shouldn't happen in normal play)
+        // Assign a default value (this matches client behavior)
+        totalValue = 13 * tiles.length; // Maximum possible value
+        console.log(`All-joker group value calculation: 13 × ${tiles.length} = ${totalValue}`);
+      }
+    } else if (this.isValidRun(tiles)) {
+      // Run: consecutive numbers, same color
+      // Need to determine what number each joker represents
+      totalValue = this.calculateRunValueWithJokers(tiles);
+      console.log(`Run value calculation: ${totalValue} points`);
+    } else {
+      console.log(`Set is neither a valid group nor run - no value calculated`);
+    }
+    
+    // Final value check for initial play requirement
+    console.log(`Final set value: ${totalValue} points ${totalValue >= 30 ? '(meets 30-point requirement)' : '(below 30-point requirement)'}`);
+    return totalValue;
+  }
+
+  calculateRunValueWithJokers(tiles) {
+    // Use enhanced joker detection for consistency
+    const nonJokers = tiles.filter(t => !(t.isJoker || t.number === null || (t.id && t.id.toLowerCase().includes('joker'))));
+    const jokerCount = tiles.length - nonJokers.length;
+    
+    // Enhanced logging for run calculation
+    console.log(`calculateRunValueWithJokers called with ${tiles.length} tiles (${jokerCount} jokers)`);
+    const nonJokerDetails = nonJokers.map(t => `${t.color}-${t.number}`).join(", ");
+    console.log(`Non-joker tiles: [${nonJokerDetails}]`);
+    
+    if (nonJokers.length === 0) {
+      // All jokers case
+      console.log(`All jokers in run - assigning consecutive values starting from 1`);
+      let value = 0;
+      for (let i = 1; i <= tiles.length; i++) {
+        value += i;
+      }
+      console.log(`All-joker run total: ${value} points`);
+      return value;
+    }
+    
+    // Sort non-jokers by number to determine the sequence
+    nonJokers.sort((a, b) => a.number - b.number);
+    
+    // Determine the complete sequence including jokers
+    const minNumber = nonJokers[0].number;
+    const maxNumber = nonJokers[nonJokers.length - 1].number;
+    const sequenceLength = tiles.length;
+    
+    // Calculate if jokers fill gaps or extend the sequence
+    const knownRange = maxNumber - minNumber + 1;
+    const missingInRange = knownRange - nonJokers.length;
+    
+    let sequenceStart;
+    if (missingInRange === jokerCount) {
+      // Jokers fill gaps in the known range
+      sequenceStart = minNumber;
+      console.log(`Jokers fill gaps in range ${minNumber}-${maxNumber}`);
+    } else {
+      // Some jokers extend the sequence
+      // We need to determine the optimal placement
+      // For value calculation, place jokers to minimize total value (conservative approach)
+      sequenceStart = Math.max(1, minNumber - Math.floor((jokerCount - missingInRange) / 2));
+      console.log(`Jokers extend sequence, starting from ${sequenceStart}`);
+    }
+    
+    // Calculate total value for the complete sequence
+    let total = 0;
+    for (let i = 0; i < sequenceLength; i++) {
+      total += sequenceStart + i;
+    }
+    
+    console.log(`Run sequence ${sequenceStart} to ${sequenceStart + sequenceLength - 1}: total value = ${total}`);
+    return total;
+  }
+
   isValidRun(tiles) {
     if (tiles.length < 3) return false;
     
@@ -840,6 +939,22 @@ class RummikubGame {
     
     if (!this.isValidSet(tiles)) {
       return false;
+    }
+
+    // Check initial play requirement (30+ points for first play)
+    if (!player.hasPlayedInitial) {
+      const setValue = this.calculateSetValue(tiles);
+      console.log(`==========================================`);
+      console.log(`Initial play validation:`);
+      console.log(`Set value: ${setValue} points`);
+      console.log(`Required points: 30+`);
+      console.log(`Meets requirement: ${setValue >= 30 ? 'YES' : 'NO'}`);
+      console.log(`==========================================`);
+      
+      if (setValue < 30) {
+        console.log(`Initial play rejected: insufficient points (${setValue})`);
+        return false;
+      }
     }
     
     // Remove tiles from player's hand
