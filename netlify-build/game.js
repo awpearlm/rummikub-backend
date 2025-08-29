@@ -1542,6 +1542,9 @@ class RummikubClient {
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
+        
+        // Load leaderboard when showing welcome screen
+        this.loadLeaderboard();
     }
 
     showGameScreen() {
@@ -3649,8 +3652,6 @@ class RummikubClient {
             case 'connected':
                 statusElement.classList.add('connected');
                 statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <span>Connected</span>';
-                // Load leaderboard once connected
-                this.loadLeaderboard();
                 break;
             case 'connecting':
                 statusElement.classList.add('connecting');
@@ -3663,7 +3664,7 @@ class RummikubClient {
         }
     }
 
-    loadLeaderboard() {
+    async loadLeaderboard() {
         const leaderboardList = document.getElementById('leaderboardList');
         const leaderboardLoading = document.querySelector('.leaderboard-loading');
         const leaderboardError = document.getElementById('leaderboardError');
@@ -3671,79 +3672,54 @@ class RummikubClient {
         if (!leaderboardList) return;
         
         // Show loading state
-        if (leaderboardLoading) leaderboardLoading.style.display = 'block';
+        if (leaderboardLoading) leaderboardLoading.style.display = 'flex';
         if (leaderboardError) leaderboardError.style.display = 'none';
         leaderboardList.style.display = 'none';
         
-        // Request leaderboard data from server
-        this.socket.emit('getLeaderboard');
-        
-        // Set up one-time listener for leaderboard response
-        this.socket.once('leaderboardData', (data) => {
-            this.displayLeaderboard(data);
-        });
-        
-        // Handle leaderboard error
-        this.socket.once('leaderboardError', (error) => {
-            console.error('Leaderboard error:', error);
-            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
-            if (leaderboardError) {
-                leaderboardError.style.display = 'block';
-                leaderboardError.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Unable to load leaderboard';
+        try {
+            const backendUrl = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000' 
+                : 'https://rummikub-backend.onrender.com';
+            
+            const response = await fetch(`${backendUrl}/api/stats/leaderboard/public`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch leaderboard');
             }
-        });
-    }
-
-    displayLeaderboard(data) {
-        const leaderboardList = document.getElementById('leaderboardList');
-        const leaderboardLoading = document.querySelector('.leaderboard-loading');
-        const leaderboardError = document.getElementById('leaderboardError');
-        
-        if (!leaderboardList || !data || !Array.isArray(data)) return;
-        
-        // Hide loading and error states
-        if (leaderboardLoading) leaderboardLoading.style.display = 'none';
-        if (leaderboardError) leaderboardError.style.display = 'none';
-        
-        // Clear existing content
-        leaderboardList.innerHTML = '';
-        
-        if (data.length === 0) {
-            leaderboardList.innerHTML = `
-                <div class="leaderboard-placeholder">
-                    <i class="fas fa-users"></i>
-                    <p>No players on the leaderboard yet</p>
-                    <p>Be the first to complete a game!</p>
-                </div>
-            `;
-        } else {
-            // Display top players
-            data.slice(0, 10).forEach((player, index) => {
-                const rank = index + 1;
-                const entry = document.createElement('div');
-                entry.className = 'leaderboard-entry';
-                
-                let rankIcon = '';
-                if (rank === 1) rankIcon = '<i class="fas fa-crown" style="color: #ffd700;"></i>';
-                else if (rank === 2) rankIcon = '<i class="fas fa-medal" style="color: #c0c0c0;"></i>';
-                else if (rank === 3) rankIcon = '<i class="fas fa-medal" style="color: #cd7f32;"></i>';
-                else rankIcon = `<span class="rank-number">${rank}</span>`;
-                
-                entry.innerHTML = `
-                    <div class="rank">${rankIcon}</div>
-                    <div class="player-name">${player.username || 'Unknown'}</div>
-                    <div class="player-stats">
-                        <span class="wins">${player.wins || 0}W</span>
-                        <span class="games">${player.totalGames || 0}G</span>
+            
+            const data = await response.json();
+            
+            // Hide loading and show list
+            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+            if (leaderboardError) leaderboardError.style.display = 'none';
+            leaderboardList.style.display = 'block';
+            
+            // Populate leaderboard
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                leaderboardList.innerHTML = data.leaderboard.map(player => `
+                    <div class="leaderboard-entry">
+                        <div class="leaderboard-rank">#${player.rank}</div>
+                        <div class="leaderboard-player">${player.username}</div>
+                        <div class="leaderboard-wins">${player.gamesWon} win${player.gamesWon !== 1 ? 's' : ''}</div>
+                    </div>
+                `).join('');
+            } else {
+                leaderboardList.innerHTML = `
+                    <div class="leaderboard-placeholder">
+                        <i class="fas fa-users"></i>
+                        <p>No players on the leaderboard yet</p>
+                        <p>Be the first to complete a game!</p>
                     </div>
                 `;
-                
-                leaderboardList.appendChild(entry);
-            });
+            }
+        } catch (error) {
+            console.error('Error loading leaderboard:', error);
+            
+            // Show error state
+            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+            leaderboardList.style.display = 'none';
+            if (leaderboardError) leaderboardError.style.display = 'flex';
         }
-        
-        // Show the leaderboard
-        leaderboardList.style.display = 'block';
     }
 
     showConnectionLostOverlay() {
@@ -4027,6 +4003,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 DOM loaded, initializing RummikubClient...');
     window.game = new RummikubClient();
     console.log('✅ RummikubClient initialized');
+    
+    // Load leaderboard on initial page load
+    window.game.loadLeaderboard();
     
     // Set up manual reconnect button
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
