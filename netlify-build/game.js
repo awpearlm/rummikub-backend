@@ -3003,7 +3003,7 @@ class RummikubClient {
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                this.handleTileDrop(dragData, -1); // -1 indicates new set
+                this.handleEnhancedTileDrop(dragData, -1, null); // -1 indicates new set, null for no specific position
             } catch (error) {
                 console.error('Error parsing drag data:', error);
             }
@@ -3057,7 +3057,7 @@ class RummikubClient {
             
             try {
                 const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-                this.handleTileDrop(dragData, -1); // -1 indicates new set
+                this.handleEnhancedTileDrop(dragData, -1, null); // -1 indicates new set, null for no specific position
             } catch (error) {
                 console.error('Error parsing drag data:', error);
             }
@@ -3148,8 +3148,6 @@ class RummikubClient {
             }
         }
 
-        // Send board update to server
-        this.updateBoard(newBoard, tilesFromHand);
     }
 
     // Enhanced tile drop handler that respects insert position
