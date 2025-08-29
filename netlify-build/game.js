@@ -3206,8 +3206,8 @@ class RummikubClient {
         let tilesFromHand = [];  // Track tiles moved from hand to board
 
         if (dragData.type === 'hand-tile') {
-            // Only prevent single tile drops from hand to board if player needs initial play
-            if (needsInitialPlay) {
+            // Only prevent single tile drops from hand to board if player needs initial play AND the board is empty
+            if (needsInitialPlay && this.gameState.board.length === 0) {
                 this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
                 return;
             }
