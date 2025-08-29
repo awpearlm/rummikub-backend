@@ -20,15 +20,28 @@ const allowedOrigins = [
 const io = socketIo(server, {
   cors: {
     origin: function (origin, callback) {
-      // Allow all in development
-      if (process.env.NODE_ENV !== 'production') return callback(null, true);
+      console.log(`🔍 Socket.IO CORS check - Origin: "${origin}", NODE_ENV: "${process.env.NODE_ENV}"`);
       
-      // In production, allow specified origins or Netlify domains
-      if (!origin || allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
+      // Allow requests with no origin (like mobile apps, curl requests, direct access)
+      if (!origin) {
+        console.log('✅ Allowing request with no origin');
         return callback(null, true);
       }
       
-      return callback(new Error('Not allowed by CORS'));
+      // Allow all in development
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Allowing all origins in development');
+        return callback(null, true);
+      }
+      
+      // In production, check against our allowed origins and Netlify domains
+      if (allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
+        console.log(`✅ Allowing origin: ${origin}`);
+        return callback(null, true);
+      }
+      
+      console.log(`❌ Blocking origin: ${origin}`);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     methods: ["GET", "POST"],
     credentials: true
@@ -41,19 +54,29 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: function (origin, callback) {
+    console.log(`🔍 Express CORS check - Origin: "${origin}", NODE_ENV: "${process.env.NODE_ENV}"`);
+    
     // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
+      return callback(null, true);
+    }
     
     // In development, allow all origins
-    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Allowing all origins in development');
+      return callback(null, true);
+    }
     
     // In production, check against our allowed origins
     if (allowedOrigins.includes(origin) || origin.match(/\.netlify\.app$/)) {
+      console.log(`✅ Allowing origin: ${origin}`);
       return callback(null, true);
     }
     
     // If not allowed
-    return callback(new Error('Not allowed by CORS'));
+    console.log(`❌ Blocking origin: ${origin}`);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true
 }));
@@ -2464,6 +2487,14 @@ app.get('/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Debug environment variables
+console.log('🔧 Environment variables:');
+console.log(`   NODE_ENV: "${process.env.NODE_ENV}"`);
+console.log(`   PORT: "${process.env.PORT}"`);
+console.log(`   RENDER: "${process.env.RENDER}"`);
+console.log('📋 Allowed origins:', allowedOrigins);
+
 server.listen(PORT, () => {
   console.log(`🎮 Rummikub game server running on port ${PORT}`);
   console.log(`🌐 Open your browser to http://localhost:${PORT}`);
