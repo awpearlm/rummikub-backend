@@ -7,7 +7,7 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-
+// STABLE v0.1
 // Configure CORS for production
 const allowedOrigins = [
   'http://localhost:3000',
