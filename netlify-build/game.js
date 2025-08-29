@@ -174,16 +174,12 @@ class RummikubClient {
     // Check if user is authenticated and update UI accordingly
     checkAuthenticationStatus() {
         const loggedInStatus = document.getElementById('loggedInStatus');
-        const playerNameInput = document.getElementById('playerName');
         
         if (this.token && this.username) {
             // User is authenticated
             if (loggedInStatus) {
                 loggedInStatus.style.display = 'block';
                 loggedInStatus.innerHTML = `<i class="fas fa-user-check"></i> Logged in as: <strong>${this.username}</strong>`;
-            }
-            if (playerNameInput) {
-                playerNameInput.style.display = 'none';
             }
         } else {
             // User is not authenticated, redirect to login
@@ -282,10 +278,6 @@ class RummikubClient {
         });
         
         // Enter key events
-        addSafeEventListener('playerName', 'keypress', (e) => {
-            if (e.key === 'Enter') this.createGame();
-        });
-        
         addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
@@ -802,9 +794,10 @@ class RummikubClient {
     }
 
     createGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use the authenticated username
+        const playerName = this.username;
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in first', 'error');
             return;
         }
         
@@ -3645,7 +3638,7 @@ class RummikubClient {
     
     // Connection status management
     updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
+        const statusElement = document.getElementById('profileConnectionStatus');
         if (!statusElement) return;
         
         // Remove all status classes
@@ -3656,6 +3649,8 @@ class RummikubClient {
             case 'connected':
                 statusElement.classList.add('connected');
                 statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <span>Connected</span>';
+                // Load leaderboard once connected
+                this.loadLeaderboard();
                 break;
             case 'connecting':
                 statusElement.classList.add('connecting');
@@ -3667,7 +3662,84 @@ class RummikubClient {
                 break;
         }
     }
-    
+
+    loadLeaderboard() {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const leaderboardLoading = document.querySelector('.leaderboard-loading');
+        const leaderboardError = document.getElementById('leaderboardError');
+        
+        if (!leaderboardList) return;
+        
+        // Show loading state
+        if (leaderboardLoading) leaderboardLoading.style.display = 'block';
+        if (leaderboardError) leaderboardError.style.display = 'none';
+        leaderboardList.style.display = 'none';
+        
+        // Request leaderboard data from server
+        this.socket.emit('getLeaderboard');
+        
+        // Set up one-time listener for leaderboard response
+        this.socket.once('leaderboardData', (data) => {
+            this.displayLeaderboard(data);
+        });
+        
+        // Handle leaderboard error
+        this.socket.once('leaderboardError', (error) => {
+            console.error('Leaderboard error:', error);
+            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+            if (leaderboardError) {
+                leaderboardError.style.display = 'block';
+                leaderboardError.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Unable to load leaderboard';
+            }
+        });
+    }
+
+    displayLeaderboard(data) {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const leaderboardLoading = document.querySelector('.leaderboard-loading');
+        const leaderboardError = document.getElementById('leaderboardError');
+        
+        if (!leaderboardList || !data || !Array.isArray(data)) return;
+        
+        // Hide loading and error states
+        if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+        if (leaderboardError) leaderboardError.style.display = 'none';
+        
+        // Clear existing content
+        leaderboardList.innerHTML = '';
+        
+        if (data.length === 0) {
+            leaderboardList.innerHTML = '<div class="leaderboard-empty">No players yet</div>';
+        } else {
+            // Display top players
+            data.slice(0, 10).forEach((player, index) => {
+                const rank = index + 1;
+                const entry = document.createElement('div');
+                entry.className = 'leaderboard-entry';
+                
+                let rankIcon = '';
+                if (rank === 1) rankIcon = '<i class="fas fa-crown" style="color: #ffd700;"></i>';
+                else if (rank === 2) rankIcon = '<i class="fas fa-medal" style="color: #c0c0c0;"></i>';
+                else if (rank === 3) rankIcon = '<i class="fas fa-medal" style="color: #cd7f32;"></i>';
+                else rankIcon = `<span class="rank-number">${rank}</span>`;
+                
+                entry.innerHTML = `
+                    <div class="rank">${rankIcon}</div>
+                    <div class="player-name">${player.username || 'Unknown'}</div>
+                    <div class="player-stats">
+                        <span class="wins">${player.wins || 0}W</span>
+                        <span class="games">${player.totalGames || 0}G</span>
+                    </div>
+                `;
+                
+                leaderboardList.appendChild(entry);
+            });
+        }
+        
+        // Show the leaderboard
+        leaderboardList.style.display = 'block';
+    }
+
     showConnectionLostOverlay() {
         const overlay = document.getElementById('connectionLostOverlay');
         if (overlay) {
