@@ -127,6 +127,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    activeGames: games.size,
+    activePlayers: players.size
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
+});
+
 // Game state management
 const games = new Map();
 const players = new Map();
