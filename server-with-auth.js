@@ -1144,6 +1144,9 @@ class RummikubGame {
     this.board = JSON.parse(JSON.stringify(this.boardSnapshot));
   }
 
+  // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+  // This method is essential for drag-and-drop functionality
+  // Removing or changing this will cause "updateBoard is not a function" server crashes
   updateBoard(newBoard) {
     // Update the board with new arrangement
     this.board = newBoard;

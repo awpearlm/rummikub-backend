@@ -2739,6 +2739,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // Sets up drag-and-drop zones for existing sets on the board
+    // Handles precise positioning within sets via handleEnhancedTileDrop
     setupSetDropZone(setElement, setIndex) {
         // Add visual indicators for drag over locations
         const addPositionIndicators = (e) => {
@@ -2819,6 +2822,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // Sets up drag-and-drop zones for creating new sets
+    // Used for "Create New Set" zones and empty board placeholders
     setupNewSetDropZone(newSetZone) {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2873,6 +2879,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md  
+    // Sets up drag-and-drop zones for empty board placeholders
+    // Allows creating the first set when board is empty
     setupBoardDropZone(placeholderElement) {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2927,6 +2936,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // This is the core drag-and-drop handler for simple tile drops (new sets)
+    // Used by setupNewSetDropZone and setupBoardDropZone
     handleTileDrop(dragData, targetSetIndex) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
@@ -3007,7 +3019,9 @@ class RummikubClient {
         this.updateBoard(newBoard, tilesFromHand);
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
     // Enhanced tile drop handler that respects insert position
+    // Used by setupSetDropZone for precise positioning within existing sets
     handleEnhancedTileDrop(dragData, targetSetIndex, insertPosition) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');

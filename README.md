@@ -277,8 +277,11 @@ The server will run on port 3000 by default, or use the PORT environment variabl
 
 This is a personal project created for family and friends, but contributions are welcome! 
 
+### ⚠️ CRITICAL - Before Making Code Changes
+**🛡️ Drag-Drop Protection**: Before editing any game logic, authentication, or UI code, please read [`DRAG_DROP_PRESERVATION.md`](./DRAG_DROP_PRESERVATION.md) for critical preservation guidelines.
+
 ### Areas for Enhancement
-- [ ] Drag and drop tile movement
+- [x] Drag and drop tile movement ✅ **WORKING - DO NOT MODIFY WITHOUT READING PRESERVATION GUIDE**
 - [ ] Advanced joker handling
 - [ ] Game replay functionality
 - [ ] Player statistics and rankings
