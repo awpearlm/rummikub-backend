@@ -1143,6 +1143,11 @@ class RummikubGame {
     // Restore board to snapshot state
     this.board = JSON.parse(JSON.stringify(this.boardSnapshot));
   }
+
+  updateBoard(newBoard) {
+    // Update the board with new arrangement
+    this.board = newBoard;
+  }
   
   // Restore game state from MongoDB document
   static async restoreFromMongoDB(gameId) {

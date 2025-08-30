@@ -1441,25 +1441,44 @@ class RummikubClient {
     }
 
     isMyTurn() {
+        // Rate limiting to prevent infinite loops
+        const now = Date.now();
+        if (!this.lastTurnCheck) this.lastTurnCheck = 0;
+        if (now - this.lastTurnCheck < 10) {
+            // Too many calls in short time, return cached result
+            return this.cachedTurnResult || false;
+        }
+        this.lastTurnCheck = now;
+        
         if (!this.gameState || !this.gameState.started || !this.socket) {
             console.log(`❌ Not my turn: gameState=${!!this.gameState}, started=${this.gameState?.started}, socket=${!!this.socket}`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         if (!this.gameState.players || this.gameState.players.length === 0) {
             console.log(`❌ Not my turn: no players in game state`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         const currentPlayer = this.gameState.players[this.gameState.currentPlayerIndex];
         if (!currentPlayer) {
             console.log(`❌ Not my turn: no current player at index ${this.gameState.currentPlayerIndex}`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         const result = currentPlayer.id === this.socket.id;
-        console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
         
+        // Add throttling to prevent spam logging
+        const currentTime = Date.now();
+        if (!this.lastTurnCheckLog || currentTime - this.lastTurnCheckLog > 1000) {
+            console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
+            this.lastTurnCheckLog = currentTime;
+        }
+        
+        this.cachedTurnResult = result;
         return result;
     }
     
