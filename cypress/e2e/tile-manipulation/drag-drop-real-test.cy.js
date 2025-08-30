@@ -863,4 +863,182 @@ Cypress.Commands.add('testBasicDragMechanics', () => {
     
     cy.log('✅ Basic drag event mechanics tested')
   })
+
+  it('should preserve hand tile arrangement after playing tiles', () => {
+    cy.log('🎯 Testing hand arrangement preservation after playing tiles')
+    
+    // First, let's get to a state where we can play tiles
+    cy.setupTestGameForDragDrop()
+    
+    // Wait for initial hand to be dealt and sorted
+    cy.wait(2000)
+    
+    // Record initial hand arrangement by getting tile positions
+    let initialTileArrangement = []
+    cy.get('#playerHand .tile').then($tiles => {
+      $tiles.each((index, tile) => {
+        const $tile = Cypress.$(tile)
+        const tileId = $tile.attr('data-tile-id')
+        const position = {
+          gridColumn: $tile.css('grid-column'),
+          gridRow: $tile.css('grid-row'),
+          tileId: tileId
+        }
+        initialTileArrangement.push(position)
+      })
+      
+      cy.log(`📋 Initial arrangement: ${initialTileArrangement.length} tiles`)
+      
+      // Now let's rearrange some tiles manually by dragging
+      if (initialTileArrangement.length >= 3) {
+        // Move the first tile to a different position (e.g., position 5)
+        cy.get('#playerHand .tile').first().then($firstTile => {
+          const firstTileId = $firstTile.attr('data-tile-id')
+          
+          // Drag first tile to the 5th position
+          cy.get('#playerHand .empty-slot[data-slot-index="4"]').then($targetSlot => {
+            if ($targetSlot.length > 0) {
+              cy.wrap($firstTile).trigger('dragstart', {
+                dataTransfer: { setData: cy.stub() }
+              })
+              cy.wrap($targetSlot).trigger('drop')
+              cy.wrap($firstTile).trigger('dragend')
+              
+              cy.log(`🔄 Moved tile ${firstTileId} to position 5`)
+            }
+          })
+        })
+      }
+      
+      // Wait a moment for the rearrangement to settle
+      cy.wait(1000)
+      
+      // Record the manually arranged positions
+      let manuallyArrangedPositions = []
+      cy.get('#playerHand .tile').then($tilesAfterArrangement => {
+        $tilesAfterArrangement.each((index, tile) => {
+          const $tile = Cypress.$(tile)
+          const tileId = $tile.attr('data-tile-id')
+          const position = {
+            gridColumn: $tile.css('grid-column'),
+            gridRow: $tile.css('grid-row'),
+            tileId: tileId
+          }
+          manuallyArrangedPositions.push(position)
+        })
+        
+        cy.log(`🎨 Manually arranged: ${manuallyArrangedPositions.length} tiles`)
+        
+        // Now play some tiles and verify the remaining tiles stay in their positions
+        cy.makeInitialPlay().then(() => {
+          cy.wait(2000) // Wait for the play to be processed
+          
+          // Check that remaining tiles maintained their relative positions
+          cy.get('#playerHand .tile').then($tilesAfterPlay => {
+            const remainingTileCount = $tilesAfterPlay.length
+            cy.log(`🎯 After playing tiles: ${remainingTileCount} tiles remaining`)
+            
+            // The key test: tiles that weren't played should be in the same relative positions
+            // We can't check exact positions since some tiles were removed, but we can verify
+            // that the arrangement wasn't completely reset to default sorting
+            
+            if (remainingTileCount > 0) {
+              // If we still have tiles, check that they haven't been auto-sorted by number
+              let isAutoSorted = true
+              let previousNumber = 0
+              
+              $tilesAfterPlay.each((index, tile) => {
+                const $tile = Cypress.$(tile)
+                const tileText = $tile.text().trim()
+                
+                // Extract number from tile (skip jokers)
+                if (!tileText.includes('JOKER')) {
+                  const match = tileText.match(/(\d+)/)
+                  if (match) {
+                    const currentNumber = parseInt(match[1])
+                    if (currentNumber < previousNumber) {
+                      isAutoSorted = false
+                    }
+                    previousNumber = currentNumber
+                  }
+                }
+              })
+              
+              if (isAutoSorted && remainingTileCount > 3) {
+                cy.log('❌ Hand appears to have been auto-sorted after playing tiles')
+                // This would indicate our fix didn't work
+                expect(false, 'Hand was auto-sorted after playing tiles - arrangement not preserved').to.be.true
+              } else {
+                cy.log('✅ Hand arrangement appears to be preserved (not auto-sorted)')
+              }
+            }
+            
+            cy.log('✅ Hand arrangement preservation test completed')
+          })
+        })
+      })
+    })
+  })
+
+  it('should not reshuffle hand tiles after playing tiles', () => {
+    cy.log('🎯 Testing that hand tiles do not auto-reshuffle when tiles are played')
+    
+    // Setup game
+    cy.setupTestGameForDragDrop()
+    cy.wait(2000)
+    
+    // Record initial tile order (just the text/IDs for simplicity)
+    let initialTileOrder = []
+    cy.get('#playerHand .tile').then($tiles => {
+      $tiles.each((index, tile) => {
+        const tileText = Cypress.$(tile).text().trim()
+        initialTileOrder.push(tileText)
+      })
+      
+      cy.log(`📋 Initial hand order: ${initialTileOrder.slice(0, 5).join(', ')}... (${initialTileOrder.length} tiles)`)
+      
+      // Make initial play to remove some tiles
+      cy.makeInitialPlay().then(() => {
+        cy.wait(2000)
+        
+        // Record tile order after playing tiles
+        let afterPlayOrder = []
+        cy.get('#playerHand .tile').then($remainingTiles => {
+          $remainingTiles.each((index, tile) => {
+            const tileText = Cypress.$(tile).text().trim()
+            afterPlayOrder.push(tileText)
+          })
+          
+          cy.log(`🔍 Hand after play: ${afterPlayOrder.slice(0, 5).join(', ')}... (${afterPlayOrder.length} tiles)`)
+          
+          // Key test: Check that remaining tiles maintained their relative order
+          // Find tiles that appear in both arrays and verify their relative positions
+          let orderPreserved = true
+          let lastFoundIndex = -1
+          
+          for (let i = 0; i < afterPlayOrder.length; i++) {
+            const currentTile = afterPlayOrder[i]
+            const originalIndex = initialTileOrder.indexOf(currentTile)
+            
+            if (originalIndex !== -1) {
+              if (originalIndex < lastFoundIndex) {
+                orderPreserved = false
+                cy.log(`❌ Order violation: ${currentTile} found at original index ${originalIndex}, but previous tile was at ${lastFoundIndex}`)
+                break
+              }
+              lastFoundIndex = originalIndex
+            }
+          }
+          
+          if (orderPreserved) {
+            cy.log('✅ Hand order preserved - tiles maintained their relative positions')
+          } else {
+            cy.log('❌ Hand order was not preserved - tiles were reshuffled')
+            // Fail the test
+            expect(orderPreserved, 'Hand tiles should maintain their relative order after playing tiles').to.be.true
+          }
+        })
+      })
+    })
+  })
 })
