@@ -1676,10 +1676,21 @@ class RummikubClient {
                     // Auto-sort tiles by number on initial deal only
                     this.autoSortHandByNumber();
                     
-                    // Always refresh grid layout when hand changes to ensure tiles are properly removed/added
-                    if (!this.tileGridLayout || this.hasHandChanged() || this.needsGridExpansion) {
+                    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+                    // Handle hand changes while preserving user's tile arrangement
+                    if (!this.tileGridLayout) {
+                        // No grid exists - create initial layout
                         this.initializeGridLayout();
+                    } else if (this.needsGridExpansion) {
+                        // Grid needs to grow - preserve existing positions
+                        this.expandGridLayout();
                         this.needsGridExpansion = false;
+                    } else if (handSize < lastKnownSize) {
+                        // Tiles were played - remove them while preserving positions
+                        this.updateGridLayoutAfterTilesPlayed();
+                    } else {
+                        // Fallback for other changes - preserve positions where possible
+                        this.syncGridLayoutWithGameState();
                     }
                 }
                 
@@ -2028,6 +2039,90 @@ class RummikubClient {
     syncGridLayoutToGameState() {
         // Update gameState.playerHand to match the current grid layout
         this.gameState.playerHand = this.tileGridLayout.filter(tile => tile !== null);
+    }
+
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    updateGridLayoutAfterTilesPlayed() {
+        // Remove played tiles from grid while preserving positions of remaining tiles
+        if (!this.tileGridLayout || !this.gameState?.playerHand) return;
+        
+        // Create a set of current tile IDs for quick lookup
+        const currentTileIds = new Set(this.gameState.playerHand.map(t => t.id));
+        
+        // Remove tiles that are no longer in the hand, keep others in their positions
+        for (let i = 0; i < this.tileGridLayout.length; i++) {
+            const tile = this.tileGridLayout[i];
+            if (tile && !currentTileIds.has(tile.id)) {
+                // This tile was played - remove it but keep the empty slot
+                this.tileGridLayout[i] = null;
+            }
+        }
+        
+        console.log('🎯 Updated grid layout after tiles played - preserved positions');
+    }
+
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    expandGridLayout() {
+        // Expand grid while preserving existing tile positions
+        const currentCapacity = this.tileGridLayout ? this.tileGridLayout.length : 0;
+        const handSize = this.gameState?.playerHand?.length || 0;
+        const tilesPerRow = 10;
+        
+        // Calculate new grid size
+        const newGridSize = Math.ceil(handSize / tilesPerRow) * tilesPerRow;
+        
+        if (newGridSize > currentCapacity) {
+            // Expand the grid array while preserving existing positions
+            const oldLayout = this.tileGridLayout || [];
+            this.tileGridLayout = new Array(newGridSize).fill(null);
+            
+            // Copy existing tiles to their same positions
+            for (let i = 0; i < oldLayout.length; i++) {
+                this.tileGridLayout[i] = oldLayout[i];
+            }
+            
+            console.log(`🔧 Expanded grid from ${currentCapacity} to ${newGridSize} slots`);
+        }
+    }
+
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    syncGridLayoutWithGameState() {
+        // Sync grid with gameState while trying to preserve positions where possible
+        if (!this.gameState?.playerHand) return;
+        
+        // If no grid exists, create it
+        if (!this.tileGridLayout) {
+            this.initializeGridLayout();
+            return;
+        }
+        
+        const currentTileIds = new Set(this.gameState.playerHand.map(t => t.id));
+        const existingTileIds = new Set();
+        
+        // First pass: remove tiles that are no longer in hand
+        for (let i = 0; i < this.tileGridLayout.length; i++) {
+            const tile = this.tileGridLayout[i];
+            if (tile) {
+                if (currentTileIds.has(tile.id)) {
+                    existingTileIds.add(tile.id);
+                } else {
+                    // Remove tile that's no longer in hand
+                    this.tileGridLayout[i] = null;
+                }
+            }
+        }
+        
+        // Second pass: add new tiles to empty slots
+        const newTiles = this.gameState.playerHand.filter(tile => !existingTileIds.has(tile.id));
+        newTiles.forEach(tile => {
+            // Find first empty slot for new tile
+            const emptySlotIndex = this.tileGridLayout.findIndex(slot => slot === null);
+            if (emptySlotIndex !== -1) {
+                this.tileGridLayout[emptySlotIndex] = tile;
+            }
+        });
+        
+        console.log('🔄 Synced grid layout with game state - preserved existing positions');
     }
 
     addDragAndDropToTile(tileElement, tile, index) {

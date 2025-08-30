@@ -703,6 +703,139 @@ Cypress.Commands.add('testDragLastTileFromSet', () => {
       cy.log('ℹ️ Not enough tiles on board for last tile removal testing')
     }
   })
+
+  it('should preserve hand arrangement when tiles are played', () => {
+    cy.log('🎯 Testing that player hand arrangement is preserved after playing tiles')
+    
+    // Wait for game to be ready
+    cy.get('#playerHand .tile', { timeout: 10000 }).should('have.length', 14)
+    
+    // Step 1: Record the initial tile arrangement (after any auto-sort)
+    let initialTileArrangement = []
+    cy.get('#playerHand .tile').then($tiles => {
+      initialTileArrangement = Array.from($tiles).map(tile => {
+        const numberElement = tile.querySelector('.tile-number')
+        const colorElement = tile.querySelector('.tile-color')
+        return {
+          number: numberElement ? numberElement.textContent : 'J',
+          color: colorElement ? colorElement.textContent : 'joker',
+          id: tile.dataset.tileId || tile.id
+        }
+      })
+      cy.log(`📋 Initial arrangement recorded: ${initialTileArrangement.length} tiles`)
+      cy.log(`First 5 tiles: ${initialTileArrangement.slice(0, 5).map(t => t.number + t.color[0]).join(', ')}`)
+    })
+    
+    // Step 2: Manually rearrange some tiles to create a custom order
+    // Drag the 5th tile to the 2nd position to change the arrangement
+    cy.get('#playerHand .tile').eq(4).then($fifthTile => {
+      cy.get('#playerHand .tile').eq(1).then($secondTile => {
+        const fifthTileData = {
+          number: $fifthTile.find('.tile-number').text() || 'J',
+          color: $fifthTile.find('.tile-color').text() || 'joker',
+          id: $fifthTile.attr('data-tile-id') || $fifthTile.attr('id')
+        }
+        
+        cy.log(`🔄 Moving tile ${fifthTileData.number}${fifthTileData.color[0]} to position 2`)
+        
+        // Perform the drag operation
+        cy.wrap($fifthTile).trigger('dragstart', {
+          dataTransfer: {
+            setData: cy.stub(),
+            effectAllowed: 'move'
+          }
+        })
+        
+        cy.wrap($secondTile).trigger('dragover', { dataTransfer: {} })
+        cy.wrap($secondTile).trigger('drop', { dataTransfer: {} })
+        
+        cy.wait(500) // Allow time for rearrangement
+      })
+    })
+    
+    // Step 3: Record the custom arrangement after manual rearrangement
+    let customArrangement = []
+    cy.get('#playerHand .tile').then($tiles => {
+      customArrangement = Array.from($tiles).map(tile => {
+        const numberElement = tile.querySelector('.tile-number')
+        const colorElement = tile.querySelector('.tile-color')
+        return {
+          number: numberElement ? numberElement.textContent : 'J',
+          color: colorElement ? colorElement.textContent : 'joker',
+          id: tile.dataset.tileId || tile.id
+        }
+      })
+      cy.log(`✏️ Custom arrangement recorded: ${customArrangement.length} tiles`)
+      cy.log(`First 5 tiles: ${customArrangement.slice(0, 5).map(t => t.number + t.color[0]).join(', ')}`)
+    })
+    
+    // Step 4: Play the initial 30+ point set to meet the requirement
+    cy.log('🎮 Playing initial set to meet 30-point requirement')
+    
+    // Find and select tiles for a valid 30+ point set (using debug hand knowledge)
+    // Debug hand should have: 1r, 2r, 3r, 4r, 5r, 6r, 7r, 8r, 9r, 10r, 11r, 12r, 13r, J
+    cy.get('#playerHand .tile').each(($tile, index) => {
+      const numberElement = $tile.find('.tile-number')
+      const colorElement = $tile.find('.tile-color')
+      const number = numberElement.text()
+      const color = colorElement.text()
+      
+      // Select 11r, 12r, 13r for a 36-point run
+      if ((number === '11' || number === '12' || number === '13') && color === 'red') {
+        cy.wrap($tile).click()
+        cy.log(`Selected ${number}${color[0]} for initial play`)
+      }
+    })
+    
+    // Play the selected set
+    cy.get('#playSelectedBtn').should('not.be.disabled')
+    cy.get('#playSelectedBtn').click()
+    
+    cy.wait(2000) // Allow time for server response and hand update
+    
+    // Step 5: Verify that the remaining tiles preserved their relative positions
+    cy.get('#playerHand .tile').then($remainingTiles => {
+      const remainingArrangement = Array.from($remainingTiles).map(tile => {
+        const numberElement = tile.querySelector('.tile-number')
+        const colorElement = tile.querySelector('.tile-color')
+        return {
+          number: numberElement ? numberElement.textContent : 'J',
+          color: colorElement ? colorElement.textContent : 'joker',
+          id: tile.dataset.tileId || tile.id
+        }
+      })
+      
+      cy.log(`🔍 Remaining arrangement: ${remainingArrangement.length} tiles`)
+      cy.log(`First 5 remaining: ${remainingArrangement.slice(0, 5).map(t => t.number + t.color[0]).join(', ')}`)
+      
+      // The key test: tiles that weren't played should maintain their relative order
+      // Filter out the played tiles (11r, 12r, 13r) from the custom arrangement
+      const expectedArrangement = customArrangement.filter(tile => 
+        !(tile.number === '11' && tile.color === 'red') &&
+        !(tile.number === '12' && tile.color === 'red') &&
+        !(tile.number === '13' && tile.color === 'red')
+      )
+      
+      cy.log(`📊 Expected arrangement: ${expectedArrangement.length} tiles`)
+      cy.log(`Expected first 5: ${expectedArrangement.slice(0, 5).map(t => t.number + t.color[0]).join(', ')}`)
+      
+      // Verify the arrangements match (accounting for potential ID changes)
+      expect(remainingArrangement.length).to.equal(expectedArrangement.length)
+      
+      // Check that the sequence of tiles (ignoring exact IDs) is preserved
+      for (let i = 0; i < Math.min(5, remainingArrangement.length); i++) {
+        const remaining = remainingArrangement[i]
+        const expected = expectedArrangement[i]
+        
+        cy.log(`Position ${i}: Got ${remaining.number}${remaining.color[0]}, Expected ${expected.number}${expected.color[0]}`)
+        
+        expect(remaining.number).to.equal(expected.number, `Tile at position ${i} should have same number`)
+        expect(remaining.color).to.equal(expected.color, `Tile at position ${i} should have same color`)
+      }
+      
+      cy.log('✅ PASSED: Hand arrangement preserved after playing tiles!')
+    })
+  })
 })
 
 Cypress.Commands.add('testBasicDragMechanics', () => {

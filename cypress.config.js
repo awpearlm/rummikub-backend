@@ -21,7 +21,7 @@ module.exports = defineConfig({
       },
       // For testing against deployed environments
       production: {
-        frontendUrl: 'https://debug-drag-drop-work--jkube.netlify.app', // Debug branch for testing
+        frontendUrl: 'https://jkube.netlify.app', // Main production URL
         backendUrl: 'https://rummikub-backend.onrender.com', // Your Render backend URL
       },
     },
