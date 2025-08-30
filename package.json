@@ -8,7 +8,6 @@
     "dev": "node server.js",
     "start:auth": "node server-with-auth.js",
     "dev:auth": "nodemon server-with-auth.js",
-    "build": "./build-frontend.sh",
     "test": "npx cypress run",
     "test:open": "npx cypress open",
     "test:reconnection": "npx cypress run --spec 'cypress/e2e/reconnection.cy.js'",
