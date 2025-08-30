@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - J_kube</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-crown"></i>
+                <h1>J_kube Admin</h1>
+            </div>
+            <div class="header-actions">
+                <span class="admin-greeting">Welcome, <span id="adminUsername">Admin</span></span>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    Dashboard
+                </button>
+                <button class="nav-item" data-tab="users">
+                    <i class="fas fa-users"></i>
+                    Users
+                </button>
+                <button class="nav-item" data-tab="invitations">
+                    <i class="fas fa-user-plus"></i>
+                    Invitations
+                </button>
+                <button class="nav-item" data-tab="metrics">
+                    <i class="fas fa-chart-bar"></i>
+                    Metrics
+                </button>
+                
+                <!-- Separator and Back Link -->
+                <div class="nav-separator"></div>
+                <a href="index.html" class="nav-item back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to J_kube
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content active">
+                <div class="tab-header">
+                    <h2><i class="fas fa-chart-line"></i> Dashboard Overview</h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalUsers">-</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon online">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="onlineUsers">-</h3>
+                            <p>Online Now</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon active">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeUsers">-</h3>
+                            <p>Active (7 days)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon pending">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pendingInvitations">-</h3>
+                            <p>Pending Invites</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-gamepad"></i> Game Statistics</h3>
+                        <div class="game-stats">
+                            <div class="game-stat">
+                                <span class="label">Total Games:</span>
+                                <span id="totalGames">-</span>
+                            </div>
+                            <div class="game-stat">
+                                <span class="label">Total Play Time:</span>
+                                <span id="totalPlayTime">-</span>
+                            </div>
+                            <div class="game-stat">
+                                <span class="label">Avg Points/Game:</span>
+                                <span id="avgPoints">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                        <div id="recentActivity" class="activity-list">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Tab -->
+            <section id="users" class="tab-content">
+                <div class="tab-header">
+                    <h2><i class="fas fa-users"></i> User Management</h2>
+                    <div class="header-actions">
+                        <button id="refreshUsers" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Last Seen</th>
+                                <th>Games</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Invitations Tab -->
+            <section id="invitations" class="tab-content">
+                <div class="tab-header">
+                    <h2><i class="fas fa-user-plus"></i> Invitation Management</h2>
+                    <div class="header-actions">
+                        <button id="sendInviteBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Send Invitation
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Send Invitation Form -->
+                <div id="inviteForm" class="invite-form" style="display: none;">
+                    <div class="form-container">
+                        <h3>Send New Invitation</h3>
+                        <form id="invitationForm">
+                            <div class="form-group">
+                                <label for="inviteEmail">Email Address:</label>
+                                <input type="email" id="inviteEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="inviteMessage">Message (optional):</label>
+                                <textarea id="inviteMessage" rows="3" placeholder="Welcome to J_kube! Click the link to join..."></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Send Invitation</button>
+                                <button type="button" id="cancelInvite" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="invitations-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Invited By</th>
+                                <th>Status</th>
+                                <th>Sent</th>
+                                <th>Expires</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invitationsTableBody">
+                            <tr>
+                                <td colspan="6" class="loading">Loading invitations...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Metrics Tab -->
+            <section id="metrics" class="tab-content">
+                <div class="tab-header">
+                    <h2><i class="fas fa-chart-bar"></i> Detailed Metrics</h2>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3><i class="fas fa-trophy"></i> Top Players</h3>
+                        <div id="topPlayersList" class="top-players">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h3><i class="fas fa-chart-line"></i> User Registration Trend</h3>
+                        <div id="registrationChart" class="chart-placeholder">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Deletion</h3>
+            <p id="deleteMessage">Are you sure you want to delete this item?</p>
+            <div class="modal-actions">
+                <button id="confirmDelete" class="btn btn-danger">Delete</button>
+                <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

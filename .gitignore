@@ -9,3 +9,6 @@ dist/
 
 # Local analysis files
 STABLE_BUILD_ANALYSIS.md
+
+# Local admin tools - keep out of public repo
+local-admin-tools/

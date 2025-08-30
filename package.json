@@ -4,10 +4,10 @@
   "description": "A multiplayer online Rummikub game with real-time chat for playing with friends across the globe - Now with Socket.IO support",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server-with-auth.js",
     "dev": "node server.js",
-    "debug": "node debug-server.js",
-    "build": "./build-frontend.sh",
+    "start:auth": "node server-with-auth.js",
+    "dev:auth": "nodemon server-with-auth.js",
     "test": "npx cypress run",
     "test:open": "npx cypress open",
     "test:reconnection": "npx cypress run --spec 'cypress/e2e/reconnection.cy.js'",
@@ -36,9 +36,14 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.8.7",
+    "nodemailer": "^7.0.5",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

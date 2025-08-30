@@ -6,6 +6,49 @@ class RummikubClient {
             : 'https://rummikub-backend.onrender.com'; // Your deployed backend URL
         
         console.log('🌐 Connecting to:', backendUrl);
+        
+        // Check if user is authenticated
+        this.token = localStorage.getItem('auth_token');
+        this.username = localStorage.getItem('username');
+        this.isAdmin = localStorage.getItem('is_admin') === 'true';
+        
+        // If not authenticated, redirect to login
+        if (!this.token || !this.username) {
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Display the username in the profile bubble
+        const profileUsername = document.getElementById('profileUsername');
+        if (profileUsername) {
+            profileUsername.textContent = this.username;
+        }
+        
+        // Set the profile avatar initial (first letter of username)
+        const profileAvatar = document.getElementById('profileInitial');
+        if (profileAvatar) {
+            profileAvatar.textContent = this.username.charAt(0).toUpperCase();
+        }
+        
+        // Set up logout button
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.logout());
+        }
+        
+        // Set up admin button (only for admins)
+        const adminButton = document.getElementById('adminButton');
+        if (adminButton) {
+            if (this.isAdmin) {
+                adminButton.style.display = 'block';
+                adminButton.addEventListener('click', () => {
+                    window.open('/admin.html', '_blank');
+                });
+            } else {
+                adminButton.style.display = 'none';
+            }
+        }
+        
         this.socket = io(backendUrl, {
             timeout: 20000, // 20 second timeout
             forceNew: true,
@@ -13,7 +56,8 @@ class RummikubClient {
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+            transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+            auth: this.token ? { token: this.token } : {}
         });
         
         // Add connection debugging
@@ -127,7 +171,53 @@ class RummikubClient {
         this.initializeSocketListeners();
     }
 
+    // Check if user is authenticated and update UI accordingly
+    checkAuthenticationStatus() {
+        const loggedInStatus = document.getElementById('loggedInStatus');
+        
+        if (this.token && this.username) {
+            // User is authenticated
+            if (loggedInStatus) {
+                loggedInStatus.style.display = 'block';
+                loggedInStatus.innerHTML = `<i class="fas fa-user-check"></i> Logged in as: <strong>${this.username}</strong>`;
+            }
+        } else {
+            // User is not authenticated, redirect to login
+            window.location.href = '/login.html';
+        }
+    }
+    
+    // Logout the user
+    logout() {
+        // Clear any active reconnection timer
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
+        }
+        
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('is_admin');
+        
+        // Reset client properties
+        this.token = null;
+        this.username = null;
+        
+        // Show a notification
+        this.showNotification('You have been logged out', 'info');
+        
+        // Redirect to login page
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 1000);
+    }
+    
     initializeEventListeners() {
+        // Check authentication status on page load
+        this.checkAuthenticationStatus();
         // Game mode selection
         addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
         addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
@@ -188,10 +278,6 @@ class RummikubClient {
         });
         
         // Enter key events
-        addSafeEventListener('playerName', 'keypress', (e) => {
-            if (e.key === 'Enter') this.createGame();
-        });
-        
         addSafeEventListener('gameId', 'keypress', (e) => {
             if (e.key === 'Enter') this.joinGame();
         });
@@ -684,11 +770,12 @@ class RummikubClient {
 
     startBotGame() {
         console.log('🎯 startBotGame() called');
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use authenticated username instead of form input
+        const playerName = this.username;
         console.log('👤 Player name:', playerName);
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in to play', 'error');
             return;
         }
         
@@ -707,9 +794,10 @@ class RummikubClient {
     }
 
     createGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use the authenticated username
+        const playerName = this.username;
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in first', 'error');
             return;
         }
         
@@ -727,11 +815,12 @@ class RummikubClient {
     }
 
     joinGame() {
-        const playerName = document.getElementById('playerName').value.trim();
+        // Use the authenticated username
+        const playerName = this.username;
         const gameId = document.getElementById('gameId').value.trim().toUpperCase();
         
         if (!playerName) {
-            this.showNotification('Please enter your name', 'error');
+            this.showNotification('Please log in to play', 'error');
             return;
         }
         
@@ -1352,25 +1441,44 @@ class RummikubClient {
     }
 
     isMyTurn() {
+        // Rate limiting to prevent infinite loops
+        const now = Date.now();
+        if (!this.lastTurnCheck) this.lastTurnCheck = 0;
+        if (now - this.lastTurnCheck < 10) {
+            // Too many calls in short time, return cached result
+            return this.cachedTurnResult || false;
+        }
+        this.lastTurnCheck = now;
+        
         if (!this.gameState || !this.gameState.started || !this.socket) {
             console.log(`❌ Not my turn: gameState=${!!this.gameState}, started=${this.gameState?.started}, socket=${!!this.socket}`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         if (!this.gameState.players || this.gameState.players.length === 0) {
             console.log(`❌ Not my turn: no players in game state`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         const currentPlayer = this.gameState.players[this.gameState.currentPlayerIndex];
         if (!currentPlayer) {
             console.log(`❌ Not my turn: no current player at index ${this.gameState.currentPlayerIndex}`);
+            this.cachedTurnResult = false;
             return false;
         }
         
         const result = currentPlayer.id === this.socket.id;
-        console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
         
+        // Add throttling to prevent spam logging
+        const currentTime = Date.now();
+        if (!this.lastTurnCheckLog || currentTime - this.lastTurnCheckLog > 1000) {
+            console.log(`🔍 Turn check: currentPlayer=${currentPlayer.name} (${currentPlayer.id}), myId=${this.socket.id}, isMyTurn=${result}, index=${this.gameState.currentPlayerIndex}`);
+            this.lastTurnCheckLog = currentTime;
+        }
+        
+        this.cachedTurnResult = result;
         return result;
     }
     
@@ -1453,6 +1561,9 @@ class RummikubClient {
     showWelcomeScreen() {
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
+        
+        // Load leaderboard when showing welcome screen
+        this.loadLeaderboard();
     }
 
     showGameScreen() {
@@ -2628,6 +2739,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // Sets up drag-and-drop zones for existing sets on the board
+    // Handles precise positioning within sets via handleEnhancedTileDrop
     setupSetDropZone(setElement, setIndex) {
         // Add visual indicators for drag over locations
         const addPositionIndicators = (e) => {
@@ -2708,6 +2822,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // Sets up drag-and-drop zones for creating new sets
+    // Used for "Create New Set" zones and empty board placeholders
     setupNewSetDropZone(newSetZone) {
         newSetZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2762,6 +2879,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md  
+    // Sets up drag-and-drop zones for empty board placeholders
+    // Allows creating the first set when board is empty
     setupBoardDropZone(placeholderElement) {
         placeholderElement.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2816,6 +2936,9 @@ class RummikubClient {
         });
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
+    // This is the core drag-and-drop handler for simple tile drops (new sets)
+    // Used by setupNewSetDropZone and setupBoardDropZone
     handleTileDrop(dragData, targetSetIndex) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
@@ -2896,7 +3019,9 @@ class RummikubClient {
         this.updateBoard(newBoard, tilesFromHand);
     }
 
+    // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
     // Enhanced tile drop handler that respects insert position
+    // Used by setupSetDropZone for precise positioning within existing sets
     handleEnhancedTileDrop(dragData, targetSetIndex, insertPosition) {
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
@@ -3549,7 +3674,7 @@ class RummikubClient {
     
     // Connection status management
     updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
+        const statusElement = document.getElementById('profileConnectionStatus');
         if (!statusElement) return;
         
         // Remove all status classes
@@ -3571,7 +3696,65 @@ class RummikubClient {
                 break;
         }
     }
-    
+
+    async loadLeaderboard() {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const leaderboardLoading = document.querySelector('.leaderboard-loading');
+        const leaderboardError = document.getElementById('leaderboardError');
+        
+        if (!leaderboardList) return;
+        
+        // Show loading state
+        if (leaderboardLoading) leaderboardLoading.style.display = 'flex';
+        if (leaderboardError) leaderboardError.style.display = 'none';
+        leaderboardList.style.display = 'none';
+        
+        try {
+            const backendUrl = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000' 
+                : 'https://rummikub-backend.onrender.com';
+            
+            const response = await fetch(`${backendUrl}/api/stats/leaderboard/public`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch leaderboard');
+            }
+            
+            const data = await response.json();
+            
+            // Hide loading and show list
+            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+            if (leaderboardError) leaderboardError.style.display = 'none';
+            leaderboardList.style.display = 'block';
+            
+            // Populate leaderboard
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                leaderboardList.innerHTML = data.leaderboard.map(player => `
+                    <div class="leaderboard-entry">
+                        <div class="leaderboard-rank">#${player.rank}</div>
+                        <div class="leaderboard-player">${player.username}</div>
+                        <div class="leaderboard-wins">${player.gamesWon} win${player.gamesWon !== 1 ? 's' : ''}</div>
+                    </div>
+                `).join('');
+            } else {
+                leaderboardList.innerHTML = `
+                    <div class="leaderboard-placeholder">
+                        <i class="fas fa-users"></i>
+                        <p>No players on the leaderboard yet</p>
+                        <p>Be the first to complete a game!</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading leaderboard:', error);
+            
+            // Show error state
+            if (leaderboardLoading) leaderboardLoading.style.display = 'none';
+            leaderboardList.style.display = 'none';
+            if (leaderboardError) leaderboardError.style.display = 'flex';
+        }
+    }
+
     showConnectionLostOverlay() {
         const overlay = document.getElementById('connectionLostOverlay');
         if (overlay) {
@@ -3854,6 +4037,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.game = new RummikubClient();
     console.log('✅ RummikubClient initialized');
     
+    // Load leaderboard on initial page load
+    window.game.loadLeaderboard();
+    
     // Set up manual reconnect button
     const manualReconnectBtn = document.getElementById('manualReconnectBtn');
     if (manualReconnectBtn) {
@@ -3899,3 +4085,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.game.showNotification(`You have a saved game (${savedGameInfo.gameId}). You can rejoin it from the connection panel if disconnected.`, 'info', 8000);
     }
 });
+
+// Check if the user is authenticated and update UI accordingly
+RummikubClient.prototype.checkAuthenticationStatus = function() {
+    // Check for authentication token in localStorage
+    const token = localStorage.getItem('auth_token');
+    const username = localStorage.getItem('username');
+    
+    console.log('🔐 Checking authentication status:', token ? 'Token found' : 'No token');
+    
+    if (token && username) {
+        return true;
+    }
+    
+    return false;
+};
