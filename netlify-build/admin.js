@@ -249,12 +249,12 @@ class AdminDashboard {
         }
         
         tbody.innerHTML = users.map(user => `
-            <tr>
+            <tr ${user.isTestUser ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : ''}>
                 <td>
                     <div class="user-info">
                         <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
                         <div class="user-details">
-                            <h4>${user.username}</h4>
+                            <h4>${user.username}${user.isTestUser ? ' <span style="color: #6c757d; font-size: 0.8em;">(test)</span>' : ''}</h4>
                             <p>${user.isAdmin ? 'Admin' : 'User'}</p>
                         </div>
                     </div>
@@ -346,7 +346,18 @@ class AdminDashboard {
             return;
         }
         
-        container.innerHTML = players.map((player, index) => `
+        // Filter out test users from display
+        const testUsers = ['testuser', 'testuser2'];
+        const filteredPlayers = players.filter(player => 
+            !testUsers.includes(player.username.toLowerCase())
+        );
+        
+        if (filteredPlayers.length === 0) {
+            container.innerHTML = '<div class="loading">No player data (excluding test users)</div>';
+            return;
+        }
+        
+        container.innerHTML = filteredPlayers.map((player, index) => `
             <div class="player-item">
                 <div>
                     <span class="player-rank">#${index + 1}</span>

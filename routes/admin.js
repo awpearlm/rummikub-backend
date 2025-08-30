@@ -12,6 +12,7 @@ router.use(authenticateToken, isAdmin);
 // Get all users with enhanced info
 router.get('/users', async (req, res) => {
   try {
+    // Define test users to exclude from metrics but still show in admin panel for management
     const users = await User.find()
       .select('-password')
       .populate('invitedBy', 'username email')
@@ -30,7 +31,9 @@ router.get('/users', async (req, res) => {
           highestScore: 0
         },
         // Calculate online status (online if seen within last 5 minutes)
-        isCurrentlyOnline: user.isOnline && (Date.now() - new Date(user.lastSeen)) < 5 * 60 * 1000
+        isCurrentlyOnline: user.isOnline && (Date.now() - new Date(user.lastSeen)) < 5 * 60 * 1000,
+        // Mark test users for visual distinction
+        isTestUser: ['testuser', 'testuser2'].includes(user.username.toLowerCase())
       };
     }));
     
@@ -285,22 +288,33 @@ router.delete('/users/:id', async (req, res) => {
 // Get comprehensive statistics
 router.get('/stats', async (req, res) => {
   try {
-    // Get total counts
-    const totalUsers = await User.countDocuments();
+    // Define test users to exclude from metrics
+    const testUsers = ['testuser', 'testuser2'];
+    const excludeTestUsers = { username: { $nin: testUsers } };
+    
+    // Get total counts (excluding test users)
+    const totalUsers = await User.countDocuments(excludeTestUsers);
     const activeUsers = await User.countDocuments({ 
+      ...excludeTestUsers,
       lastSeen: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
     });
     const onlineUsers = await User.countDocuments({ 
+      ...excludeTestUsers,
       isOnline: true,
       lastSeen: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // Last 5 minutes
     });
     const totalInvitations = await Invitation.countDocuments();
     const pendingInvitations = await Invitation.countDocuments({ status: 'pending' });
     
-    // Get user registration over time (last 30 days)
+    // Get user registration over time (last 30 days, excluding test users)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const userRegistrations = await User.aggregate([
-      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      { 
+        $match: { 
+          createdAt: { $gte: thirtyDaysAgo },
+          username: { $nin: testUsers }
+        } 
+      },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -310,8 +324,13 @@ router.get('/stats', async (req, res) => {
       { $sort: { _id: 1 } }
     ]);
     
-    // Get user stats summary
+    // Get test user IDs to exclude from stats
+    const testUserIds = await User.find({ username: { $in: testUsers } }).select('_id');
+    const testUserObjectIds = testUserIds.map(user => user._id);
+    
+    // Get user stats summary (excluding test users)
     const gameStats = await Stats.aggregate([
+      { $match: { userId: { $nin: testUserObjectIds } } },
       {
         $group: {
           _id: null,
@@ -325,14 +344,15 @@ router.get('/stats', async (req, res) => {
       }
     ]);
     
-    // Get top players by wins
-    const topPlayers = await Stats.find()
+    // Get top players by wins (excluding test users)
+    const topPlayers = await Stats.find({ userId: { $nin: testUserObjectIds } })
       .sort({ gamesWon: -1 })
       .limit(10)
       .populate('userId', 'username');
     
-    // Get recent activity (users who logged in recently)
+    // Get recent activity (users who logged in recently, excluding test users)
     const recentActivity = await User.find({ 
+      ...excludeTestUsers,
       lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
     })
       .select('username lastLogin')
