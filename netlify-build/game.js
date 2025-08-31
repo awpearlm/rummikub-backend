@@ -1945,9 +1945,14 @@ class RummikubClient {
             
             if (!this.gameState?.playerHand || this.gameState.playerHand.length === 0) {
                 console.log(`⚠️ Skipping render - no tiles to display`);
-                // Don't clear the hand if game has started but we have 0 tiles - this might be a sync issue
+                // 🐛 FIX: Always clear the hand element when there are no tiles to prevent ghost tiles
+                // This fixes the last tile duplication visual bug
                 if (!this.gameState?.started) {
                     handElement.innerHTML = '<div class="hand-placeholder"><p>Your tiles will appear here when the game starts</p></div>';
+                } else {
+                    // Game is started but hand is empty - clear any remaining tile elements
+                    handElement.innerHTML = '';
+                    console.log(`🧹 Cleared hand display - game started with 0 tiles`);
                 }
                 return;
             }
