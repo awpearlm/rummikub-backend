@@ -1950,6 +1950,17 @@ io.on('connection', (socket) => {
       return;
     }
     
+    // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+    console.log('🐛 [SERVER DEBUG] updateBoard received:', {
+      playerId: socket.id,
+      playerName: currentPlayer.name,
+      tilesFromHand: data.tilesFromHand,
+      currentHandSize: currentPlayer.hand.length,
+      isLastTile: currentPlayer.hand.length === 1,
+      boardTileCount: game.board.flat().length
+    });
+    // 🐛 END DEBUG LOGGING
+    
     // Check if this is the first board update in the turn and create a snapshot
     // This ensures we always have a snapshot to compare against for undo
     if (!game.boardSnapshot) {
@@ -1960,16 +1971,40 @@ io.on('connection', (socket) => {
     // Find tiles that were moved from hand to board
     // Instead of just looking at added tiles, we'll use an explicit approach
     if (data.tilesFromHand && Array.isArray(data.tilesFromHand) && data.tilesFromHand.length > 0) {
+      // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+      console.log('🐛 [SERVER DEBUG] Processing tilesFromHand:', {
+        tilesFromHand: data.tilesFromHand,
+        handSizeBefore: currentPlayer.hand.length,
+        handTileIdsBefore: currentPlayer.hand.map(t => t.id)
+      });
+      // 🐛 END DEBUG LOGGING
+      
       console.log(`Player ${currentPlayer.name} moved tiles from hand to board:`, data.tilesFromHand);
       
       // Remove these specific tiles from the player's hand
       data.tilesFromHand.forEach(tileId => {
         const tileIndex = currentPlayer.hand.findIndex(t => t.id === tileId);
         if (tileIndex !== -1) {
+          // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+          console.log(`🐛 [SERVER DEBUG] Removing tile ${tileId} from hand at index ${tileIndex}`);
+          // 🐛 END DEBUG LOGGING
+          
           currentPlayer.hand.splice(tileIndex, 1);
           console.log(`Removed tile ${tileId} from ${currentPlayer.name}'s hand`);
+        } else {
+          // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+          console.log(`🐛 [SERVER DEBUG] WARNING: Tile ${tileId} not found in hand!`);
+          // 🐛 END DEBUG LOGGING
         }
       });
+      
+      // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+      console.log('🐛 [SERVER DEBUG] After tile removal:', {
+        handSizeAfter: currentPlayer.hand.length,
+        handTileIdsAfter: currentPlayer.hand.map(t => t.id),
+        removedTileCount: data.tilesFromHand.length
+      });
+      // 🐛 END DEBUG LOGGING
     }
     
     // Check if joker manipulation is occurring
@@ -1985,6 +2020,14 @@ io.on('connection', (socket) => {
     if (jokerChange.manipulated) {
       currentPlayer.hasManipulatedJoker = true;
     }
+    
+    // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+    console.log('🐛 [SERVER DEBUG] Broadcasting game state update:', {
+      currentPlayerHandSize: currentPlayer.hand.length,
+      currentPlayerTileIds: currentPlayer.hand.map(t => t.id),
+      boardTileCount: game.board.flat().length
+    });
+    // 🐛 END DEBUG LOGGING
     
     // Send updated game state to all players
     game.players.forEach(player => {

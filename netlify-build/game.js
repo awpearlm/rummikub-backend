@@ -361,6 +361,25 @@ class RummikubClient {
         
         // Add explicit listener for gameStateUpdate events
         this.socket.on('gameStateUpdate', (data) => {
+            // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+            const previousHandSize = this.gameState?.playerHand?.length || 0;
+            const newHandSize = data.gameState?.playerHand?.length || 0;
+            const previousHandIds = this.gameState?.playerHand?.map(t => t.id) || [];
+            const newHandIds = data.gameState?.playerHand?.map(t => t.id) || [];
+            
+            console.log('🐛 [DEBUG] gameStateUpdate received:', {
+                handSizeChange: `${previousHandSize} → ${newHandSize}`,
+                handIdsChanged: !previousHandIds.every(id => newHandIds.includes(id)) || !newHandIds.every(id => previousHandIds.includes(id)),
+                previousHandIds,
+                newHandIds
+            });
+            
+            if (previousHandSize === 0 && newHandSize > 0) {
+                console.log('🚨 [DEBUG] POTENTIAL DUPLICATION: Hand was empty, now has tiles!');
+                console.log('🚨 [DEBUG] Restored tiles:', newHandIds);
+            }
+            // 🐛 END DEBUG LOGGING
+            
             // Store the previous board state before updating
             if (this.gameState && this.gameState.board) {
                 this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
@@ -482,6 +501,13 @@ class RummikubClient {
         });
 
         this.socket.on('error', (data) => {
+            // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+            console.log('🐛 [DEBUG] Server error received:', {
+                message: data.message,
+                currentHandSize: this.gameState?.playerHand?.length || 0
+            });
+            // 🐛 END DEBUG LOGGING
+            
             this.showNotification(data.message, 'error');
         });
 
@@ -3035,6 +3061,17 @@ class RummikubClient {
     // This is the core drag-and-drop handler for simple tile drops (new sets)
     // Used by setupNewSetDropZone and setupBoardDropZone
     handleTileDrop(dragData, targetSetIndex) {
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🔍 [DEBUG] handleTileDrop called:', {
+            dragDataType: dragData.type,
+            tileId: dragData.tile?.id,
+            tileInfo: `${dragData.tile?.number} ${dragData.tile?.color}`,
+            targetSetIndex,
+            currentHandSize: this.gameState.playerHand.length,
+            isLastTile: this.gameState.playerHand.length === 1
+        });
+        // 🐛 END DEBUG LOGGING
+
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
             return;
@@ -3049,6 +3086,14 @@ class RummikubClient {
         let tilesFromHand = [];  // Track tiles moved from hand to board
 
         if (dragData.type === 'hand-tile') {
+            // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+            console.log('🐛 [DEBUG] Processing hand-tile drop:', {
+                beforeHandSize: this.gameState.playerHand.length,
+                tileBeingMoved: `${dragData.tile.number} ${dragData.tile.color} (${dragData.tile.id})`,
+                needsInitialPlay
+            });
+            // 🐛 END DEBUG LOGGING
+
             // Only prevent single tile drops from hand to board if player needs initial play
             if (needsInitialPlay) {
                 this.showNotification('Must use "Play Selected" button for initial 30+ point play!', 'error');
@@ -3068,13 +3113,32 @@ class RummikubClient {
             // Track that this tile was moved from hand to board
             tilesFromHand.push(dragData.tile.id);
             
+            // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+            console.log('🐛 [DEBUG] About to remove tile from hand locally');
+            // 🐛 END DEBUG LOGGING
+            
             // Remove tile from hand locally for immediate UI feedback
             const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
             if (tileIndex !== -1) {
+                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+                console.log('🐛 [DEBUG] Removing tile from hand:', {
+                    tileIndex,
+                    beforeRemoval: this.gameState.playerHand.length,
+                    tileId: dragData.tile.id
+                });
+                // 🐛 END DEBUG LOGGING
+                
                 // Create a copy of the player's hand and remove the tile
                 const newHand = [...this.gameState.playerHand];
                 newHand.splice(tileIndex, 1);
                 this.gameState.playerHand = newHand;
+                
+                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+                console.log('🐛 [DEBUG] After local removal:', {
+                    afterRemoval: this.gameState.playerHand.length,
+                    handTileIds: this.gameState.playerHand.map(t => t.id)
+                });
+                // 🐛 END DEBUG LOGGING
                 
                 // Render the updated hand
                 this.renderPlayerHand();
@@ -3291,6 +3355,14 @@ class RummikubClient {
     }
     
     updateBoard(newBoard, tilesFromHand = []) {
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🐛 [DEBUG] updateBoard called:', {
+            tilesFromHand,
+            currentHandSize: this.gameState?.playerHand?.length || 0,
+            boardTileCount: newBoard.flat().length
+        });
+        // 🐛 END DEBUG LOGGING
+        
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
         
@@ -3301,6 +3373,14 @@ class RummikubClient {
             // Update the undo button based on the board state change
             this.updateActionButtons();
         }
+        
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🐛 [DEBUG] Sending updateBoard to server:', {
+            tilesFromHand,
+            boardSets: newBoard.length,
+            totalBoardTiles: newBoard.flat().length
+        });
+        // 🐛 END DEBUG LOGGING
         
         // Send to server with explicit list of tiles moved from hand
         this.socket.emit('updateBoard', { 
