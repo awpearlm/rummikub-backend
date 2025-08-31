@@ -409,9 +409,8 @@ class AdminDashboard {
                 body: JSON.stringify({ email, message })
             });
             
-            // Show invitation link
-            const baseUrl = window.location.origin;
-            const invitationLink = `${baseUrl}/signup.html?token=${response.invitation.token}`;
+            // Use the invitation link provided by the backend
+            const invitationLink = response.invitation.invitationLink;
             
             this.showInvitationLink(invitationLink, email);
             this.toggleInviteForm(false);
