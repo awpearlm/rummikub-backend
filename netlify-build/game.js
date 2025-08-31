@@ -970,6 +970,32 @@ class RummikubClient {
             return;
         }
         
+        // If tiles have been played this turn, restore board to turn-start state before drawing
+        if (this.hasPlayedTilesThisTurn && this.gameState && this.gameState.boardSnapshot) {
+            console.log('🎯 Restoring board to turn-start state before drawing tile');
+            
+            // Create a deep copy of the board snapshot to restore
+            const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
+            
+            // Update local board state
+            this.gameState.board = restoredBoard;
+            
+            // Re-render the board to reflect the restoration
+            this.renderBoard();
+            
+            // Send board restoration to server first
+            this.socket.emit('updateBoard', { 
+                board: restoredBoard,
+                tilesFromHand: [] // No new tiles from hand, this is a restoration
+            });
+            
+            // Reset the flag since board has been restored to snapshot
+            this.hasPlayedTilesThisTurn = false;
+            this.updateActionButtons();
+            
+            console.log('🎯 Board restored to turn-start state, ready to draw tile');
+        }
+        
         this.playSound('pickupTile');
         this.socket.emit('drawTile');
     }
