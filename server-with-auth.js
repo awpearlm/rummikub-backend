@@ -387,6 +387,10 @@ class RummikubGame {
       console.log(`🔧 DEBUG MODE DETECTED! Calling dealDebugHand...`);
       // Debug mode: Give human player a preset hand for testing
       this.dealDebugHand();
+    } else if (this.isBotGame && this.botDifficulty === 'lastTile') {
+      console.log(`🔧 LAST TILE TEST MODE DETECTED! Dealing 4-tile hand...`);
+      // Special test mode: Give human player exactly 4 tiles for last tile duplication test
+      this.dealLastTileTestHand();
     } else {
       console.log(`🎲 Normal mode: dealing random tiles`);
       // Normal mode: Deal 14 tiles to each player
@@ -475,6 +479,51 @@ class RummikubGame {
     
     // Give bot normal random hand
     for (let i = 0; i < 14; i++) {
+      if (this.deck.length > 0) {
+        botPlayer.hand.push(this.deck.pop());
+      }
+    }
+    
+    console.log(`🔧 Bot ${botPlayer.name} hand size: ${botPlayer.hand.length}`);
+    console.log(`🔧 Deck remaining: ${this.deck.length} tiles`);
+  }
+
+  dealLastTileTestHand() {
+    console.log(`🔧 dealLastTileTestHand called! Setting up 4-tile hand for last tile duplication test...`);
+    
+    // Find human player (non-bot)
+    const humanPlayer = this.players.find(p => !p.isBot);
+    const botPlayer = this.players.find(p => p.isBot);
+    
+    console.log(`🔧 Found players - Human: ${humanPlayer?.name}, Bot: ${botPlayer?.name}`);
+    
+    if (!humanPlayer || !botPlayer) {
+      console.log(`🔧 ERROR: Missing players! Human: ${!!humanPlayer}, Bot: ${!!botPlayer}`);
+      return;
+    }
+    
+    // Create a 4-tile hand: three 13s (different colors) + one extra tile for the duplication test
+    const testTiles = [
+      // Three 13s in different colors (39 points - valid initial play)
+      { id: 'red_13_0', color: 'red', number: 13, isJoker: false },
+      { id: 'blue_13_0', color: 'blue', number: 13, isJoker: false },
+      { id: 'yellow_13_0', color: 'yellow', number: 13, isJoker: false },
+      // One extra tile to test last tile duplication
+      { id: 'red_4_0', color: 'red', number: 4, isJoker: false }
+    ];
+    
+    // Clear human player's hand and give them the test tiles
+    humanPlayer.hand = [];
+    testTiles.forEach(tile => {
+      humanPlayer.hand.push(tile);
+    });
+    
+    console.log(`🔧 Gave last tile test hand to ${humanPlayer.name}: ${humanPlayer.hand.length} tiles`);
+    console.log(`🔧 Test hand: 3×13s (red, blue, yellow) + red 4`);
+    
+    // Give bot a minimal hand (just enough to play)
+    botPlayer.hand = [];
+    for (let i = 0; i < 4; i++) {
       if (this.deck.length > 0) {
         botPlayer.hand.push(this.deck.pop());
       }
@@ -1206,7 +1255,8 @@ class RummikubGame {
           const playerSocket = io.sockets.sockets.get(player.id);
           if (playerSocket) {
             playerSocket.emit('botMove', {
-              gameState: this.getGameState(player.id)
+              gameState: this.getGameState(player.id),
+              moveDescription: 'drew a tile'
             });
           }
         });
