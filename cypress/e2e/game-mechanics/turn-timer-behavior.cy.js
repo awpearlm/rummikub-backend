@@ -28,6 +28,12 @@ describe('Turn Timer Behavior', () => {
     cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
+    // Handle the new settings modal
+    cy.get('#gameSettingsModal.show', { timeout: 5000 }).should('be.visible')
+    // Ensure timer is enabled for testing
+    cy.get('#settingsEnableTimer').check()
+    cy.get('#createBotGameWithSettingsBtn').click()
+    
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
     cy.get('#playerHand .tile', { timeout: 10000 }).should('have.length', 14)
     
@@ -121,15 +127,21 @@ describe('Turn Timer Behavior', () => {
     
     cy.url({ timeout: 15000 }).should('include', 'index.html')
     cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
-    
+
     // Start bot game
     cy.get('#playWithBotBtn').click()
     cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
+    // Handle the new settings modal
+    cy.get('#gameSettingsModal.show', { timeout: 5000 }).should('be.visible')
+    // Ensure timer is enabled for testing
+    cy.get('#settingsEnableTimer').check()
+    cy.get('#createBotGameWithSettingsBtn').click()
+    
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
     cy.get('#playerHand .tile', { timeout: 10000 }).should('have.length', 14)
-    
+
     // Monitor console for timer-related logs
     cy.window().then((win) => {
       const originalLog = win.console.log
@@ -228,15 +240,21 @@ describe('Turn Timer Behavior', () => {
     
     cy.url({ timeout: 15000 }).should('include', 'index.html')
     cy.get('#welcomeScreen.active', { timeout: 15000 }).should('be.visible')
-    
+
     // Start bot game
     cy.get('#playWithBotBtn').click()
     cy.get('#botGameOptions').should('not.have.class', 'hidden')
     cy.get('#startBotGameBtn').click()
     
+    // Handle the new settings modal
+    cy.get('#gameSettingsModal.show', { timeout: 5000 }).should('be.visible')
+    // Ensure timer is enabled for testing
+    cy.get('#settingsEnableTimer').check()
+    cy.get('#createBotGameWithSettingsBtn').click()
+    
     cy.get('#gameScreen.active', { timeout: 15000 }).should('be.visible')
     cy.get('#playerHand .tile', { timeout: 10000 }).should('have.length', 14)
-    
+
     cy.wait(3000)
     cy.get('#turnTimer', { timeout: 5000 }).should('be.visible')
     
