@@ -843,7 +843,10 @@ class RummikubGame {
     console.log(`⏰ Starting timer for ${currentPlayer ? currentPlayer.name : 'unknown'}, ${this.turnTimeLimit}s limit`);
     
     // Delay the initial timer broadcast to allow for the client-side animation (2.5s)
-    setTimeout(() => {
+    this.turnTimerTimeout = setTimeout(() => {
+      // Clear the timeout reference since it's about to complete
+      this.turnTimerTimeout = null;
+      
       // Send initial timer update after the notification animation would be complete
       this.broadcastTimerUpdate(this.turnTimeLimit);
       
@@ -869,6 +872,10 @@ class RummikubGame {
     if (this.turnTimerInterval) {
       clearInterval(this.turnTimerInterval);
       this.turnTimerInterval = null;
+    }
+    if (this.turnTimerTimeout) {
+      clearTimeout(this.turnTimerTimeout);
+      this.turnTimerTimeout = null;
     }
   }
   

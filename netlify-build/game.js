@@ -397,7 +397,10 @@ class RummikubClient {
             // Update remaining time from server
             this.remainingTime = data.remainingTime;
             
-            console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
+            // Only log timer updates every 10 seconds to reduce spam
+            if (this.remainingTime % 10 === 0 || this.remainingTime <= 10) {
+                console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
+            }
             
             // Update timer display
             this.updateTimerDisplay();
@@ -3095,17 +3098,6 @@ class RummikubClient {
     // This is the core drag-and-drop handler for simple tile drops (new sets)
     // Used by setupNewSetDropZone and setupBoardDropZone
     handleTileDrop(dragData, targetSetIndex) {
-        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
-        console.log('🔍 [DEBUG] handleTileDrop called:', {
-            dragDataType: dragData.type,
-            tileId: dragData.tile?.id,
-            tileInfo: `${dragData.tile?.number} ${dragData.tile?.color}`,
-            targetSetIndex,
-            currentHandSize: this.gameState.playerHand.length,
-            isLastTile: this.gameState.playerHand.length === 1
-        });
-        // 🐛 END DEBUG LOGGING
-
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
             return;
@@ -3154,25 +3146,10 @@ class RummikubClient {
             // Remove tile from hand locally for immediate UI feedback
             const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
             if (tileIndex !== -1) {
-                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
-                console.log('🐛 [DEBUG] Removing tile from hand:', {
-                    tileIndex,
-                    beforeRemoval: this.gameState.playerHand.length,
-                    tileId: dragData.tile.id
-                });
-                // 🐛 END DEBUG LOGGING
-                
                 // Create a copy of the player's hand and remove the tile
                 const newHand = [...this.gameState.playerHand];
                 newHand.splice(tileIndex, 1);
                 this.gameState.playerHand = newHand;
-                
-                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
-                console.log('🐛 [DEBUG] After local removal:', {
-                    afterRemoval: this.gameState.playerHand.length,
-                    handTileIds: this.gameState.playerHand.map(t => t.id)
-                });
-                // 🐛 END DEBUG LOGGING
                 
                 // Render the updated hand
                 this.renderPlayerHand();
@@ -3398,14 +3375,6 @@ class RummikubClient {
     }
     
     updateBoard(newBoard, tilesFromHand = []) {
-        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
-        console.log('🐛 [DEBUG] updateBoard called:', {
-            tilesFromHand,
-            currentHandSize: this.gameState?.playerHand?.length || 0,
-            boardTileCount: newBoard.flat().length
-        });
-        // 🐛 END DEBUG LOGGING
-        
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
         
@@ -3416,14 +3385,6 @@ class RummikubClient {
             // Update the undo button based on the board state change
             this.updateActionButtons();
         }
-        
-        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
-        console.log('🐛 [DEBUG] Sending updateBoard to server:', {
-            tilesFromHand,
-            boardSets: newBoard.length,
-            totalBoardTiles: newBoard.flat().length
-        });
-        // 🐛 END DEBUG LOGGING
         
         // Send to server with explicit list of tiles moved from hand
         this.socket.emit('updateBoard', { 
@@ -3804,7 +3765,10 @@ class RummikubClient {
             }
         }
         
-        console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
+        // Only log timer display updates every 10 seconds to reduce spam
+        if (this.remainingTime % 10 === 0 || this.remainingTime <= 10) {
+            console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
+        }
     }
     
     // Helper method to rejoin a game after reconnection
