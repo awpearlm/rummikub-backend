@@ -225,7 +225,7 @@ class RummikubClient {
         // Bot game button - with error handling
         addSafeEventListener('startBotGameBtn', 'click', () => {
             console.log('🤖 Start Bot Game button clicked!');
-            this.showBotGameSettings();
+            this.startBotGame();
         });
         
         // Welcome screen events
@@ -271,7 +271,6 @@ class RummikubClient {
         addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
         addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
         addSafeEventListener('createGameWithSettingsBtn', 'click', () => this.createGameWithSettings());
-        addSafeEventListener('createBotGameWithSettingsBtn', 'click', () => this.createBotGameWithSettings());
         addSafeEventListener('gameSettingsModal', 'click', (event) => {
             if (event.target.classList.contains('modal-scrim')) {
                 this.closeSettingsModal();
@@ -398,10 +397,7 @@ class RummikubClient {
             // Update remaining time from server
             this.remainingTime = data.remainingTime;
             
-            // Only log timer updates every 10 seconds to reduce spam
-            if (this.remainingTime % 10 === 0 || this.remainingTime <= 10) {
-                console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
-            }
+            console.log(`⏰ Timer update from server: ${this.remainingTime}s remaining`);
             
             // Update timer display
             this.updateTimerDisplay();
@@ -823,44 +819,6 @@ class RummikubClient {
         });
     }
 
-    showBotGameSettings() {
-        // Use authenticated username instead of form input
-        const playerName = this.username;
-        if (!playerName) {
-            this.showNotification('Please log in to play', 'error');
-            return;
-        }
-        
-        // Store player name and bot settings
-        this.playerName = playerName;
-        this.botDifficulty = document.getElementById('botDifficulty').value;
-        this.botCount = parseInt(document.getElementById('botCount').value);
-        
-        // Open the settings modal in bot mode
-        this.openBotSettingsModal();
-    }
-
-    createBotGameWithSettings() {
-        // Get settings from the modal
-        const timerEnabled = document.getElementById('settingsEnableTimer').checked;
-        this.timerEnabled = timerEnabled;
-        console.log(`🕒 Bot game turn timer: ${timerEnabled ? 'ENABLED' : 'disabled'}`);
-        console.log('🤖 Bot difficulty:', this.botDifficulty);
-        console.log('🤖 Bot count:', this.botCount);
-        
-        // Close the modal
-        this.closeSettingsModal();
-        
-        this.showLoadingScreen();
-        console.log('📡 Emitting createBotGame event with settings...');
-        this.socket.emit('createBotGame', { 
-            playerName: this.playerName, 
-            difficulty: this.botDifficulty,
-            botCount: this.botCount,
-            timerEnabled: this.timerEnabled
-        });
-    }
-
     createGame() {
         // Use the authenticated username
         const playerName = this.username;
@@ -970,30 +928,17 @@ class RummikubClient {
             return;
         }
         
-        // If tiles have been played this turn, restore board to turn-start state before drawing
-        if (this.hasPlayedTilesThisTurn && this.gameState && this.gameState.boardSnapshot) {
-            console.log('🎯 Restoring board to turn-start state before drawing tile');
+        // If the board has been modified during this turn, revert it to the original state
+        if (this.gameState && this.gameState.boardSnapshot && this.hasBoardChanged) {
+            console.log('🔄 Reverting board to original state before drawing tile');
+            this.gameState.board = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
             
-            // Create a deep copy of the board snapshot to restore
-            const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
+            // Update the UI to show the reverted board
+            this.updateGameState();
             
-            // Update local board state
-            this.gameState.board = restoredBoard;
-            
-            // Re-render the board to reflect the restoration
-            this.renderBoard();
-            
-            // Send board restoration to server first
-            this.socket.emit('updateBoard', { 
-                board: restoredBoard,
-                tilesFromHand: [] // No new tiles from hand, this is a restoration
-            });
-            
-            // Reset the flag since board has been restored to snapshot
+            // Reset the board changed flag
+            this.hasBoardChanged = false;
             this.hasPlayedTilesThisTurn = false;
-            this.updateActionButtons();
-            
-            console.log('🎯 Board restored to turn-start state, ready to draw tile');
         }
         
         this.playSound('pickupTile');
@@ -2008,8 +1953,8 @@ class RummikubClient {
             }
             
             console.log(`🎯 renderPlayerHand() called with ${this.gameState?.playerHand?.length || 0} tiles`);
-            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.filter(t => t)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.filter(t => t)?.map(t => t.id));
+            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.map(t => t.id));
             
             if (!this.gameState?.playerHand || this.gameState.playerHand.length === 0) {
                 console.log(`⚠️ Skipping render - no tiles to display`);
@@ -3163,6 +3108,17 @@ class RummikubClient {
     // This is the core drag-and-drop handler for simple tile drops (new sets)
     // Used by setupNewSetDropZone and setupBoardDropZone
     handleTileDrop(dragData, targetSetIndex) {
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🔍 [DEBUG] handleTileDrop called:', {
+            dragDataType: dragData.type,
+            tileId: dragData.tile?.id,
+            tileInfo: `${dragData.tile?.number} ${dragData.tile?.color}`,
+            targetSetIndex,
+            currentHandSize: this.gameState.playerHand.length,
+            isLastTile: this.gameState.playerHand.length === 1
+        });
+        // 🐛 END DEBUG LOGGING
+
         if (!this.isMyTurn()) {
             this.showNotification('Not your turn!', 'error');
             return;
@@ -3211,10 +3167,25 @@ class RummikubClient {
             // Remove tile from hand locally for immediate UI feedback
             const tileIndex = this.gameState.playerHand.findIndex(t => t.id === dragData.tile.id);
             if (tileIndex !== -1) {
+                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+                console.log('🐛 [DEBUG] Removing tile from hand:', {
+                    tileIndex,
+                    beforeRemoval: this.gameState.playerHand.length,
+                    tileId: dragData.tile.id
+                });
+                // 🐛 END DEBUG LOGGING
+                
                 // Create a copy of the player's hand and remove the tile
                 const newHand = [...this.gameState.playerHand];
                 newHand.splice(tileIndex, 1);
                 this.gameState.playerHand = newHand;
+                
+                // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+                console.log('🐛 [DEBUG] After local removal:', {
+                    afterRemoval: this.gameState.playerHand.length,
+                    handTileIds: this.gameState.playerHand.map(t => t.id)
+                });
+                // 🐛 END DEBUG LOGGING
                 
                 // Render the updated hand
                 this.renderPlayerHand();
@@ -3393,21 +3364,11 @@ class RummikubClient {
         
         // Add the tile to the local hand immediately for better visual feedback
         // This will be overwritten when the server responds with the updated state
-        if (this.gameState && this.gameState.playerHand && dragData.tile) {
-            // Validate the tile has required properties
-            if (dragData.tile.id && (dragData.tile.isJoker || (dragData.tile.number && dragData.tile.color))) {
-                // Create a deep copy to avoid reference issues
-                const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
-                console.log('🔄 Adding tile back to hand:', tileCopy);
-                this.gameState.playerHand.push(tileCopy);
-                this.renderPlayerHand();
-            } else {
-                console.error('❌ Invalid tile data for board-to-hand move:', dragData.tile);
-                return;
-            }
-        } else {
-            console.error('❌ Missing gameState, playerHand, or tile data for board-to-hand move');
-            return;
+        if (this.gameState && this.gameState.playerHand) {
+            // Create a deep copy to avoid reference issues
+            const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
+            this.gameState.playerHand.push(tileCopy);
+            this.renderPlayerHand();
         }
 
         // We send the request to the server for official state update
@@ -3450,16 +3411,22 @@ class RummikubClient {
     }
     
     updateBoard(newBoard, tilesFromHand = []) {
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🐛 [DEBUG] updateBoard called:', {
+            tilesFromHand,
+            currentHandSize: this.gameState?.playerHand?.length || 0,
+            boardTileCount: newBoard.flat().length
+        });
+        // 🐛 END DEBUG LOGGING
+        
+        // If tiles were moved from hand to board, mark that tiles have been played this turn
+        if (tilesFromHand && tilesFromHand.length > 0) {
+            this.hasPlayedTilesThisTurn = true;
+            console.log('🎯 Tiles moved from hand to board - disabling draw button');
+        }
+        
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
-        
-        // Safety check: Ensure tilesFromHand is valid array
-        if (tilesFromHand && Array.isArray(tilesFromHand) && tilesFromHand.length > 0) {
-            // Only set flag if tiles are actually moved from hand to board
-            // This prevents the draw button from being used after making moves
-            console.log(`🎯 Hand-to-board detection: ${tilesFromHand.length} tiles moved from hand to board`);
-            this.hasPlayedTilesThisTurn = true;
-        }
         
         // Store local copy immediately for better UX response
         if (this.gameState) {
@@ -3468,6 +3435,14 @@ class RummikubClient {
             // Update the undo button based on the board state change
             this.updateActionButtons();
         }
+        
+        // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
+        console.log('🐛 [DEBUG] Sending updateBoard to server:', {
+            tilesFromHand,
+            boardSets: newBoard.length,
+            totalBoardTiles: newBoard.flat().length
+        });
+        // 🐛 END DEBUG LOGGING
         
         // Send to server with explicit list of tiles moved from hand
         this.socket.emit('updateBoard', { 
@@ -3848,10 +3823,7 @@ class RummikubClient {
             }
         }
         
-        // Only log timer display updates every 10 seconds to reduce spam
-        if (this.remainingTime % 10 === 0 || this.remainingTime <= 10) {
-            console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
-        }
+        console.log(`⏰ Timer display updated: ${timerElement.textContent}`);
     }
     
     // Helper method to rejoin a game after reconnection
@@ -4197,24 +4169,6 @@ RummikubClient.prototype.closeSettingsModal = function() {
         modal.classList.remove('show');
         // Restore scrolling
         document.body.style.overflow = '';
-        // Reset button visibility for next use
-        document.getElementById('createGameWithSettingsBtn').style.display = 'inline-block';
-        document.getElementById('createBotGameWithSettingsBtn').style.display = 'none';
-    }
-};
-
-RummikubClient.prototype.openBotSettingsModal = function() {
-    const modal = document.getElementById('gameSettingsModal');
-    if (modal) {
-        modal.classList.add('show');
-        // Copy the current timer setting to the modal
-        const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
-        document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
-        // Show bot game button instead of regular game button
-        document.getElementById('createGameWithSettingsBtn').style.display = 'none';
-        document.getElementById('createBotGameWithSettingsBtn').style.display = 'inline-block';
-        // Prevent scrolling of background content
-        document.body.style.overflow = 'hidden';
     }
 };
 
