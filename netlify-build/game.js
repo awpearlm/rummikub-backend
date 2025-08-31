@@ -2281,6 +2281,9 @@ class RummikubClient {
         
         this.renderPlayerHand();
         this.showNotification('Tile moved', 'info');
+        
+        // Clear tile selections after successful drag-and-drop to prevent UI inconsistencies
+        this.clearSelection();
     }
 
     showDropIndicator(targetElement, clientX) {
@@ -2324,6 +2327,9 @@ class RummikubClient {
         
         this.renderPlayerHand();
         this.showNotification('Tiles reordered', 'info');
+        
+        // Clear tile selections after successful drag-and-drop to prevent UI inconsistencies
+        this.clearSelection();
     }
 
     renderGameBoard() {
@@ -3204,6 +3210,9 @@ class RummikubClient {
 
         // Send board update to server
         this.updateBoard(newBoard, tilesFromHand);
+        
+        // Clear tile selections after successful drag-and-drop to prevent UI inconsistencies
+        this.clearSelection();
     }
 
     // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
@@ -3310,6 +3319,9 @@ class RummikubClient {
 
         // Send board update to server
         this.updateBoard(newBoard, tilesFromHand);
+        
+        // Clear tile selections after successful drag-and-drop to prevent UI inconsistencies
+        this.clearSelection();
     }
 
     handleBoardTileToHand(dragData) {
@@ -3369,6 +3381,9 @@ class RummikubClient {
         }
         
         this.showNotification('Moved tile back to hand', 'success');
+        
+        // Clear tile selections after successful drag-and-drop to prevent UI inconsistencies
+        this.clearSelection();
     }
 
     // Intelligently add a tile to a set in the appropriate position
