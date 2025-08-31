@@ -1961,6 +1961,13 @@ body {
     opacity: 0.9;
 }
 
+.victory-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 .victory-btn {
     font-size: 1.2rem;
     padding: 15px 30px;
@@ -1968,12 +1975,23 @@ body {
     border: 2px solid white;
     color: white;
     transition: all 0.3s ease;
+    min-width: 150px;
 }
 
 .victory-btn:hover {
     background: white;
     color: #667eea;
     transform: translateY(-2px);
+}
+
+.victory-btn.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.victory-btn.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
 }
 
 @keyframes fadeIn {

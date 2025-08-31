@@ -2775,6 +2775,7 @@ class RummikubClient {
         const overlay = document.getElementById('victoryOverlay');
         const winnerElement = document.getElementById('winnerName');
         const playAgainBtn = document.getElementById('playAgainBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
         
         // Set winner name
         winnerElement.textContent = `${winnerName} Wins!`;
@@ -2788,13 +2789,14 @@ class RummikubClient {
         // Setup play again button
         playAgainBtn.onclick = () => {
             this.hideVictoryCelebration();
-            this.backToWelcome();
+            this.startNewGame();
         };
         
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
+        // Setup cancel button
+        cancelBtn.onclick = () => {
             this.hideVictoryCelebration();
-        }, 10000);
+            this.backToWelcome();
+        };
     }
 
     hideVictoryCelebration() {
@@ -2836,6 +2838,27 @@ class RummikubClient {
         
         // Stop inactivity checker
         this.stopInactivityCheck();
+    }
+
+    startNewGame() {
+        // Check if the current game has any bots
+        const hasBots = this.gameState && this.gameState.players && 
+                       this.gameState.players.some(player => player.isBot);
+        
+        if (hasBots) {
+            // Restart bot game with same settings
+            console.log('🤖 Restarting bot game...');
+            this.showWelcomeScreen();
+            // Small delay to ensure screen transition, then start bot game
+            setTimeout(() => {
+                this.startBotGame();
+            }, 100);
+        } else {
+            // For human-only games, just go back to welcome screen
+            // The user will need to manually create a new game or join one
+            console.log('👥 Human game ended - returning to welcome screen');
+            this.backToWelcome();
+        }
     }
 
     setupBoardTileDrag(tileElement, tile, setIndex, tileIndex) {
