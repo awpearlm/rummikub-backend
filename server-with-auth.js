@@ -185,7 +185,6 @@ class RummikubGame {
     this.turnTimeLimit = 120; // 2 minutes in seconds
     this.turnStartTime = null; // When the current turn started
     this.turnTimerInterval = null; // Server-side timer interval
-    this.turnTimerTimeout = null; // Server-side timer timeout for initial delay
     this.started = false;
     this.winner = null;
     this.chatMessages = [];
@@ -549,7 +548,7 @@ class RummikubGame {
     console.log(`⏰ Starting timer for ${currentPlayer ? currentPlayer.name : 'unknown'}, ${this.turnTimeLimit}s limit`);
     
     // Delay the initial timer broadcast to allow for the client-side animation (2.5s)
-    this.turnTimerTimeout = setTimeout(() => {
+    setTimeout(() => {
       // Send initial timer update after the notification animation would be complete
       this.broadcastTimerUpdate(this.turnTimeLimit);
       
@@ -576,11 +575,6 @@ class RummikubGame {
       clearInterval(this.turnTimerInterval);
       this.turnTimerInterval = null;
     }
-    if (this.turnTimerTimeout) {
-      clearTimeout(this.turnTimerTimeout);
-      this.turnTimerTimeout = null;
-    }
-    this.turnStartTime = null;
   }
   
   // Broadcast timer update to all players in the game
@@ -1279,9 +1273,18 @@ class RummikubGame {
       }
     }, delay);
   }
-
+  
+  // Clear the turn timer
+  clearTurnTimer() {
+    if (this.turnTimerInterval) {
+      clearInterval(this.turnTimerInterval);
+      this.turnTimerInterval = null;
+    }
+    this.turnStartTime = null;
+  }
+  
   // Game Lifecycle Management Methods
-
+  
   startLifecycleManagement() {
     // Start checking for single player timeout
     this.checkSinglePlayerTimeout();
