@@ -225,7 +225,7 @@ class RummikubClient {
         // Bot game button - with error handling
         addSafeEventListener('startBotGameBtn', 'click', () => {
             console.log('🤖 Start Bot Game button clicked!');
-            this.startBotGame();
+            this.showBotGameSettings();
         });
         
         // Welcome screen events
@@ -271,6 +271,7 @@ class RummikubClient {
         addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
         addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
         addSafeEventListener('createGameWithSettingsBtn', 'click', () => this.createGameWithSettings());
+        addSafeEventListener('createBotGameWithSettingsBtn', 'click', () => this.createBotGameWithSettings());
         addSafeEventListener('gameSettingsModal', 'click', (event) => {
             if (event.target.classList.contains('modal-scrim')) {
                 this.closeSettingsModal();
@@ -819,6 +820,44 @@ class RummikubClient {
             playerName, 
             difficulty: this.botDifficulty,
             botCount: this.botCount
+        });
+    }
+
+    showBotGameSettings() {
+        // Use authenticated username instead of form input
+        const playerName = this.username;
+        if (!playerName) {
+            this.showNotification('Please log in to play', 'error');
+            return;
+        }
+        
+        // Store player name and bot settings
+        this.playerName = playerName;
+        this.botDifficulty = document.getElementById('botDifficulty').value;
+        this.botCount = parseInt(document.getElementById('botCount').value);
+        
+        // Open the settings modal in bot mode
+        this.openBotSettingsModal();
+    }
+
+    createBotGameWithSettings() {
+        // Get settings from the modal
+        const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+        this.timerEnabled = timerEnabled;
+        console.log(`🕒 Bot game turn timer: ${timerEnabled ? 'ENABLED' : 'disabled'}`);
+        console.log('🤖 Bot difficulty:', this.botDifficulty);
+        console.log('🤖 Bot count:', this.botCount);
+        
+        // Close the modal
+        this.closeSettingsModal();
+        
+        this.showLoadingScreen();
+        console.log('📡 Emitting createBotGame event with settings...');
+        this.socket.emit('createBotGame', { 
+            playerName: this.playerName, 
+            difficulty: this.botDifficulty,
+            botCount: this.botCount,
+            timerEnabled: this.timerEnabled
         });
     }
 
@@ -4114,6 +4153,24 @@ RummikubClient.prototype.closeSettingsModal = function() {
         modal.classList.remove('show');
         // Restore scrolling
         document.body.style.overflow = '';
+        // Reset button visibility for next use
+        document.getElementById('createGameWithSettingsBtn').style.display = 'inline-block';
+        document.getElementById('createBotGameWithSettingsBtn').style.display = 'none';
+    }
+};
+
+RummikubClient.prototype.openBotSettingsModal = function() {
+    const modal = document.getElementById('gameSettingsModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Copy the current timer setting to the modal
+        const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
+        document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
+        // Show bot game button instead of regular game button
+        document.getElementById('createGameWithSettingsBtn').style.display = 'none';
+        document.getElementById('createBotGameWithSettingsBtn').style.display = 'inline-block';
+        // Prevent scrolling of background content
+        document.body.style.overflow = 'hidden';
     }
 };
 

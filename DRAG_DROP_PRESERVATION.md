@@ -154,7 +154,7 @@ Before committing any changes that might affect drag-drop:
 If drag-drop breaks in production and you need to revert quickly:
 
 1. **Stable reference**: The `main` branch contains known-working drag-drop
-2. **Working commit**: `200173b` - Contains the full working implementation
+2. **Working commit**: `65ed4a8` - Contains the full working implementation
 3. **Test command**: Always run the full test suite before deploying
 4. **Rollback strategy**: Revert to main branch if all else fails
 

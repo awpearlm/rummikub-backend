@@ -1573,6 +1573,10 @@ io.on('connection', (socket) => {
     const botCount = data.botCount || 1; // Default to 1 bot if not specified
     const game = new RummikubGame(gameId, true, data.difficulty);
     
+    // Set timer option if provided
+    game.timerEnabled = data.timerEnabled || false;
+    console.log(`🤖 Bot game timer setting: ${game.timerEnabled ? 'ENABLED' : 'disabled'}`);
+    
     if (game.addPlayer(socket.id, data.playerName)) {
       // Add the specified number of bot players
       const addedBots = [];
