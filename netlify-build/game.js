@@ -3417,6 +3417,12 @@ class RummikubClient {
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
         
+        // If tiles were moved from hand to board, mark that tiles have been played this turn
+        if (tilesFromHand && tilesFromHand.length > 0) {
+            this.hasPlayedTilesThisTurn = true;
+            console.log(`🎯 Tiles moved from hand to board: ${tilesFromHand.length} tiles - Draw button now disabled`);
+        }
+        
         // Store local copy immediately for better UX response
         if (this.gameState) {
             this.gameState.board = newBoard;
