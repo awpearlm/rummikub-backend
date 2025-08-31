@@ -1910,6 +1910,16 @@ io.on('connection', (socket) => {
       // Reset any turn-specific flags
       currentPlayer.hasManipulatedJoker = false;
       
+      // Check for win condition before ending turn
+      if (currentPlayer.hand.length === 0) {
+        game.winner = currentPlayer;
+        io.to(playerData.gameId).emit('gameWon', {
+          winner: game.winner,
+          gameState: game.getGameState(socket.id)
+        });
+        return;
+      }
+      
       // Clear the current timer before changing turns
       game.clearTurnTimer();
       
