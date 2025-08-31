@@ -970,28 +970,6 @@ class RummikubClient {
             return;
         }
         
-        // If tiles have been played this turn, restore board to turn-start state before drawing
-        if (this.hasPlayedTilesThisTurn && this.gameState && this.gameState.boardSnapshot) {
-            console.log('🎯 Restoring board to turn-start state before drawing tile');
-            
-            // Restore board to the snapshot state
-            const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
-            
-            // Update the board state locally and on server
-            this.gameState.board = restoredBoard;
-            this.renderBoard();
-            
-            // Send board restoration to server before drawing
-            this.socket.emit('updateBoard', { 
-                board: restoredBoard,
-                tilesFromHand: []
-            });
-            
-            // Reset the flag since board has been restored
-            this.hasPlayedTilesThisTurn = false;
-            this.updateActionButtons();
-        }
-        
         this.playSound('pickupTile');
         this.socket.emit('drawTile');
     }
@@ -3448,12 +3426,6 @@ class RummikubClient {
     updateBoard(newBoard, tilesFromHand = []) {
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
-        
-        // If tiles were moved from hand to board, mark that tiles have been played this turn
-        if (tilesFromHand && tilesFromHand.length > 0) {
-            this.hasPlayedTilesThisTurn = true;
-            console.log(`🎯 Tiles moved from hand to board: ${tilesFromHand.length} tiles - Draw button now disabled`);
-        }
         
         // Store local copy immediately for better UX response
         if (this.gameState) {
