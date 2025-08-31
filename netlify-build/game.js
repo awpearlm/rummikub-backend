@@ -3427,6 +3427,14 @@ class RummikubClient {
         // Sort all sets on the board before updating
         this.sortAllBoardSets(newBoard);
         
+        // Safety check: Ensure tilesFromHand is valid array
+        if (tilesFromHand && Array.isArray(tilesFromHand) && tilesFromHand.length > 0) {
+            // Only set flag if tiles are actually moved from hand to board
+            // This prevents the draw button from being used after making moves
+            console.log(`🎯 Hand-to-board detection: ${tilesFromHand.length} tiles moved from hand to board`);
+            this.hasPlayedTilesThisTurn = true;
+        }
+        
         // Store local copy immediately for better UX response
         if (this.gameState) {
             this.gameState.board = newBoard;
