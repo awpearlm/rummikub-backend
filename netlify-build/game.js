@@ -970,6 +970,28 @@ class RummikubClient {
             return;
         }
         
+        // If tiles have been played this turn, restore board to turn-start state before drawing
+        if (this.hasPlayedTilesThisTurn && this.gameState && this.gameState.boardSnapshot) {
+            console.log('🎯 Restoring board to turn-start state before drawing tile');
+            
+            // Restore board to the snapshot state
+            const restoredBoard = JSON.parse(JSON.stringify(this.gameState.boardSnapshot));
+            
+            // Update the board state locally and on server
+            this.gameState.board = restoredBoard;
+            this.renderBoard();
+            
+            // Send board restoration to server before drawing
+            this.socket.emit('updateBoard', { 
+                board: restoredBoard,
+                tilesFromHand: []
+            });
+            
+            // Reset the flag since board has been restored
+            this.hasPlayedTilesThisTurn = false;
+            this.updateActionButtons();
+        }
+        
         this.playSound('pickupTile');
         this.socket.emit('drawTile');
     }
@@ -1982,8 +2004,8 @@ class RummikubClient {
             }
             
             console.log(`🎯 renderPlayerHand() called with ${this.gameState?.playerHand?.length || 0} tiles`);
-            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.map(t => t.id));
+            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.filter(t => t)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.filter(t => t)?.map(t => t.id));
             
             if (!this.gameState?.playerHand || this.gameState.playerHand.length === 0) {
                 console.log(`⚠️ Skipping render - no tiles to display`);
@@ -3367,11 +3389,21 @@ class RummikubClient {
         
         // Add the tile to the local hand immediately for better visual feedback
         // This will be overwritten when the server responds with the updated state
-        if (this.gameState && this.gameState.playerHand) {
-            // Create a deep copy to avoid reference issues
-            const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
-            this.gameState.playerHand.push(tileCopy);
-            this.renderPlayerHand();
+        if (this.gameState && this.gameState.playerHand && dragData.tile) {
+            // Validate the tile has required properties
+            if (dragData.tile.id && (dragData.tile.isJoker || (dragData.tile.number && dragData.tile.color))) {
+                // Create a deep copy to avoid reference issues
+                const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
+                console.log('🔄 Adding tile back to hand:', tileCopy);
+                this.gameState.playerHand.push(tileCopy);
+                this.renderPlayerHand();
+            } else {
+                console.error('❌ Invalid tile data for board-to-hand move:', dragData.tile);
+                return;
+            }
+        } else {
+            console.error('❌ Missing gameState, playerHand, or tile data for board-to-hand move');
+            return;
         }
 
         // We send the request to the server for official state update
