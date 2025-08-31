@@ -457,6 +457,9 @@ class RummikubGame {
       // Fifth set: Two 10s + joker (can represent any 10)
       { id: 'red_10_0', color: 'red', number: 10, isJoker: false },
       { id: 'blue_10_0', color: 'blue', number: 10, isJoker: false },
+      
+      // Extra testing tile: Joker for last tile duplication testing
+      { id: 'joker_1', color: null, number: null, isJoker: true }
     ];
     
     console.log(`🔧 Created debug tiles: ${debugTiles.length} tiles`);
@@ -475,7 +478,7 @@ class RummikubGame {
     console.log(`🔧 Gave debug tiles to ${humanPlayer.name}: ${humanPlayer.hand.length} tiles`);
     
     console.log(`🔧 Final human hand size: ${humanPlayer.hand.length}`);
-    console.log(`🔧 Human hand sets: 3×13s (${debugTiles.slice(0,3).map(t => t.color).join(', ')}), red 1-2-3, blue 4-5-6, 3×7s, 2×10s`);
+    console.log(`🔧 Human hand sets: 3×13s (${debugTiles.slice(0,3).map(t => t.color).join(', ')}), red 1-2-3, blue 4-5-6, 3×7s, 2×10s, +1 joker`);
     
     // Give bot normal random hand
     for (let i = 0; i < 14; i++) {
