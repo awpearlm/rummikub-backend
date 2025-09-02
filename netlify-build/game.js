@@ -2016,18 +2016,22 @@ class RummikubClient {
                 
                 if (tile) {
                     const tileElement = this.createTileElement(tile, true);
-                    tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
-                    
-                    // Add drag and drop functionality
-                    this.addDragAndDropToTile(tileElement, tile, i);
-                    
-                    // Calculate grid position
-                    const row = Math.floor(i / tilesPerRow) + 1;
-                    const col = (i % tilesPerRow) + 1;
-                    tileElement.style.gridRow = row;
-                    tileElement.style.gridColumn = col;
-                    
-                    handElement.appendChild(tileElement);
+                    if (tileElement) {  // Safety check in case createTileElement returns null
+                        tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
+                        
+                        // Add drag and drop functionality
+                        this.addDragAndDropToTile(tileElement, tile, i);
+                        
+                        // Calculate grid position
+                        const row = Math.floor(i / tilesPerRow) + 1;
+                        const col = (i % tilesPerRow) + 1;
+                        tileElement.style.gridRow = row;
+                        tileElement.style.gridColumn = col;
+                        
+                        handElement.appendChild(tileElement);
+                    } else {
+                        console.warn('⚠️ Skipping invalid tile at grid position', i, ':', tile);
+                    }
                 } else {
                     // Only create empty slots that are visible and useful for drag-and-drop
                     // Show empty slots in current rows, but only a few extra beyond the tiles
@@ -2483,6 +2487,13 @@ class RummikubClient {
     }
 
     createTileElement(tile, isDraggable = false) {
+        // Safety check for malformed tile objects
+        if (!tile || typeof tile !== 'object' || !tile.hasOwnProperty('isJoker') || !tile.id) {
+            console.error('❌ Error: Invalid tile object passed to createTileElement:', tile);
+            console.trace(); // This will show us where the invalid tile came from
+            return null;
+        }
+        
         const tileElement = document.createElement('div');
         tileElement.className = `tile ${tile.color || ''} ${tile.isJoker ? 'joker' : ''}`;
         tileElement.dataset.tileId = tile.id;

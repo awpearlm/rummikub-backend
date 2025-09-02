@@ -419,3 +419,170 @@ Cypress.Commands.add('verifyInvitationTableRow', (email, invitedBy, status = 'Pe
     cy.get('td').eq(4).should('not.be.empty') // Expires date
   })
 })
+
+// ===== GAME PLAY COMMANDS =====
+
+// Command to make a valid initial play in debug mode
+Cypress.Commands.add('makeValidInitialPlay', () => {
+  cy.log('🎯 Attempting to make valid initial play with debug hand')
+  
+  return cy.get('#playerHand .tile').then($tiles => {
+    const tiles = Array.from($tiles).map((tile, index) => {
+      const numberElement = tile.querySelector('.tile-number')
+      const value = numberElement ? parseInt(numberElement.textContent.trim()) : 0
+      const color = tile.className.match(/tile-(red|blue|yellow|black)/)?.[1] || 'unknown'
+      const isJoker = tile.classList.contains('joker')
+      return { element: tile, value, color, isJoker, index }
+    })
+    
+    cy.log(`Found ${tiles.length} tiles in hand`)
+    
+    // Strategy 1: Look for the three 13s that debug mode provides (39 points - easy win)
+    const thirteens = tiles.filter(t => t.value === 13)
+    
+    if (thirteens.length >= 3) {
+      cy.log(`Found ${thirteens.length} thirteens - selecting first 3 for 39-point initial play`)
+      
+      // Clear any existing selections first
+      cy.get('#playerHand').then($hand => {
+        const selectedTiles = $hand.find('.tile.selected')
+        if (selectedTiles.length > 0) {
+          cy.log(`Clearing ${selectedTiles.length} selected tiles`)
+          cy.wrap(selectedTiles).each($tile => {
+            cy.wrap($tile).click()
+          })
+        } else {
+          cy.log('No tiles currently selected')
+        }
+      })
+      
+      // Select the first 3 thirteens
+      thirteens.slice(0, 3).forEach(tile => {
+        cy.wrap(tile.element).click()
+      })
+      
+      return cy.get('#playSetBtn').then($btn => {
+        if (!$btn.is(':disabled')) {
+          cy.log('✅ Found valid 39-point set of thirteens - playing it')
+          cy.wrap($btn).click()
+          cy.wait(2000)
+          
+          // Verify the play was successful
+          return cy.get('#gameBoard .tile').then($boardTiles => {
+            if ($boardTiles.length >= 3) {
+              cy.log('✅ Initial play successful - tiles are on the board')
+              return cy.wrap(true)
+            } else {
+              cy.log('❌ Initial play failed - no tiles on board')
+              return cy.wrap(false)
+            }
+          })
+        } else {
+          cy.log('❌ Three thirteens do not form valid set - trying alternative')
+          return cy.tryAlternativeDebugPlay(tiles)
+        }
+      })
+    } else {
+      cy.log(`Only found ${thirteens.length} thirteens - trying alternative debug patterns`)
+      return cy.tryAlternativeDebugPlay(tiles)
+    }
+  })
+})
+
+// Command to try alternative plays when standard debug play doesn't work
+Cypress.Commands.add('tryAlternativeDebugPlay', (tiles) => {
+  cy.log('🔄 Trying alternative debug hand combinations')
+  
+  // Clear any selections
+  cy.get('#playerHand').then($hand => {
+    const selectedTiles = $hand.find('.tile.selected')
+    if (selectedTiles.length > 0) {
+      cy.wrap(selectedTiles).each($tile => {
+        cy.wrap($tile).click()
+      })
+    }
+  })
+  
+  // Strategy 2: Look for the three 7s (21 points - need more for 30)
+  const sevens = tiles.filter(t => t.value === 7)
+  const tens = tiles.filter(t => t.value === 10)
+  const jokers = tiles.filter(t => t.isJoker)
+  
+  if (tens.length >= 2 && jokers.length >= 1) {
+    cy.log('Trying two 10s + joker combination (30 points)')
+    
+    // Select two 10s and one joker
+    cy.wrap(tens[0].element).click()
+    cy.wrap(tens[1].element).click()
+    cy.wrap(jokers[0].element).click()
+    
+    return cy.get('#playSetBtn').then($btn => {
+      if (!$btn.is(':disabled')) {
+        cy.log('✅ Two 10s + joker forms valid set - playing it')
+        cy.wrap($btn).click()
+        cy.wait(2000)
+        
+        return cy.get('#gameBoard .tile').then($boardTiles => {
+          if ($boardTiles.length >= 3) {
+            cy.log('✅ Alternative play successful')
+            return cy.wrap(true)
+          } else {
+            cy.log('❌ Alternative play failed')
+            return cy.wrap(false)
+          }
+        })
+      } else {
+        cy.log('❌ Two 10s + joker not valid - trying basic sequence')
+        return cy.tryBasicSequence(tiles)
+      }
+    })
+  } else {
+    cy.log('Not enough tens/jokers - trying basic sequence')
+    return cy.tryBasicSequence(tiles)
+  }
+})
+
+// Command to try a basic sequence as fallback
+Cypress.Commands.add('tryBasicSequence', (tiles) => {
+  cy.log('🔄 Trying basic sequence as last resort')
+  
+  // Try to find any 3+ consecutive numbers in same color
+  const colors = ['red', 'blue', 'yellow', 'black']
+  
+  for (const color of colors) {
+    const colorTiles = tiles.filter(t => t.color === color && !t.isJoker).sort((a, b) => a.value - b.value)
+    
+    // Look for consecutive numbers
+    for (let i = 0; i < colorTiles.length - 2; i++) {
+      const tile1 = colorTiles[i]
+      const tile2 = colorTiles[i + 1]
+      const tile3 = colorTiles[i + 2]
+      
+      if (tile2.value === tile1.value + 1 && tile3.value === tile2.value + 1) {
+        const totalValue = tile1.value + tile2.value + tile3.value
+        if (totalValue >= 30) {
+          cy.log(`Found valid sequence: ${tile1.value}, ${tile2.value}, ${tile3.value} in ${color} (${totalValue} points)`)
+          
+          // Clear selections and select these tiles
+          cy.get('#playerHand .tile.selected').click({ multiple: true })
+          cy.wrap(tile1.element).click()
+          cy.wrap(tile2.element).click()
+          cy.wrap(tile3.element).click()
+          
+          return cy.get('#playSetBtn').then($btn => {
+            if (!$btn.is(':disabled')) {
+              cy.wrap($btn).click()
+              cy.wait(2000)
+              return cy.wrap(true)
+            } else {
+              return cy.wrap(false)
+            }
+          })
+        }
+      }
+    }
+  }
+  
+  cy.log('❌ No valid initial play found in debug hand')
+  return cy.wrap(false)
+})
