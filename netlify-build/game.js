@@ -372,8 +372,8 @@ class RummikubClient {
             // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
             const previousHandSize = this.gameState?.playerHand?.length || 0;
             const newHandSize = data.gameState?.playerHand?.length || 0;
-            const previousHandIds = this.gameState?.playerHand?.map(t => t.id) || [];
-            const newHandIds = data.gameState?.playerHand?.map(t => t.id) || [];
+            const previousHandIds = this.gameState?.playerHand?.filter(t => t != null).map(t => t.id) || [];
+            const newHandIds = data.gameState?.playerHand?.filter(t => t != null).map(t => t.id) || [];
             
             console.log('🐛 [DEBUG] gameStateUpdate received:', {
                 handSizeChange: `${previousHandSize} → ${newHandSize}`,
@@ -1834,8 +1834,8 @@ class RummikubClient {
         
         // Also check if the actual tiles have changed (same count but different tiles)
         if (this.gameState.playerHand && this.tileGridLayout) {
-            const currentTileIds = new Set(this.gameState.playerHand.map(t => t.id));
-            const gridTileIds = new Set(this.tileGridLayout.filter(t => t !== null).map(t => t.id));
+            const currentTileIds = new Set(this.gameState.playerHand.filter(t => t != null).map(t => t.id));
+            const gridTileIds = new Set(this.tileGridLayout.filter(t => t != null).map(t => t.id));
             
             // If the sets don't match, the hand has changed
             if (currentTileIds.size !== gridTileIds.size || 
@@ -1852,8 +1852,10 @@ class RummikubClient {
         if (!this.tileGridLayout || !this.gameState.playerHand) return;
         
         // Find the new tile - it should be the one that's not in our current grid layout
-        const existingTileIds = new Set(this.tileGridLayout.filter(t => t !== null).map(t => t.id));
-        const newTile = this.gameState.playerHand.find(tile => !existingTileIds.has(tile.id));
+        // Filter out both null and undefined elements before mapping IDs
+        const existingTileIds = new Set(this.tileGridLayout.filter(t => t != null).map(t => t.id));
+        const validHand = this.gameState.playerHand.filter(t => t != null);
+        const newTile = validHand.find(tile => !existingTileIds.has(tile.id));
         
         if (!newTile) {
             console.log('⚠️ No new tile found after draw - falling back to initializeGridLayout');
@@ -2108,7 +2110,8 @@ class RummikubClient {
 
     syncGridLayoutToGameState() {
         // Update gameState.playerHand to match the current grid layout
-        this.gameState.playerHand = this.tileGridLayout.filter(tile => tile !== null);
+        this.gameState.playerHand = this.tileGridLayout.filter(tile => tile != null);
+        this.cleanPlayerHand(); // Extra safety
     }
 
     // ⚠️ CRITICAL: DO NOT MODIFY OR REMOVE - See DRAG_DROP_PRESERVATION.md
@@ -2117,7 +2120,7 @@ class RummikubClient {
         if (!this.tileGridLayout || !this.gameState?.playerHand) return;
         
         // Create a set of current tile IDs for quick lookup
-        const currentTileIds = new Set(this.gameState.playerHand.map(t => t.id));
+        const currentTileIds = new Set(this.gameState.playerHand.filter(t => t != null).map(t => t.id));
         
         // Remove tiles that are no longer in the hand, keep others in their positions
         for (let i = 0; i < this.tileGridLayout.length; i++) {
@@ -2166,7 +2169,7 @@ class RummikubClient {
             return;
         }
         
-        const currentTileIds = new Set(this.gameState.playerHand.map(t => t.id));
+        const currentTileIds = new Set(this.gameState.playerHand.filter(t => t != null).map(t => t.id));
         const existingTileIds = new Set();
         
         // First pass: remove tiles that are no longer in hand
@@ -3210,7 +3213,7 @@ class RummikubClient {
                 // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
                 console.log('🐛 [DEBUG] After local removal:', {
                     afterRemoval: this.gameState.playerHand.length,
-                    handTileIds: this.gameState.playerHand.map(t => t.id)
+                    handTileIds: this.gameState.playerHand.filter(t => t != null).map(t => t.id)
                 });
                 // 🐛 END DEBUG LOGGING
                 
