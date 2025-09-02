@@ -171,6 +171,13 @@ class RummikubClient {
         this.initializeSocketListeners();
     }
 
+    // Helper function to ensure playerHand doesn't contain undefined elements
+    cleanPlayerHand() {
+        if (this.gameState?.playerHand) {
+            this.gameState.playerHand = this.gameState.playerHand.filter(t => t != null);
+        }
+    }
+
     // Check if user is authenticated and update UI accordingly
     checkAuthenticationStatus() {
         const loggedInStatus = document.getElementById('loggedInStatus');
@@ -387,6 +394,7 @@ class RummikubClient {
             }
             
             this.gameState = data.gameState;
+            this.cleanPlayerHand(); // Ensure no undefined elements in hand
             this.updateGameState();
             
             // Reset inactivity timer whenever we get a game state update
@@ -1969,10 +1977,13 @@ class RummikubClient {
             }
             
             console.log(`🎯 renderPlayerHand() called with ${this.gameState?.playerHand?.length || 0} tiles`);
-            console.log(`🃏 Tiles to render:`, this.gameState?.playerHand?.slice(0, 5)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
-            console.log(`🆔 First 3 tile IDs:`, this.gameState?.playerHand?.slice(0, 3)?.map(t => t.id));
             
-            if (!this.gameState?.playerHand || this.gameState.playerHand.length === 0) {
+            // Filter out any undefined elements from the hand
+            const validTiles = this.gameState?.playerHand?.filter(t => t != null) || [];
+            console.log(`🃏 Tiles to render:`, validTiles.slice(0, 5)?.map(t => `${t.isJoker ? 'JOKER' : t.number + t.color[0]}`));
+            console.log(`🆔 First 3 tile IDs:`, validTiles.slice(0, 3)?.map(t => t.id));
+            
+            if (!validTiles || validTiles.length === 0) {
                 console.log(`⚠️ Skipping render - no tiles to display`);
                 // 🐛 FIX: Always clear the hand element when there are no tiles to prevent ghost tiles
                 // This fixes the last tile duplication visual bug
@@ -1986,11 +1997,11 @@ class RummikubClient {
                 return;
             }
             
-            console.log(`✅ Proceeding with hand render for ${this.gameState.playerHand.length} tiles`);
+            console.log(`✅ Proceeding with hand render for ${validTiles.length} tiles`);
             handElement.innerHTML = '';
             
             // Dynamic grid sizing based on number of tiles
-            const totalTiles = this.gameState.playerHand.length;
+            const totalTiles = validTiles.length;
             const tilesPerRow = 10; // Updated from 7 to 10 tiles per row
             
             // Calculate rows needed: start with 3 rows (30 slots), add more only when needed
@@ -2016,22 +2027,18 @@ class RummikubClient {
                 
                 if (tile) {
                     const tileElement = this.createTileElement(tile, true);
-                    if (tileElement) {  // Safety check in case createTileElement returns null
-                        tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
-                        
-                        // Add drag and drop functionality
-                        this.addDragAndDropToTile(tileElement, tile, i);
-                        
-                        // Calculate grid position
-                        const row = Math.floor(i / tilesPerRow) + 1;
-                        const col = (i % tilesPerRow) + 1;
-                        tileElement.style.gridRow = row;
-                        tileElement.style.gridColumn = col;
-                        
-                        handElement.appendChild(tileElement);
-                    } else {
-                        console.warn('⚠️ Skipping invalid tile at grid position', i, ':', tile);
-                    }
+                    tileElement.addEventListener('click', () => this.toggleTileSelection(tile.id, tileElement));
+                    
+                    // Add drag and drop functionality
+                    this.addDragAndDropToTile(tileElement, tile, i);
+                    
+                    // Calculate grid position
+                    const row = Math.floor(i / tilesPerRow) + 1;
+                    const col = (i % tilesPerRow) + 1;
+                    tileElement.style.gridRow = row;
+                    tileElement.style.gridColumn = col;
+                    
+                    handElement.appendChild(tileElement);
                 } else {
                     // Only create empty slots that are visible and useful for drag-and-drop
                     // Show empty slots in current rows, but only a few extra beyond the tiles
@@ -2070,7 +2077,8 @@ class RummikubClient {
 
     initializeGridLayout(maxSlots = null) {
         // Calculate dynamic grid size based on current hand
-        const handSize = this.gameState?.playerHand?.length || 0;
+        const validHand = this.gameState?.playerHand?.filter(t => t != null) || [];
+        const handSize = validHand.length;
         const tilesPerRow = 10; // Updated from 7 to 10 tiles per row
         
         console.log(`🔧 initializeGridLayout() called with handSize=${handSize}, maxSlots=${maxSlots}`);
@@ -2091,13 +2099,11 @@ class RummikubClient {
         this.tileGridLayout = new Array(gridSize).fill(null);
         
         // Place all current hand tiles in the grid
-        if (this.gameState?.playerHand) {
-            this.gameState.playerHand.forEach((tile, index) => {
-                if (index < this.tileGridLayout.length) {
-                    this.tileGridLayout[index] = tile;
-                }
-            });
-        }
+        validHand.forEach((tile, index) => {
+            if (index < this.tileGridLayout.length) {
+                this.tileGridLayout[index] = tile;
+            }
+        });
     }
 
     syncGridLayoutToGameState() {
@@ -2487,13 +2493,6 @@ class RummikubClient {
     }
 
     createTileElement(tile, isDraggable = false) {
-        // Safety check for malformed tile objects
-        if (!tile || typeof tile !== 'object' || !tile.hasOwnProperty('isJoker') || !tile.id) {
-            console.error('❌ Error: Invalid tile object passed to createTileElement:', tile);
-            console.trace(); // This will show us where the invalid tile came from
-            return null;
-        }
-        
         const tileElement = document.createElement('div');
         tileElement.className = `tile ${tile.color || ''} ${tile.isJoker ? 'joker' : ''}`;
         tileElement.dataset.tileId = tile.id;
@@ -3206,6 +3205,7 @@ class RummikubClient {
                 const newHand = [...this.gameState.playerHand];
                 newHand.splice(tileIndex, 1);
                 this.gameState.playerHand = newHand;
+                this.cleanPlayerHand(); // Ensure no undefined elements
                 
                 // 🐛 DEBUG LOGGING - REMOVE AFTER BUG FIX
                 console.log('🐛 [DEBUG] After local removal:', {
@@ -3310,6 +3310,7 @@ class RummikubClient {
                 
                 // Update the local hand immediately for visual feedback
                 this.gameState.playerHand = newHand;
+                this.cleanPlayerHand(); // Ensure no undefined elements
                 this.renderPlayerHand();
                 
                 // Make sure buttons are updated (particularly undo button)
@@ -3395,6 +3396,7 @@ class RummikubClient {
             // Create a deep copy to avoid reference issues
             const tileCopy = JSON.parse(JSON.stringify(dragData.tile));
             this.gameState.playerHand.push(tileCopy);
+            this.cleanPlayerHand(); // Ensure no undefined elements
             this.renderPlayerHand();
         }
 
