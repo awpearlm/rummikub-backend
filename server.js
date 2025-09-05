@@ -109,6 +109,7 @@ class RummikubGame {
     this.isBotGame = isBotGame;
     this.botDifficulty = botDifficulty;
     this.createdAt = Date.now(); // Add creation timestamp
+    this.lastPlayerActivity = Date.now(); // Track last player activity to prevent false timeouts
     console.log(`🎮 Game ${gameId} created, isBotGame: ${isBotGame}`);
     this.initializeDeck();
   }
@@ -472,15 +473,17 @@ class RummikubGame {
       return !(t.isJoker === true || t.number === null || (t.id && t.id.toLowerCase().includes('joker')));
     });
     
-    // If all jokers, it's valid (matching client-side behavior)
+    // MULTIPLAYER FIX: Better validation for edge cases
+    // If all jokers, it's only valid if exactly 3 or 4 jokers (complete group)
     if (jokerCount === tiles.length) {
-      console.log(`Group valid: all jokers`);
-      return true;
+      const isValid = jokerCount >= 3 && jokerCount <= 4;
+      console.log(`Group of all jokers (${jokerCount}): ${isValid ? 'valid' : 'invalid'}`);
+      return isValid;
     }
     
     // Need at least one real tile to determine the group number
     if (nonJokers.length === 0) {
-      console.log(`Group invalid: all jokers, need at least one real tile`);
+      console.log(`Group invalid: all jokers but no real tile to determine number`);
       return false;
     }
     
@@ -900,7 +903,20 @@ class RummikubGame {
     const currentPlayer = this.getCurrentPlayer();
     if (!currentPlayer) return;
     
-    console.log(`⏰ Time's up for ${currentPlayer.name}!`);
+    // MULTIPLAYER FIX: Check if player is actually inactive before forcing timeout
+    // Don't timeout if recent activity detected (board changes, socket activity, etc.)
+    const now = Date.now();
+    const timeSinceLastActivity = now - (this.lastPlayerActivity || this.turnStartTime || now);
+    
+    if (timeSinceLastActivity < 10000) { // Less than 10 seconds since last activity
+      console.log(`⏰ Timer expired but recent activity detected for ${currentPlayer.name}, extending turn by 30s`);
+      // Extend the turn by 30 seconds instead of immediate timeout
+      this.turnStartTime = now - (this.turnTimeLimit - 30) * 1000;
+      this.startTurnTimer();
+      return;
+    }
+    
+    console.log(`⏰ Time's up for ${currentPlayer.name} - no recent activity detected!`);
     
     // Find tiles that need to be returned to the player's hand
     // Compare current board with snapshot to find tiles that were moved from hand to board
@@ -1161,19 +1177,40 @@ class RummikubGame {
   }
 
   validateBoardState(isEndTurn = true) {
-    // Validate that all sets on the board are legal
-    for (let i = 0; i < this.board.length; i++) {
-      const set = this.board[i];
-      
-      // When ending a turn, enforce that sets must have 3+ tiles and be valid
-      // During a turn, allow partial sets with fewer than 3 tiles
-      if ((isEndTurn && set.length < 3) || !this.isValidPartialSet(set, isEndTurn)) {
-        console.log(`❌ Invalid set found at index ${i}:`, set.map(t => `${t.color || 'joker'}_${t.number || 'J'}`));
-        return { valid: false, invalidSetIndex: i };
+    // MULTIPLAYER FIX: Add recovery logic for corrupted board states
+    try {
+      // Validate that all sets on the board are legal
+      for (let i = 0; i < this.board.length; i++) {
+        const set = this.board[i];
+        
+        // MULTIPLAYER FIX: Filter out any undefined tiles that might have crept in
+        const validTiles = set.filter(tile => tile && tile.id);
+        if (validTiles.length !== set.length) {
+          console.log(`⚠️  Found and removed ${set.length - validTiles.length} invalid tiles from set ${i}`);
+          this.board[i] = validTiles;
+        }
+        
+        // When ending a turn, enforce that sets must have 3+ tiles and be valid
+        // During a turn, allow partial sets with fewer than 3 tiles
+        if ((isEndTurn && validTiles.length < 3) || !this.isValidPartialSet(validTiles, isEndTurn)) {
+          console.log(`❌ Invalid set found at index ${i}:`, validTiles.map(t => `${t.color || 'joker'}_${t.number || 'J'}`));
+          return { valid: false, invalidSetIndex: i };
+        }
       }
+      
+      // Remove any empty sets that might exist
+      const originalLength = this.board.length;
+      this.board = this.board.filter(set => set && set.length > 0);
+      if (this.board.length !== originalLength) {
+        console.log(`🧹 Cleaned up ${originalLength - this.board.length} empty sets from board`);
+      }
+      
+      console.log(`✅ Board state is valid: ${this.board.length} sets`);
+      return { valid: true };
+    } catch (error) {
+      console.error(`❌ Error validating board state:`, error);
+      return { valid: false, error: error.message };
     }
-    console.log(`✅ Board state is valid: ${this.board.length} sets`);
-    return { valid: true };
   }
   
   // Check if a set is valid or could become valid
@@ -1952,6 +1989,9 @@ io.on('connection', (socket) => {
       const game = games.get(playerData.gameId);
       if (!game) return;
 
+      // MULTIPLAYER FIX: Update activity timestamp on play actions
+      game.lastPlayerActivity = Date.now();
+
       // Check if this is multiple sets for initial play
       if (Array.isArray(data.setArrays)) {
         const result = game.playMultipleSets(socket.id, data.setArrays);
@@ -2061,6 +2101,9 @@ io.on('connection', (socket) => {
         return;
       }
 
+      // MULTIPLAYER FIX: Update activity timestamp
+      game.lastPlayerActivity = Date.now();
+
       console.log(`🔄 ${player.name} moving tile from board to hand:`, data.tile);
 
       // Make sure we're working with a valid tile and indices
@@ -2069,36 +2112,59 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Properly update the board by removing the tile at the specified position
+      // MULTIPLAYER FIX: Better error handling and validation
       try {
-        if (game.board[data.sourceSetIndex] && 
-            game.board[data.sourceSetIndex][data.sourceTileIndex]) {
-          
-          // Remove tile from specified position
-          game.board[data.sourceSetIndex].splice(data.sourceTileIndex, 1);
-          
-          // Clean up empty sets
-          game.board = game.board.filter(set => set.length > 0);
-          
-          // Add tile to player's hand (safe copy to prevent references)
-          const tileCopy = JSON.parse(JSON.stringify(data.tile));
-          player.hand.push(tileCopy);
-          
-          // Broadcast updated game state to each player with their respective game state
-          game.players.forEach(p => {
-            const playerSocket = io.sockets.sockets.get(p.id);
-            if (playerSocket) {
-              playerSocket.emit('gameStateUpdate', {
-                gameState: game.getGameState(p.id)
-              });
-            }
-          });
-        } else {
-          socket.emit('error', { message: 'Invalid board position!' });
+        // Validate indices are within bounds
+        if (data.sourceSetIndex < 0 || data.sourceSetIndex >= game.board.length) {
+          socket.emit('error', { message: 'Invalid set index!' });
+          return;
         }
+        
+        const sourceSet = game.board[data.sourceSetIndex];
+        if (!sourceSet || data.sourceTileIndex < 0 || data.sourceTileIndex >= sourceSet.length) {
+          socket.emit('error', { message: 'Invalid tile index!' });
+          return;
+        }
+        
+        const tileToMove = sourceSet[data.sourceTileIndex];
+        if (!tileToMove || tileToMove.id !== data.tile.id) {
+          socket.emit('error', { message: 'Tile mismatch - board state may be out of sync!' });
+          return;
+        }
+
+        // Remove tile from specified position
+        game.board[data.sourceSetIndex].splice(data.sourceTileIndex, 1);
+        
+        // Clean up empty sets
+        game.board = game.board.filter(set => set.length > 0);
+        
+        // Add tile to player's hand (safe copy to prevent references)
+        const tileCopy = JSON.parse(JSON.stringify(data.tile));
+        player.hand.push(tileCopy);
+        
+        console.log(`✅ Successfully moved tile ${data.tile.id} from board to ${player.name}'s hand`);
+        
+        // Broadcast updated game state to each player with their respective game state
+        game.players.forEach(p => {
+          const playerSocket = io.sockets.sockets.get(p.id);
+          if (playerSocket) {
+            playerSocket.emit('gameStateUpdate', {
+              gameState: game.getGameState(p.id)
+            });
+          }
+        });
       } catch (err) {
-        console.error("Error in moveFromBoardToHand:", err);
-        socket.emit('error', { message: 'Error processing move!' });
+        console.error(`❌ Error in moveFromBoardToHand:`, err);
+        socket.emit('error', { message: 'Error processing move - please refresh and try again!' });
+        
+        // MULTIPLAYER FIX: Try to recover by sending current game state
+        try {
+          socket.emit('gameStateUpdate', {
+            gameState: game.getGameState(socket.id)
+          });
+        } catch (recoveryErr) {
+          console.error(`❌ Failed to send recovery game state:`, recoveryErr);
+        }
       }
     });    
     
@@ -2169,6 +2235,11 @@ io.on('connection', (socket) => {
       if (playerData) {
         const game = games.get(playerData.gameId);
         if (game) {
+          console.log(`🔌 Player ${playerData.playerName} disconnected from game ${playerData.gameId}`);
+          
+          // MULTIPLAYER FIX: Handle disconnections more gracefully
+          const wasCurrentPlayer = game.getCurrentPlayer()?.id === socket.id;
+          
           game.removePlayer(socket.id);
           
           // If it's a bot game and a human player disconnects, terminate the game immediately
@@ -2176,15 +2247,35 @@ io.on('connection', (socket) => {
             console.log(`Human player left bot game ${playerData.gameId}, terminating game`);
             games.delete(playerData.gameId);
           } else {
-            // For multiplayer games, notify other players
-            io.to(playerData.gameId).emit('playerLeft', {
-              playerName: playerData.playerName,
-              gameState: game.getGameState(socket.id)
-            });
-            
-            // Clean up empty games
+            // For multiplayer games, handle the disconnection
             if (game.players.length === 0) {
+              console.log(`🗑️  Game ${playerData.gameId} is empty, cleaning up`);
               games.delete(playerData.gameId);
+            } else if (game.players.length === 1 && game.started) {
+              // Only one player left in a started game - pause or end it
+              console.log(`⏸️  Only one player left in game ${playerData.gameId}, pausing game`);
+              game.clearTurnTimer(); // Stop any active timers
+              
+              // Notify remaining player
+              io.to(playerData.gameId).emit('playerLeft', {
+                playerName: playerData.playerName,
+                gameState: game.getGameState(game.players[0].id),
+                message: 'Other player disconnected. Waiting for reconnection or new player...'
+              });
+            } else {
+              // Normal multiplayer handling
+              // If disconnected player was current player, advance to next
+              if (wasCurrentPlayer && game.started && !game.winner) {
+                console.log(`🔄 Current player disconnected, advancing turn`);
+                game.clearTurnTimer();
+                game.nextTurn();
+              }
+              
+              // Notify other players
+              io.to(playerData.gameId).emit('playerLeft', {
+                playerName: playerData.playerName,
+                gameState: game.getPublicGameState()
+              });
             }
           }
         }
@@ -2207,6 +2298,9 @@ io.on('connection', (socket) => {
         socket.emit('error', { message: 'Not your turn' });
         return;
       }
+      
+      // MULTIPLAYER FIX: Update activity timestamp when player makes moves
+      game.lastPlayerActivity = Date.now();
       
       // Check if this is the first board update in the turn and create a snapshot
       // This ensures we always have a snapshot to compare against for undo
@@ -2270,6 +2364,9 @@ io.on('connection', (socket) => {
         socket.emit('error', { message: 'Not your turn' });
         return;
       }
+      
+      // MULTIPLAYER FIX: Update activity timestamp 
+      game.lastPlayerActivity = Date.now();
       
       console.log(`🎮 ${currentPlayer.name} updated their hand - now has ${data.newHand.length} tiles`);
       
