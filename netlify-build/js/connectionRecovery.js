@@ -74,6 +74,76 @@ class ConnectionRecoveryManager {
   }
 
   /**
+   * Handle reconnection attempt
+   * Requirements: 4.2
+   */
+  handleReconnectAttempt(attemptNumber) {
+    console.log(`🔄 Reconnection attempt ${attemptNumber}`);
+    this.updateReconnectionStatus(`Attempting to reconnect... (${attemptNumber})`);
+  }
+
+  /**
+   * Handle reconnection error
+   * Requirements: 4.2
+   */
+  handleReconnectError(error) {
+    console.error('❌ Reconnection error:', error);
+    this.updateReconnectionStatus(`Reconnection failed: ${error.message}`);
+  }
+
+  /**
+   * Handle reconnection failed
+   * Requirements: 4.2
+   */
+  handleReconnectFailed() {
+    console.error('❌ All reconnection attempts failed');
+    this.handleMaxReconnectionAttemptsReached();
+  }
+
+  /**
+   * Handle reconnection guidance from server
+   * Requirements: 4.2
+   */
+  handleReconnectionGuidance(data) {
+    console.log('🔧 Reconnection guidance received:', data);
+    
+    const { guidance, actions } = data;
+    
+    // Show guidance to user
+    this.showNotification(guidance, 'info');
+    
+    // Execute recommended actions
+    if (actions && actions.length > 0) {
+      actions.forEach(action => {
+        this.executeFallbackAction(action);
+      });
+    }
+  }
+
+  /**
+   * Handle game state restored event
+   * Requirements: 4.3, 4.4
+   */
+  handleGameStateRestored(data) {
+    console.log('✅ Game state restored:', data);
+    
+    const { gameId, gameState, message } = data;
+    
+    // Update game manager with restored state
+    if (this.gameManager) {
+      this.gameManager.gameId = gameId;
+      this.gameManager.gameState = gameState;
+      this.gameManager.updateGameDisplay();
+    }
+    
+    // Clear preserved state since we've successfully restored
+    this.clearPreservedState();
+    
+    // Show success message
+    this.showNotification(message || 'Game state restored successfully', 'success');
+  }
+
+  /**
    * Handle successful connection
    * Requirements: 4.1, 4.3
    */
@@ -365,6 +435,36 @@ class ConnectionRecoveryManager {
   }
 
   /**
+   * Create new game (fallback action)
+   * Requirements: 4.2
+   */
+  createNewGame() {
+    console.log('🎮 Creating new game as fallback');
+    
+    // Clear any preserved state
+    this.clearPreservedState();
+    
+    // Redirect to game creation
+    window.location.href = '/';
+    
+    this.showNotification('Starting a new game...', 'info');
+  }
+
+  /**
+   * Attempt game state restore
+   * Requirements: 4.3, 4.4
+   */
+  attemptGameStateRestore() {
+    console.log('🔄 Attempting to restore game state');
+    
+    if (this.lastKnownGameId && this.lastKnownPlayerName) {
+      this.requestGameReconnection();
+    } else {
+      console.warn('⚠️ No preserved game state to restore');
+    }
+  }
+
+  /**
    * Force reconnection
    * Requirements: 4.2
    */
@@ -528,6 +628,42 @@ class ConnectionRecoveryManager {
     if (indicator) {
       indicator.className = `connection-quality ${quality}`;
       indicator.textContent = `${latency}ms`;
+    }
+  }
+
+  /**
+   * Handle player disconnected event
+   * Requirements: 4.5
+   */
+  handlePlayerDisconnected(data) {
+    console.log('🔌 Player disconnected:', data);
+    
+    const { playerName, playerId, gameId, reason } = data;
+    
+    // Update UI to show player as disconnected
+    this.showNotification(`${playerName} disconnected (${reason})`, 'warning');
+    
+    // Update player list if available
+    if (this.gameManager && this.gameManager.updatePlayerStatus) {
+      this.gameManager.updatePlayerStatus(playerId, 'disconnected');
+    }
+  }
+
+  /**
+   * Handle player reconnected event
+   * Requirements: 4.5
+   */
+  handlePlayerReconnected(data) {
+    console.log('🔌 Player reconnected:', data);
+    
+    const { playerName, playerId, gameId } = data;
+    
+    // Update UI to show player as reconnected
+    this.showNotification(`${playerName} reconnected`, 'success');
+    
+    // Update player list if available
+    if (this.gameManager && this.gameManager.updatePlayerStatus) {
+      this.gameManager.updatePlayerStatus(playerId, 'connected');
     }
   }
 
