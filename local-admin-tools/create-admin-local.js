@@ -26,7 +26,7 @@ async function createAdmin() {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/j_kube');
         console.log('✅ Connected to MongoDB');
         
-        const User = require('./models/User');
+        const User = require('../models/User');
         
         // Check if admin already exists
         const existingAdmin = await User.findOne({ email: 'pearlman.aaron@gmail.com' });
@@ -58,7 +58,8 @@ async function createAdmin() {
             email,
             username,
             password: hashedPassword,
-            isAdmin: true
+            isAdmin: true,
+            signupComplete: true  // Allow immediate login
         });
         
         await adminUser.save();

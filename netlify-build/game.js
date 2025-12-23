@@ -169,6 +169,9 @@ class RummikubClient {
         
         this.initializeEventListeners();
         this.initializeSocketListeners();
+        
+        // Initialize enhanced connection recovery manager
+        this.connectionRecovery = new ConnectionRecoveryManager(this.socket, this);
     }
 
     // Helper function to ensure playerHand doesn't contain undefined elements
@@ -1035,6 +1038,9 @@ class RummikubClient {
 
     leaveGame() {
         if (confirm('Are you sure you want to leave the game?')) {
+            // Unlock orientation when leaving game
+            this.unlockOrientation();
+            
             // Clear game info from storage
             this.clearGameStateFromStorage();
             
@@ -1622,6 +1628,9 @@ class RummikubClient {
     }
 
     showWelcomeScreen() {
+        // Unlock orientation when returning to welcome screen
+        this.unlockOrientation();
+        
         this.hideAllScreens();
         document.getElementById('welcomeScreen').classList.add('active');
         
@@ -1635,6 +1644,9 @@ class RummikubClient {
         console.log('📺 Showing game screen...');
         document.getElementById('gameScreen').classList.add('active');
         console.log('📺 Game screen should now be visible');
+        
+        // Lock orientation to landscape on mobile devices when entering game
+        this.lockOrientationToLandscape();
         
         // Clear any existing games refresh interval when starting a game
         if (this.gamesRefreshInterval) {
@@ -2201,6 +2213,12 @@ class RummikubClient {
     addDragAndDropToTile(tileElement, tile, index) {
         tileElement.draggable = true;
         tileElement.dataset.tileIndex = index;
+        tileElement.dataset.tileId = tile.id; // Add tile ID for touch interface
+        
+        // Add touch-friendly attributes
+        tileElement.setAttribute('role', 'button');
+        tileElement.setAttribute('tabindex', '0');
+        tileElement.setAttribute('aria-label', `${tile.color} ${tile.number} tile`);
         
         tileElement.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', index);
@@ -2248,6 +2266,17 @@ class RummikubClient {
             
             if (draggedIndex !== targetIndex) {
                 this.reorderTiles(draggedIndex, targetIndex);
+            }
+        });
+        
+        // Add keyboard support for accessibility
+        tileElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.toggleTileSelection(tile.id, tileElement);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.navigateTiles(e.key === 'ArrowLeft' ? -1 : 1, tileElement);
             }
         });
         
@@ -2555,6 +2584,28 @@ class RummikubClient {
         
         this.updatePlayButton();
         this.updateActionButtons(); // Update all action buttons to disable the draw button when tiles are selected
+    }
+
+    // Navigate between tiles using keyboard (accessibility and mobile support)
+    navigateTiles(direction, currentTileElement) {
+        const allTiles = Array.from(document.querySelectorAll('#playerHand .tile'));
+        const currentIndex = allTiles.indexOf(currentTileElement);
+        
+        if (currentIndex === -1) return;
+        
+        let nextIndex = currentIndex + direction;
+        
+        // Wrap around
+        if (nextIndex < 0) {
+            nextIndex = allTiles.length - 1;
+        } else if (nextIndex >= allTiles.length) {
+            nextIndex = 0;
+        }
+        
+        const nextTile = allTiles[nextIndex];
+        if (nextTile) {
+            nextTile.focus();
+        }
     }
 
     updatePlayButton() {
@@ -2873,6 +2924,9 @@ class RummikubClient {
     }
 
     backToWelcome() {
+        // Unlock orientation when leaving game
+        this.unlockOrientation();
+        
         // Switch to welcome screen
         const gameScreen = document.getElementById('gameScreen');
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -4133,6 +4187,123 @@ class RummikubClient {
         // Hide the refresh button if it was shown due to inactivity
         this.hideRefreshButton();
     }
+
+    // Mobile orientation locking methods
+    lockOrientationToLandscape() {
+        // Only attempt orientation locking on mobile devices
+        if (this.isMobileDevice()) {
+            console.log('📱 Mobile device detected - attempting to lock orientation to landscape');
+            
+            try {
+                // Modern Screen Orientation API
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').then(() => {
+                        console.log('✅ Successfully locked orientation to landscape');
+                    }).catch((error) => {
+                        console.log('⚠️ Could not lock orientation:', error.message);
+                        // Fallback: Add CSS class to encourage landscape
+                        this.addLandscapeEncouragement();
+                    });
+                }
+                // Legacy API fallback
+                else if (screen.lockOrientation) {
+                    const result = screen.lockOrientation('landscape');
+                    console.log('📱 Legacy orientation lock result:', result);
+                    if (!result) {
+                        this.addLandscapeEncouragement();
+                    }
+                }
+                // WebKit legacy API
+                else if (screen.webkitLockOrientation) {
+                    const result = screen.webkitLockOrientation('landscape');
+                    console.log('📱 WebKit orientation lock result:', result);
+                    if (!result) {
+                        this.addLandscapeEncouragement();
+                    }
+                }
+                // Mozilla legacy API
+                else if (screen.mozLockOrientation) {
+                    const result = screen.mozLockOrientation('landscape');
+                    console.log('📱 Mozilla orientation lock result:', result);
+                    if (!result) {
+                        this.addLandscapeEncouragement();
+                    }
+                }
+                else {
+                    console.log('📱 No orientation lock API available - using CSS encouragement');
+                    this.addLandscapeEncouragement();
+                }
+            } catch (error) {
+                console.log('⚠️ Error attempting orientation lock:', error);
+                this.addLandscapeEncouragement();
+            }
+        }
+    }
+
+    unlockOrientation() {
+        // Only attempt orientation unlocking on mobile devices
+        if (this.isMobileDevice()) {
+            console.log('📱 Unlocking orientation');
+            
+            try {
+                // Modern Screen Orientation API
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+                // Legacy API fallback
+                else if (screen.unlockOrientation) {
+                    screen.unlockOrientation();
+                }
+                // WebKit legacy API
+                else if (screen.webkitUnlockOrientation) {
+                    screen.webkitUnlockOrientation();
+                }
+                // Mozilla legacy API
+                else if (screen.mozUnlockOrientation) {
+                    screen.mozUnlockOrientation();
+                }
+                
+                // Remove CSS encouragement
+                this.removeLandscapeEncouragement();
+            } catch (error) {
+                console.log('⚠️ Error attempting orientation unlock:', error);
+                this.removeLandscapeEncouragement();
+            }
+        }
+    }
+
+    isMobileDevice() {
+        // Check for mobile device using multiple methods
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        
+        // Check for mobile user agents
+        const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+        const isMobileUA = mobileRegex.test(userAgent.toLowerCase());
+        
+        // Check for touch capability
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // Check screen size (mobile-like dimensions)
+        const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 768;
+        
+        // Consider it mobile if it matches user agent OR (has touch AND small screen)
+        return isMobileUA || (hasTouch && isSmallScreen);
+    }
+
+    addLandscapeEncouragement() {
+        // Add CSS class to encourage landscape orientation
+        document.body.classList.add('encourage-landscape');
+        
+        // Show a notification encouraging landscape mode
+        if (window.innerHeight > window.innerWidth) {
+            this.showNotification('📱 For the best experience, please rotate your device to landscape mode', 'info', 5000);
+        }
+    }
+
+    removeLandscapeEncouragement() {
+        // Remove CSS class
+        document.body.classList.remove('encourage-landscape');
+    }
 }
 
 // Add some fun Easter eggs
@@ -4370,6 +4541,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Show a toast notification about the saved game
         window.game.showNotification(`You have a saved game (${savedGameInfo.gameId}). You can rejoin it from the connection panel if disconnected.`, 'info', 8000);
+    }
+});
+
+// Handle page unload to unlock orientation
+window.addEventListener('beforeunload', () => {
+    if (window.game && typeof window.game.unlockOrientation === 'function') {
+        window.game.unlockOrientation();
     }
 });
 

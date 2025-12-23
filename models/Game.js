@@ -51,7 +51,75 @@ const GameSchema = new mongoose.Schema({
   isBotGame: {
     type: Boolean,
     default: false
+  },
+  // Enhanced game state for persistence
+  gameState: {
+    board: {
+      type: Array,
+      default: []
+    },
+    currentPlayerIndex: {
+      type: Number,
+      default: 0
+    },
+    started: {
+      type: Boolean,
+      default: false
+    },
+    winner: {
+      type: String,
+      default: null
+    },
+    turnStartTime: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  // Persistence metadata
+  persistence: {
+    lastSaved: {
+      type: Date,
+      default: Date.now
+    },
+    saveVersion: {
+      type: Number,
+      default: 1
+    },
+    memoryState: {
+      type: Boolean,
+      default: false
+    }
+  },
+  // Lifecycle management
+  lifecycle: {
+    startTime: {
+      type: Date,
+      default: Date.now
+    },
+    endTime: {
+      type: Date
+    },
+    lastActivity: {
+      type: Date,
+      default: Date.now
+    },
+    cleanupScheduled: {
+      type: Date
+    }
+  },
+  // Metadata for debugging and monitoring
+  metadata: {
+    version: {
+      type: String,
+      default: '1.0.0'
+    },
+    serverInstance: {
+      type: String,
+      default: 'default'
+    }
   }
+}, {
+  timestamps: true // Adds createdAt and updatedAt automatically
 });
 
 // Method to calculate game duration

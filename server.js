@@ -5,6 +5,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 
+// Import game state manager
+const gameStateManager = require('./services/gameStateManager');
+
 const app = express();
 const server = http.createServer(app);
 // STABLE v0.1
@@ -210,6 +213,73 @@ class RummikubGame {
     }
   }
 
+  // Enhanced Game State Persistence Methods
+  
+  /**
+   * Save game state to MongoDB automatically
+   * Requirements: 5.1, 5.2
+   */
+  async autoSave(priority = 'normal') {
+    try {
+      // Queue the save for processing
+      gameStateManager.queueSave(this.id, this, priority);
+      console.log(`📝 Auto-save queued for game ${this.id}`);
+    } catch (error) {
+      console.error(`❌ Auto-save failed for game ${this.id}:`, error.message);
+    }
+  }
+
+  /**
+   * Save game state immediately (synchronous)
+   * Requirements: 5.1, 5.2
+   */
+  async saveNow() {
+    try {
+      const result = await gameStateManager.saveGameState(this.id, this);
+      console.log(`💾 Game ${this.id} saved immediately`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Immediate save failed for game ${this.id}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Load game state from MongoDB
+   * Requirements: 5.3, 5.4
+   */
+  static async loadFromDatabase(gameId) {
+    try {
+      const gameData = await gameStateManager.loadGameState(gameId);
+      if (!gameData) return null;
+
+      // Create a new game instance from the loaded data
+      const game = new RummikubGame(gameData.id, gameData.isBotGame);
+      
+      // Restore the game state
+      Object.assign(game, gameData);
+      
+      console.log(`📂 Game ${gameId} loaded from database`);
+      return game;
+    } catch (error) {
+      console.error(`❌ Failed to load game ${gameId} from database:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get recovery information for this game
+   * Requirements: 5.3
+   */
+  async getRecoveryInfo() {
+    try {
+      return await gameStateManager.getRecoveryInfo(this.id);
+    } catch (error) {
+      console.error(`❌ Failed to get recovery info for game ${this.id}:`, error.message);
+      return null;
+    }
+  }
+
   startGame() {
     if (this.players.length < 2) return false;
     
@@ -283,6 +353,9 @@ class RummikubGame {
       console.log(`⏰ Starting timer for first player: ${this.players[this.currentPlayerIndex].name}`);
       this.startTurnTimer();
     }
+    
+    // Auto-save game state after starting
+    this.autoSave('high');
     
     console.log(`✅ Game ${this.id} started successfully`);
     return true;
@@ -712,6 +785,8 @@ class RummikubGame {
     // Check for win
     if (player.hand.length === 0) {
       this.winner = player;
+      // Auto-save immediately when game ends
+      this.autoSave('high');
     }
     
     return true;
@@ -801,6 +876,8 @@ class RummikubGame {
     // Check for win
     if (player.hand.length === 0) {
       this.winner = player;
+      // Auto-save immediately when game ends
+      this.autoSave('high');
     }
     
     return { success: true, totalValue, setsPlayed: validatedSets.length };
@@ -832,6 +909,9 @@ class RummikubGame {
         this.startTurnTimer();
       }
     }
+    
+    // Auto-save after turn change
+    this.autoSave('normal');
   }
   
   // Start the turn timer on the server
@@ -2519,10 +2599,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'netlify-build', 'index.html'));
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 app.get('/api/games/:gameId', (req, res) => {
   const game = games.get(req.params.gameId);
   if (game) {
@@ -2592,7 +2668,8 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeGames: games.size,
-    activePlayers: players.size
+    activePlayers: players.size,
+    gameStateManager: gameStateManager.getStatus()
   });
 });
 
@@ -2605,7 +2682,28 @@ console.log(`   PORT: "${process.env.PORT}"`);
 console.log(`   RENDER: "${process.env.RENDER}"`);
 console.log('📋 Allowed origins:', allowedOrigins);
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🎮 Rummikub game server running on port ${PORT}`);
   console.log(`🌐 Open your browser to http://localhost:${PORT}`);
+  
+  // Initialize the game state manager
+  try {
+    await gameStateManager.initialize();
+    console.log('✅ Game state persistence system ready');
+  } catch (error) {
+    console.error('❌ Failed to initialize game state manager:', error.message);
+  }
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', async () => {
+  console.log('🔄 SIGTERM received, shutting down gracefully...');
+  await gameStateManager.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🔄 SIGINT received, shutting down gracefully...');
+  await gameStateManager.shutdown();
+  process.exit(0);
 });

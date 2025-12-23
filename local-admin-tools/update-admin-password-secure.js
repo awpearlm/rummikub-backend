@@ -2,8 +2,8 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');
-const connectDB = require('./config/db');
-const User = require('./models/User');
+const connectDB = require('../config/db');
+const User = require('../models/User');
 
 // Create readline interface for secure password input
 const rl = readline.createInterface({

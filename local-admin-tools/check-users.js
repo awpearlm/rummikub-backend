@@ -9,7 +9,7 @@ async function checkUsers() {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/j_kube');
         console.log('✅ Connected to MongoDB');
         
-        const User = require('./models/User');
+        const User = require('../models/User');
         
         const users = await User.find({}, 'email username isAdmin createdAt').lean();
         

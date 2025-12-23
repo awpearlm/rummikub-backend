@@ -83,6 +83,15 @@ A beautiful, modern multiplayer Rummikub game with user authentication that allo
    - Register a new account or login with existing credentials
    - Enjoy authenticated, secure gameplay!
 
+## 📚 Documentation
+
+For detailed setup, configuration, and deployment guides, see the [Documentation](./docs/README.md):
+
+- **[MongoDB Atlas Setup](./docs/MONGODB_SETUP.md)** - Complete database setup guide
+- **[Environment Configuration](./docs/ENVIRONMENT_SETUP.md)** - Environment variables and configuration
+- **[Mobile Testing Guidelines](./docs/MOBILE_TESTING.md)** - Mobile compatibility testing procedures
+- **[Netlify Deployment](./docs/NETLIFY_DEPLOYMENT.md)** - Production deployment checklist
+
 ## 🧪 Testing
 
 J_kube includes comprehensive automated testing for key features, especially the connection and reconnection functionality.

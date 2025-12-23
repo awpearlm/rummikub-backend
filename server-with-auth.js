@@ -5,14 +5,27 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const connectDB = require('./config/db');
+const { initializeDatabase, checkDatabaseHealth } = require('./config/dbInit');
 const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB with enhanced error handling
+connectDB.connectDB().then(async (result) => {
+  if (result && result.connected) {
+    // Initialize database collections and indexes
+    await initializeDatabase();
+    
+    // Perform health check
+    await checkDatabaseHealth();
+  } else if (result && result.fallback) {
+    console.warn('⚠️  Running in fallback mode without database');
+  }
+}).catch(error => {
+  console.error('❌ Database setup failed:', error.message);
+});
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -24,6 +37,9 @@ const gamesRoutes = require('./routes/games');
 const User = require('./models/User');
 const Stats = require('./models/Stats');
 const Game = require('./models/Game');
+
+// Import enhanced connection handling
+const EnhancedSocketHandlers = require('./services/enhancedSocketHandlers');
 
 // Create Express app
 const app = express();
@@ -86,7 +102,8 @@ const io = socketIo(server, {
 
 // Security and middleware
 app.use(helmet({
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false // Temporarily disable CSP to fix login issues
 }));
 
 // Configure CORS simply
@@ -130,12 +147,15 @@ app.use('/api/stats', statsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const connectionStatus = enhancedSocketHandlers ? enhancedSocketHandlers.getStatus() : null;
+  
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeGames: games.size,
-    activePlayers: players.size
+    activePlayers: players.size,
+    connectionManager: connectionStatus
   });
 });
 
@@ -147,6 +167,9 @@ app.get('/', (req, res) => {
 // Game state management
 const games = new Map();
 const players = new Map();
+
+// Initialize enhanced socket handlers
+const enhancedSocketHandlers = new EnhancedSocketHandlers(io, games, players);
 
 // Helper function to check if a game was abandoned (not properly completed)
 function isGameAbandoned(winner) {
@@ -1485,11 +1508,12 @@ io.use(async (socket, next) => {
   }
 });
 
-  // Socket.IO event handlers
+  // Socket.IO event handlers with enhanced connection recovery
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id, socket.user?.isGuest ? '(Guest)' : `(${socket.user.username})`);
 
-  // Save game state to MongoDB periodically
+  // Initialize enhanced connection handling
+  enhancedSocketHandlers.handleConnection(socket);
   const saveGameToMongoDB = async (gameId) => {
     try {
       const game = games.get(gameId);
