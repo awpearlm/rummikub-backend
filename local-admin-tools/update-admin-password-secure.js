@@ -2,7 +2,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');
-const connectDB = require('../config/db');
 const User = require('../models/User');
 
 // Create readline interface for secure password input
@@ -57,7 +56,9 @@ function hideInput(query) {
 
 async function updateAdminPassword() {
   try {
-    await connectDB();
+    // Connect to MongoDB directly
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ Connected to MongoDB');
     
     console.log('🔐 Secure Admin Password Update');
     console.log('================================');

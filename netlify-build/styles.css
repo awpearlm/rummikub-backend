@@ -745,11 +745,27 @@ body {
     margin-bottom: 0;
     box-shadow: none;
     white-space: nowrap;
+    position: relative;
 }
 
 .players-list-horizontal .player-item.current-turn {
     background: rgba(72, 187, 120, 0.4);
     border-left: 2px solid #48bb78;
+}
+
+.players-list-horizontal .player-item.status-updating {
+    transform: scale(1.05);
+    background: rgba(102, 126, 234, 0.3);
+}
+
+.players-list-horizontal .player-connection-indicator {
+    margin-right: 6px;
+}
+
+.players-list-horizontal .connection-status-dot {
+    width: 8px;
+    height: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .players-list-horizontal .player-avatar {
@@ -770,6 +786,13 @@ body {
 .players-list-horizontal .player-stats {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.8);
+}
+
+.players-list-horizontal .player-connection-status {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    margin-top: 1px;
 }
 
 .game-actions {
@@ -839,11 +862,105 @@ body {
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
+    position: relative;
 }
 
 .player-item.current-turn {
     border-left: 4px solid #48bb78;
     background: #f0fff4;
+}
+
+.player-item.status-updating {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+}
+
+.player-connection-indicator {
+    display: flex;
+    align-items: center;
+    margin-right: 8px;
+}
+
+.connection-status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.connection-status-dot.status-connected {
+    background: #48bb78;
+    box-shadow: 0 0 8px rgba(72, 187, 120, 0.4);
+}
+
+.connection-status-dot.status-connecting {
+    background: #ed8936;
+    animation: pulse-connecting 1.5s infinite;
+}
+
+.connection-status-dot.status-disconnecting {
+    background: #f6ad55;
+    animation: pulse-warning 1s infinite;
+}
+
+.connection-status-dot.status-reconnecting {
+    background: #4299e1;
+    animation: pulse-reconnecting 1s infinite;
+}
+
+.connection-status-dot.status-disconnected {
+    background: #f56565;
+    box-shadow: 0 0 8px rgba(245, 101, 101, 0.4);
+}
+
+@keyframes pulse-connecting {
+    0% { 
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.2);
+    }
+    100% { 
+        opacity: 0.6;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse-warning {
+    0% { 
+        opacity: 0.7;
+        background: #f6ad55;
+    }
+    50% { 
+        opacity: 1;
+        background: #ed8936;
+    }
+    100% { 
+        opacity: 0.7;
+        background: #f6ad55;
+    }
+}
+
+@keyframes pulse-reconnecting {
+    0% { 
+        opacity: 0.6;
+        transform: scale(1);
+        background: #4299e1;
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.1);
+        background: #3182ce;
+    }
+    100% { 
+        opacity: 0.6;
+        transform: scale(1);
+        background: #4299e1;
+    }
 }
 
 .player-avatar {
@@ -875,6 +992,35 @@ body {
 .player-stats {
     font-size: 0.85rem;
     color: #718096;
+}
+
+.player-connection-status {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-style: italic;
+    margin-top: 2px;
+    min-height: 12px;
+    transition: all 0.3s ease;
+}
+
+.player-connection-status[data-status="reconnecting"] {
+    color: #4299e1;
+    font-weight: 500;
+}
+
+.player-connection-status[data-status="disconnected"] {
+    color: #f56565;
+    font-weight: 500;
+}
+
+.player-connection-status[data-status="connecting"] {
+    color: #ed8936;
+    font-weight: 500;
+}
+
+.player-connection-status[data-status="disconnecting"] {
+    color: #f6ad55;
+    font-weight: 500;
 }
 
 .game-status {
@@ -3401,5 +3547,330 @@ body {
     
     .mobile-optimized .game-header-bar {
         background: rgba(45, 55, 72, 0.9);
+    }
+}
+
+/* Game Pause Overlay */
+.game-pause-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pause-overlay-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+}
+
+.pause-overlay-content {
+    position: relative;
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    animation: pauseOverlayAppear 0.5s ease-out;
+}
+
+@keyframes pauseOverlayAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.pause-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.pause-icon {
+    font-size: 4rem;
+    color: #ed8936;
+    margin-bottom: 15px;
+    animation: pauseIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes pauseIconPulse {
+    0%, 100% { 
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+.pause-header h2 {
+    color: #2d3748;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.pause-header p {
+    color: #718096;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.pause-info {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* Grace Period Section */
+.grace-period-section {
+    text-align: center;
+}
+
+.grace-period-timer {
+    margin-bottom: 20px;
+}
+
+.timer-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.timer-circle::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border-radius: 50%;
+    background: white;
+    z-index: 1;
+}
+
+.timer-text {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: #2d3748;
+}
+
+.timer-text span {
+    font-size: 2.5rem;
+    font-weight: 700;
+    display: block;
+    line-height: 1;
+}
+
+.timer-text small {
+    font-size: 0.9rem;
+    color: #718096;
+    font-weight: 500;
+}
+
+.grace-period-text {
+    color: #4a5568;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.grace-period-text strong {
+    color: #2d3748;
+}
+
+/* Continuation Options Section */
+.continuation-options-section h3 {
+    color: #2d3748;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.options-description {
+    color: #718096;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1rem;
+}
+
+.continuation-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.continuation-option {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.continuation-option:hover {
+    border-color: #667eea;
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+}
+
+.continuation-option.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.option-icon {
+    font-size: 2rem;
+    margin-right: 20px;
+    color: #667eea;
+    min-width: 60px;
+    text-align: center;
+}
+
+.continuation-option.selected .option-icon {
+    color: white;
+}
+
+.option-content h4 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #2d3748;
+}
+
+.continuation-option.selected .option-content h4 {
+    color: white;
+}
+
+.option-content p {
+    font-size: 0.9rem;
+    color: #718096;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.continuation-option.selected .option-content p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Voting Status */
+.voting-status {
+    text-align: center;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+.voting-status p {
+    color: #4a5568;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+}
+
+.voting-progress {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+}
+
+.progress-bar {
+    flex: 1;
+    max-width: 200px;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.voting-progress span {
+    font-size: 0.9rem;
+    color: #718096;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+/* Mobile Responsiveness for Game Pause Overlay */
+@media (max-width: 768px) {
+    .pause-overlay-content {
+        padding: 25px;
+        margin: 20px;
+        max-height: 90vh;
+    }
+    
+    .pause-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .pause-icon {
+        font-size: 3rem;
+    }
+    
+    .timer-circle {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .timer-text span {
+        font-size: 2rem;
+    }
+    
+    .continuation-option {
+        padding: 15px;
+    }
+    
+    .option-icon {
+        font-size: 1.5rem;
+        margin-right: 15px;
+        min-width: 45px;
+    }
+    
+    .option-content h4 {
+        font-size: 1.1rem;
+    }
+    
+    .option-content p {
+        font-size: 0.85rem;
     }
 }

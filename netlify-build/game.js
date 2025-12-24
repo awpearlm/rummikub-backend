@@ -639,6 +639,73 @@ class RummikubClient {
                 this.hasBoardStateChanged(); // This will now reset hasPlayedTilesThisTurn if board matches snapshot
             }
         });
+
+        // Player connection status events
+        this.socket.on('playerStatusUpdate', (data) => {
+            console.log('👤 Player status update:', data);
+            this.updatePlayerConnectionStatus(data.playerId, data.status, data.reconnectionTime);
+        });
+
+        this.socket.on('playerDisconnected', (data) => {
+            console.log('🔌 Player disconnected:', data);
+            this.updatePlayerConnectionStatus(data.playerId, 'disconnected');
+            this.stopReconnectionTimer(data.playerId);
+            this.showNotification(`${data.playerName} disconnected`, 'warning');
+        });
+
+        this.socket.on('playerReconnecting', (data) => {
+            console.log('🔄 Player reconnecting:', data);
+            this.updatePlayerConnectionStatus(data.playerId, 'reconnecting', data.reconnectionStartTime);
+            this.startReconnectionTimer(data.playerId, data.reconnectionStartTime);
+            this.showNotification(`${data.playerName} is reconnecting...`, 'info');
+        });
+
+        this.socket.on('playerReconnected', (data) => {
+            console.log('✅ Player reconnected:', data);
+            this.updatePlayerConnectionStatus(data.playerId, 'connected');
+            this.stopReconnectionTimer(data.playerId);
+            this.showNotification(`${data.playerName} reconnected!`, 'success');
+        });
+
+        // Game pause events
+        this.socket.on('gamePaused', (data) => {
+            console.log('⏸️ Game paused:', data);
+            this.showGamePauseOverlay({
+                title: 'Game Paused',
+                reason: data.reason || 'Waiting for player to reconnect...',
+                playerName: data.playerName,
+                showGracePeriod: true,
+                gracePeriodDuration: data.gracePeriodDuration || 180
+            });
+        });
+
+        this.socket.on('gameResumed', (data) => {
+            console.log('▶️ Game resumed:', data);
+            this.hideGamePauseOverlay();
+            this.showNotification('Game resumed!', 'success');
+        });
+
+        this.socket.on('gracePeriodExpired', (data) => {
+            console.log('⏰ Grace period expired:', data);
+            this.showGamePauseOverlay({
+                title: 'Grace Period Expired',
+                reason: `${data.playerName} did not reconnect in time.`,
+                playerName: data.playerName,
+                showContinuationOptions: true,
+                continuationOptions: data.availableOptions || ['skip_turn', 'add_bot', 'end_game']
+            });
+        });
+
+        this.socket.on('continuationVoteUpdate', (data) => {
+            console.log('🗳️ Continuation vote update:', data);
+            this.updateVotingProgress(data.votesReceived, data.totalVotes);
+        });
+
+        this.socket.on('continuationDecisionMade', (data) => {
+            console.log('✅ Continuation decision made:', data);
+            this.hideGamePauseOverlay();
+            this.showNotification(`Decision: ${data.decision.replace('_', ' ')}`, 'info');
+        });
     }
 
     selectGameMode(mode) {
@@ -1913,23 +1980,115 @@ class RummikubClient {
             
             const playerDiv = document.createElement('div');
             playerDiv.className = `player-item ${isCurrentTurn ? 'current-turn' : ''}`;
+            playerDiv.setAttribute('data-player-id', player.id);
             
             const botIcon = isBot ? '<i class="fas fa-robot" style="margin-left: 5px; color: #ed8936;"></i>' : '';
             const playerLabel = isMe ? '(You)' : '';
             
-            // Simplified layout for horizontal player list
+            // Get connection status for this player
+            const connectionStatus = this.getPlayerConnectionStatus(player.id, isBot);
+            const statusIndicator = this.createConnectionStatusIndicator(connectionStatus);
+            const statusText = this.getConnectionStatusText(connectionStatus);
+            
+            // Enhanced layout with connection status
             playerDiv.innerHTML = `
+                <div class="player-connection-indicator">
+                    ${statusIndicator}
+                </div>
                 <div class="player-avatar ${isBot ? 'bot-avatar' : ''}">${player.name.charAt(0).toUpperCase()}</div>
                 <div class="player-info">
                     <div class="player-name">${player.name} ${playerLabel} ${botIcon}</div>
                     <div class="player-stats">
                         ${player.handSize} tiles
                     </div>
+                    <div class="player-connection-status" data-status="${connectionStatus}">
+                        ${statusText}
+                    </div>
                 </div>
             `;
             
             playersList.appendChild(playerDiv);
         });
+    }
+
+    // Get connection status for a specific player
+    getPlayerConnectionStatus(playerId, isBot) {
+        if (isBot) return 'connected'; // Bots are always connected
+        
+        // Check if this is the current user
+        if (playerId === this.socket.id) {
+            return this.socket.connected ? 'connected' : 'disconnected';
+        }
+        
+        // Check game state for player status information
+        if (this.gameState && this.gameState.playerStatuses) {
+            const playerStatus = this.gameState.playerStatuses.find(ps => ps.playerId === playerId);
+            if (playerStatus) {
+                return playerStatus.status.toLowerCase();
+            }
+        }
+        
+        // Default to connected if no status information available
+        return 'connected';
+    }
+
+    // Create connection status indicator (colored dot)
+    createConnectionStatusIndicator(status) {
+        const statusClasses = {
+            'connected': 'status-connected',
+            'connecting': 'status-connecting',
+            'disconnecting': 'status-disconnecting', 
+            'reconnecting': 'status-reconnecting',
+            'disconnected': 'status-disconnected'
+        };
+        
+        const statusClass = statusClasses[status] || 'status-connected';
+        return `<div class="connection-status-dot ${statusClass}"></div>`;
+    }
+
+    // Get human-readable connection status text
+    getConnectionStatusText(status) {
+        const statusTexts = {
+            'connected': '',
+            'connecting': 'Connecting...',
+            'disconnecting': 'Disconnecting...',
+            'reconnecting': 'Reconnecting...',
+            'disconnected': 'Disconnected'
+        };
+        
+        return statusTexts[status] || '';
+    }
+
+    // Update connection status for a specific player
+    updatePlayerConnectionStatus(playerId, status, reconnectionTime = null) {
+        const playerItem = document.querySelector(`[data-player-id="${playerId}"]`);
+        if (!playerItem) return;
+        
+        const statusIndicator = playerItem.querySelector('.player-connection-indicator');
+        const statusText = playerItem.querySelector('.player-connection-status');
+        
+        if (statusIndicator) {
+            statusIndicator.innerHTML = this.createConnectionStatusIndicator(status);
+        }
+        
+        if (statusText) {
+            statusText.setAttribute('data-status', status);
+            let text = this.getConnectionStatusText(status);
+            
+            // Add elapsed time for reconnecting status
+            if (status === 'reconnecting' && reconnectionTime) {
+                const elapsed = Math.floor((Date.now() - reconnectionTime) / 1000);
+                text = `Reconnecting... (${elapsed}s)`;
+            }
+            
+            statusText.textContent = text;
+        }
+        
+        // Add visual feedback for status changes
+        playerItem.classList.add('status-updating');
+        setTimeout(() => {
+            playerItem.classList.remove('status-updating');
+        }, 300);
     }
 
     updateCurrentTurn() {
@@ -4017,6 +4176,202 @@ class RummikubClient {
                 statusElement.classList.add('disconnected');
                 statusElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Disconnected</span>';
                 break;
+        }
+    }
+
+    // Start reconnection timer for a specific player
+    startReconnectionTimer(playerId, startTime) {
+        // Clear any existing timer for this player
+        if (this.reconnectionTimers && this.reconnectionTimers[playerId]) {
+            clearInterval(this.reconnectionTimers[playerId]);
+        }
+        
+        // Initialize reconnection timers object if it doesn't exist
+        if (!this.reconnectionTimers) {
+            this.reconnectionTimers = {};
+        }
+        
+        // Start new timer
+        this.reconnectionTimers[playerId] = setInterval(() => {
+            this.updatePlayerConnectionStatus(playerId, 'reconnecting', startTime);
+        }, 1000); // Update every second
+    }
+
+    // Stop reconnection timer for a specific player
+    stopReconnectionTimer(playerId) {
+        if (this.reconnectionTimers && this.reconnectionTimers[playerId]) {
+            clearInterval(this.reconnectionTimers[playerId]);
+            delete this.reconnectionTimers[playerId];
+        }
+    }
+
+    // Game pause overlay management
+    showGamePauseOverlay(pauseData) {
+        const overlay = document.getElementById('gamePauseOverlay');
+        if (!overlay) return;
+
+        // Update pause information
+        const pauseTitle = document.getElementById('pauseTitle');
+        const pauseReason = document.getElementById('pauseReason');
+        const disconnectedPlayerName = document.getElementById('disconnectedPlayerName');
+
+        if (pauseTitle) pauseTitle.textContent = pauseData.title || 'Game Paused';
+        if (pauseReason) pauseReason.textContent = pauseData.reason || 'Waiting for player to reconnect...';
+        if (disconnectedPlayerName) disconnectedPlayerName.textContent = pauseData.playerName || 'Player';
+
+        // Show appropriate section based on pause state
+        const gracePeriodSection = document.getElementById('gracePeriodSection');
+        const continuationOptionsSection = document.getElementById('continuationOptionsSection');
+
+        if (pauseData.showGracePeriod) {
+            gracePeriodSection.style.display = 'block';
+            continuationOptionsSection.style.display = 'none';
+            this.startGracePeriodTimer(pauseData.gracePeriodDuration || 180);
+        } else if (pauseData.showContinuationOptions) {
+            gracePeriodSection.style.display = 'none';
+            continuationOptionsSection.style.display = 'block';
+            this.setupContinuationOptions(pauseData.continuationOptions || []);
+        }
+
+        // Show overlay
+        overlay.style.display = 'flex';
+    }
+
+    hideGamePauseOverlay() {
+        const overlay = document.getElementById('gamePauseOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+        
+        // Clear any active timers
+        if (this.gracePeriodTimer) {
+            clearInterval(this.gracePeriodTimer);
+            this.gracePeriodTimer = null;
+        }
+    }
+
+    // Grace period timer management
+    startGracePeriodTimer(durationSeconds) {
+        // Clear any existing timer
+        if (this.gracePeriodTimer) {
+            clearInterval(this.gracePeriodTimer);
+        }
+
+        this.gracePeriodRemaining = durationSeconds;
+        this.updateGracePeriodDisplay();
+
+        this.gracePeriodTimer = setInterval(() => {
+            this.gracePeriodRemaining--;
+            this.updateGracePeriodDisplay();
+
+            if (this.gracePeriodRemaining <= 0) {
+                clearInterval(this.gracePeriodTimer);
+                this.gracePeriodTimer = null;
+                // Grace period expired - this should be handled by server events
+            }
+        }, 1000);
+    }
+
+    updateGracePeriodDisplay() {
+        const timerElement = document.getElementById('gracePeriodTimer');
+        if (!timerElement) return;
+
+        const minutes = Math.floor(this.gracePeriodRemaining / 60);
+        const seconds = this.gracePeriodRemaining % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        // Add visual warning when time is running low
+        const timerCircle = timerElement.closest('.timer-circle');
+        if (timerCircle) {
+            if (this.gracePeriodRemaining <= 30) {
+                timerCircle.style.background = 'linear-gradient(135deg, #f56565 0%, #e53e3e 100%)';
+            } else if (this.gracePeriodRemaining <= 60) {
+                timerCircle.style.background = 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)';
+            } else {
+                timerCircle.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+        }
+    }
+
+    // Continuation options management
+    setupContinuationOptions(options) {
+        const skipTurnOption = document.getElementById('skipTurnOption');
+        const addBotOption = document.getElementById('addBotOption');
+        const endGameOption = document.getElementById('endGameOption');
+
+        // Remove existing event listeners and add new ones
+        [skipTurnOption, addBotOption, endGameOption].forEach(button => {
+            if (button) {
+                button.replaceWith(button.cloneNode(true));
+            }
+        });
+
+        // Re-get elements after cloning
+        const newSkipTurnOption = document.getElementById('skipTurnOption');
+        const newAddBotOption = document.getElementById('addBotOption');
+        const newEndGameOption = document.getElementById('endGameOption');
+
+        if (newSkipTurnOption) {
+            newSkipTurnOption.addEventListener('click', () => this.selectContinuationOption('skip_turn'));
+        }
+        if (newAddBotOption) {
+            newAddBotOption.addEventListener('click', () => this.selectContinuationOption('add_bot'));
+        }
+        if (newEndGameOption) {
+            newEndGameOption.addEventListener('click', () => this.selectContinuationOption('end_game'));
+        }
+
+        // Show/hide options based on server configuration
+        if (options.length > 0) {
+            [newSkipTurnOption, newAddBotOption, newEndGameOption].forEach(button => {
+                if (button) {
+                    const optionType = button.id.replace('Option', '').replace(/([A-Z])/g, '_$1').toLowerCase();
+                    button.style.display = options.includes(optionType) ? 'flex' : 'none';
+                }
+            });
+        }
+    }
+
+    selectContinuationOption(option) {
+        // Clear previous selections
+        document.querySelectorAll('.continuation-option').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+
+        // Mark selected option
+        const optionButton = document.getElementById(option.replace('_', '') + 'Option');
+        if (optionButton) {
+            optionButton.classList.add('selected');
+        }
+
+        // Send vote to server
+        this.socket.emit('continuationVote', {
+            gameId: this.gameId,
+            option: option
+        });
+
+        // Show voting status
+        this.showVotingStatus();
+    }
+
+    showVotingStatus() {
+        const votingStatus = document.getElementById('votingStatus');
+        if (votingStatus) {
+            votingStatus.style.display = 'block';
+        }
+    }
+
+    updateVotingProgress(votesReceived, totalVotes) {
+        const progressBar = document.getElementById('votingProgressBar');
+        const progressText = document.getElementById('votingProgressText');
+
+        if (progressBar) {
+            const percentage = totalVotes > 0 ? (votesReceived / totalVotes) * 100 : 0;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        if (progressText) {
+            progressText.textContent = `${votesReceived}/${totalVotes} votes`;
         }
     }
 

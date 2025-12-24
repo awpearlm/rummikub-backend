@@ -153,6 +153,12 @@ class AdminDashboard {
         try {
             const fullUrl = `${this.backendUrl}${endpoint}`;
             console.log('🌐 API Request to:', fullUrl);
+            console.log('📦 Request options:', {
+                method: options.method || 'GET',
+                headers: options.headers || {},
+                body: options.body || 'none'
+            });
+            
             const response = await fetch(fullUrl, {
                 ...options,
                 headers: {
@@ -163,16 +169,28 @@ class AdminDashboard {
             });
             
             console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            const responseText = await response.text();
+            console.log('📦 Raw response:', responseText);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = JSON.parse(responseText);
+                    errorMessage = errorData.message || errorMessage;
+                    console.log('🔍 Parsed error data:', errorData);
+                } catch (e) {
+                    console.log('🔍 Could not parse error response as JSON');
+                }
+                throw new Error(errorMessage);
             }
             
-            const data = await response.json();
-            console.log('📦 Response data:', data);
+            const data = JSON.parse(responseText);
+            console.log('📦 Parsed response data:', data);
             return data;
         } catch (error) {
-            console.error('API Request failed:', error);
+            console.error('💥 API Request failed:', error);
             throw error;
         }
     }
@@ -398,16 +416,21 @@ class AdminDashboard {
         const email = document.getElementById('inviteEmail').value;
         const message = document.getElementById('inviteMessage').value;
         
+        console.log('📧 Sending invitation with data:', { email, message });
+        
         if (!email) {
             this.showNotification('Email is required', 'error');
             return;
         }
         
         try {
+            console.log('🌐 Making API request to send invitation...');
             const response = await this.apiRequest('/api/admin/invitations', {
                 method: 'POST',
                 body: JSON.stringify({ email, message })
             });
+            
+            console.log('✅ Invitation API response:', response);
             
             // Use the invitation link provided by the backend
             const invitationLink = response.invitation.invitationLink;
@@ -417,7 +440,8 @@ class AdminDashboard {
             this.loadInvitations();
             this.loadDashboard(); // Refresh stats
         } catch (error) {
-            this.showNotification('Failed to send invitation', 'error');
+            console.error('❌ Invitation failed:', error);
+            this.showNotification('Failed to send invitation: ' + (error.message || 'Unknown error'), 'error');
         }
     }
 

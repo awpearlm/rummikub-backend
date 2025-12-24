@@ -8,6 +8,12 @@ const path = require('path');
 // Import game state manager
 const gameStateManager = require('./services/gameStateManager');
 
+// Import player reconnection management services
+const PlayerConnectionManager = require('./services/playerConnectionManager');
+const gamePauseController = require('./services/gamePauseController');
+const NotificationBroadcaster = require('./services/notificationBroadcaster');
+const EnhancedSocketEventHandlers = require('./services/enhancedSocketEventHandlers');
+
 const app = express();
 const server = http.createServer(app);
 // STABLE v0.1
@@ -89,6 +95,25 @@ app.use(express.static(path.join(__dirname, 'netlify-build')));
 // Game state management
 const games = new Map();
 const players = new Map();
+
+// Initialize Player Connection Manager
+const playerConnectionManager = new PlayerConnectionManager();
+
+// Initialize Notification Broadcaster
+const notificationBroadcaster = new NotificationBroadcaster(io);
+
+// Initialize Enhanced Socket Event Handlers
+const enhancedSocketHandlers = new EnhancedSocketEventHandlers(
+  io, 
+  games, 
+  players, 
+  playerConnectionManager, 
+  gamePauseController, 
+  notificationBroadcaster
+);
+
+// Connect notification broadcaster to game pause controller
+gamePauseController.setNotificationBroadcaster(notificationBroadcaster);
 
 // Rummikub game logic
 class RummikubGame {
@@ -2310,59 +2335,112 @@ io.on('connection', (socket) => {
       });
     });
 
-    socket.on('disconnect', () => {
+    // Enhanced Player Reconnection Management handlers
+    socket.on('attemptReconnection', async (data) => {
+      // Use enhanced reconnection handler
+      await enhancedSocketHandlers.handleReconnectionAttempt(socket, data);
+    });
+
+    socket.on('voteContinuation', async (data) => {
+      const { gameId, decision } = data;
       const playerData = players.get(socket.id);
-      if (playerData) {
-        const game = games.get(playerData.gameId);
-        if (game) {
-          console.log(`🔌 Player ${playerData.playerName} disconnected from game ${playerData.gameId}`);
-          
-          // MULTIPLAYER FIX: Handle disconnections more gracefully
-          const wasCurrentPlayer = game.getCurrentPlayer()?.id === socket.id;
-          
-          game.removePlayer(socket.id);
-          
-          // If it's a bot game and a human player disconnects, terminate the game immediately
-          if (game.isBotGame && !socket.id.startsWith('bot_')) {
-            console.log(`Human player left bot game ${playerData.gameId}, terminating game`);
-            games.delete(playerData.gameId);
-          } else {
-            // For multiplayer games, handle the disconnection
-            if (game.players.length === 0) {
-              console.log(`🗑️  Game ${playerData.gameId} is empty, cleaning up`);
-              games.delete(playerData.gameId);
-            } else if (game.players.length === 1 && game.started) {
-              // Only one player left in a started game - pause or end it
-              console.log(`⏸️  Only one player left in game ${playerData.gameId}, pausing game`);
-              game.clearTurnTimer(); // Stop any active timers
-              
-              // Notify remaining player
-              io.to(playerData.gameId).emit('playerLeft', {
-                playerName: playerData.playerName,
-                gameState: game.getGameState(game.players[0].id),
-                message: 'Other player disconnected. Waiting for reconnection or new player...'
-              });
-            } else {
-              // Normal multiplayer handling
-              // If disconnected player was current player, advance to next
-              if (wasCurrentPlayer && game.started && !game.winner) {
-                console.log(`🔄 Current player disconnected, advancing turn`);
-                game.clearTurnTimer();
-                game.nextTurn();
+      
+      if (!playerData || playerData.gameId !== gameId) {
+        socket.emit('error', { message: 'Invalid game or player data' });
+        return;
+      }
+      
+      console.log(`🗳️ Continuation vote from ${playerData.playerName}: ${decision}`);
+      
+      try {
+        // Add the vote to the game pause controller
+        const voteResult = await gamePauseController.addContinuationVote(gameId, socket.id, decision);
+        
+        if (voteResult.success) {
+          // If ready to process, handle the decision
+          if (voteResult.readyToProcess) {
+            const result = await gamePauseController.processContinuationDecision(gameId, voteResult.decision, [
+              { playerId: socket.id, choice: decision }
+            ]);
+            
+            if (result.success) {
+              const game = games.get(gameId);
+              if (game) {
+                // The notification broadcaster will handle the decision notification
+                // through the gamePauseController integration
+                console.log(`✅ Continuation decision processed for game ${gameId}: ${voteResult.decision}`);
               }
-              
-              // Notify other players
-              io.to(playerData.gameId).emit('playerLeft', {
-                playerName: playerData.playerName,
-                gameState: game.getPublicGameState()
-              });
+            } else {
+              socket.emit('error', { message: 'Failed to process continuation decision' });
             }
+          } else {
+            // Vote recorded, waiting for more votes
+            console.log(`🗳️ Vote recorded for game ${gameId}, waiting for more votes (${voteResult.totalVotes}/${voteResult.totalPlayers})`);
           }
+        } else {
+          socket.emit('error', { message: 'Failed to record vote' });
         }
         
-        players.delete(socket.id);
-        console.log(`Player disconnected: ${playerData.playerName}`);
+      } catch (error) {
+        console.error(`❌ Continuation vote error:`, error.message);
+        socket.emit('error', { message: 'Server error processing vote' });
       }
+    });
+
+    socket.on('getContinuationOptions', async (data) => {
+      const { gameId } = data;
+      const playerData = players.get(socket.id);
+      
+      if (!playerData || playerData.gameId !== gameId) {
+        socket.emit('error', { message: 'Invalid game or player data' });
+        return;
+      }
+      
+      try {
+        // Get voting status which includes continuation options
+        const votingStatus = await gamePauseController.getVotingStatus(gameId);
+        
+        if (votingStatus) {
+          // Format options with clear explanations using the notification broadcaster
+          const formattedOptions = notificationBroadcaster.formatContinuationOptions(votingStatus.options);
+          
+          socket.emit('continuationOptionsDetails', {
+            gameId,
+            options: formattedOptions,
+            targetPlayerName: votingStatus.targetPlayerId, // TODO: Get actual player name
+            votingStatus: {
+              totalVotes: votingStatus.totalVotes,
+              totalPlayers: votingStatus.totalPlayers,
+              votes: votingStatus.votes,
+              voteCounts: votingStatus.voteCounts,
+              isComplete: votingStatus.isComplete
+            }
+          });
+        } else {
+          socket.emit('error', { message: 'No continuation options available' });
+        }
+        
+      } catch (error) {
+        console.error(`❌ Get continuation options error:`, error.message);
+        socket.emit('error', { message: 'Server error getting continuation options' });
+      }
+    });
+
+    socket.on('getPauseStatus', async (data) => {
+      const { gameId } = data;
+      
+      try {
+        const pauseStatus = await gamePauseController.getPauseStatus(gameId);
+        socket.emit('pauseStatusUpdate', pauseStatus);
+      } catch (error) {
+        console.error(`❌ Error getting pause status:`, error.message);
+        socket.emit('error', { message: 'Failed to get pause status' });
+      }
+    });
+
+    socket.on('disconnect', async (reason) => {
+      // Use enhanced disconnection handler
+      await enhancedSocketHandlers.handleEnhancedDisconnection(socket, reason);
     });
 
     socket.on('updateBoard', (data) => {
@@ -2588,6 +2666,20 @@ io.on('connection', (socket) => {
       });
     });
 });  // End of io.on('connection') handler
+
+// Helper functions for Game Pause Controller
+function getContinuationMessage(decision, action) {
+  switch (decision) {
+    case 'skip_turn':
+      return `Turn skipped for disconnected player. Moving to next player.`;
+    case 'add_bot':
+      return `Bot player ${action.botName || 'Bot'} added to replace disconnected player.`;
+    case 'end_game':
+      return `Game ended due to player disconnection.`;
+    default:
+      return `Continuation decision: ${decision}`;
+  }
+}
 
 // Helper functions
 function generateGameId() {

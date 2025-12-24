@@ -47,15 +47,23 @@ router.get('/users', async (req, res) => {
 // Send invitation
 router.post('/invitations', async (req, res) => {
   try {
+    console.log('📧 Invitation request received');
+    console.log('📦 Request body:', req.body);
+    console.log('👤 Request user:', req.user ? { id: req.user.id, username: req.user.username, isAdmin: req.user.isAdmin } : 'undefined');
+    
     const { email, message } = req.body;
     
     if (!email) {
+      console.log('❌ Email validation failed: Email is required');
       return res.status(400).json({ message: 'Email is required' });
     }
+    
+    console.log('📧 Processing invitation for email:', email);
     
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
+      console.log('❌ User validation failed: User already exists with email:', email);
       return res.status(400).json({ message: 'User already exists with this email' });
     }
     
@@ -66,8 +74,16 @@ router.post('/invitations', async (req, res) => {
     });
     
     if (existingInvitation) {
+      console.log('❌ Invitation validation failed: Invitation already sent to:', email);
       return res.status(400).json({ message: 'Invitation already sent to this email' });
     }
+    
+    if (!req.user || !req.user.id) {
+      console.log('❌ Auth validation failed: req.user or req.user.id is undefined');
+      return res.status(400).json({ message: 'Authentication error: User not found' });
+    }
+    
+    console.log('✅ All validations passed, creating invitation...');
     
     // Create new invitation
     const invitation = new Invitation({
@@ -77,7 +93,9 @@ router.post('/invitations', async (req, res) => {
       invitationToken: Invitation.generateInvitationToken()
     });
     
+    console.log('💾 Saving invitation to database...');
     await invitation.save();
+    console.log('✅ Invitation saved successfully with ID:', invitation._id);
     
     // Send the actual invitation email
     const invitationLink = `${process.env.FRONTEND_URL || 'https://jkube.netlify.app'}/signup.html?token=${invitation.invitationToken}`;
@@ -114,8 +132,32 @@ router.post('/invitations', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Send invitation error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('💥 Invitation route error:', error);
+    console.error('📊 Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines of stack
+    });
+    
+    // Check for specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      console.error('🔍 Validation error details:', error.errors);
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        details: Object.keys(error.errors).map(key => ({
+          field: key,
+          message: error.errors[key].message
+        }))
+      });
+    }
+    
+    if (error.code === 11000) {
+      console.error('🔍 Duplicate key error:', error.keyPattern);
+      return res.status(400).json({ message: 'Duplicate invitation token generated, please try again' });
+    }
+    
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

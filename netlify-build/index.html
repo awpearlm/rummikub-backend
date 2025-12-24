@@ -300,10 +300,87 @@
             <h2><i class="fas fa-exclamation-triangle"></i> Connection Lost</h2>
             <p>We're having trouble connecting to the game server. This could be due to internet issues or server maintenance.</p>
             <div id="reconnectionStatus">Attempting to reconnect automatically...</div>
-            <p class="reconnect-info">If you have an active game, clicking the button below will attempt to restore your game session.</p>
+            <p class="reconnect-info">You don't have any saved games. Clicking the button below will refresh the page.</p>
             <button id="manualReconnectBtn" class="reconnect-button">
-                <i class="fas fa-sync-alt"></i> Reconnect to Game
+                <i class="fas fa-sync-alt"></i> Refresh Page
             </button>
+        </div>
+    </div>
+
+    <!-- Game Pause Overlay -->
+    <div id="gamePauseOverlay" class="game-pause-overlay" style="display: none;">
+        <div class="pause-overlay-scrim"></div>
+        <div class="pause-overlay-content">
+            <div class="pause-header">
+                <div class="pause-icon">
+                    <i class="fas fa-pause-circle"></i>
+                </div>
+                <h2 id="pauseTitle">Game Paused</h2>
+                <p id="pauseReason">Waiting for player to reconnect...</p>
+            </div>
+            
+            <div class="pause-info">
+                <div id="gracePeriodSection" class="grace-period-section">
+                    <div class="grace-period-timer">
+                        <div class="timer-circle">
+                            <div class="timer-text">
+                                <span id="gracePeriodTimer">3:00</span>
+                                <small>remaining</small>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="grace-period-text">
+                        Waiting for <strong id="disconnectedPlayerName">Player</strong> to reconnect...
+                    </p>
+                </div>
+                
+                <div id="continuationOptionsSection" class="continuation-options-section" style="display: none;">
+                    <h3>What would you like to do?</h3>
+                    <p class="options-description">The disconnected player hasn't returned. Choose how to continue:</p>
+                    
+                    <div class="continuation-options">
+                        <button id="skipTurnOption" class="continuation-option">
+                            <div class="option-icon">
+                                <i class="fas fa-forward"></i>
+                            </div>
+                            <div class="option-content">
+                                <h4>Skip Turn</h4>
+                                <p>Skip the disconnected player's turn and continue with remaining players</p>
+                            </div>
+                        </button>
+                        
+                        <button id="addBotOption" class="continuation-option">
+                            <div class="option-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="option-content">
+                                <h4>Add Bot Player</h4>
+                                <p>Replace the disconnected player with an AI bot</p>
+                            </div>
+                        </button>
+                        
+                        <button id="endGameOption" class="continuation-option">
+                            <div class="option-icon">
+                                <i class="fas fa-stop-circle"></i>
+                            </div>
+                            <div class="option-content">
+                                <h4>End Game</h4>
+                                <p>End the current game and return to the main menu</p>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <div id="votingStatus" class="voting-status" style="display: none;">
+                        <p>Waiting for other players to vote...</p>
+                        <div class="voting-progress">
+                            <div class="progress-bar">
+                                <div id="votingProgressBar" class="progress-fill"></div>
+                            </div>
+                            <span id="votingProgressText">0/0 votes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

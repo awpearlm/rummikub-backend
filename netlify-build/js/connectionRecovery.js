@@ -188,9 +188,13 @@ class ConnectionRecoveryManager {
     // Start enhanced reconnection process
     this.startEnhancedReconnection(reason);
     
-    // Show connection lost overlay after delay
+    // Show connection lost overlay after delay with appropriate context
     setTimeout(() => {
       if (this.connectionState !== 'connected') {
+        this.updateConnectionLostOverlay({
+          status: 'Attempting to reconnect automatically...',
+          hasActiveGame: this.hasPreservedGameState()
+        });
         this.showConnectionLostOverlay();
       }
     }, 5000);
@@ -371,12 +375,59 @@ class ConnectionRecoveryManager {
   }
 
   /**
-   * Present fallback options to user
+   * Present fallback options to user (simplified)
    * Requirements: 4.2
    */
   presentFallbackOptions(fallbacks) {
     console.log('🔧 Presenting fallback options:', fallbacks);
     
+    // Update the connection lost overlay with failure context
+    this.updateConnectionLostOverlay({
+      status: 'Automatic reconnection failed. Please try manual reconnection.',
+      hasActiveGame: this.hasPreservedGameState()
+    });
+    
+    // Show the overlay
+    this.showConnectionLostOverlay();
+  }
+
+  /**
+   * Update connection lost overlay with current context
+   */
+  updateConnectionLostOverlay(context = {}) {
+    const overlay = document.getElementById('connectionLostOverlay');
+    const reconnectionStatus = document.getElementById('reconnectionStatus');
+    const reconnectInfo = overlay?.querySelector('.reconnect-info');
+    const manualReconnectBtn = document.getElementById('manualReconnectBtn');
+    
+    if (!overlay || !reconnectionStatus || !manualReconnectBtn) return;
+    
+    // Check if user has an active game
+    const hasActiveGame = this.hasPreservedGameState() || context.hasActiveGame;
+    
+    if (hasActiveGame) {
+      // User has an active game - show reconnection options
+      reconnectionStatus.textContent = context.status || 'Attempting to reconnect automatically...';
+      if (reconnectInfo) {
+        reconnectInfo.textContent = 'If you have an active game, clicking the button below will attempt to restore your game session.';
+      }
+      manualReconnectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Reconnect to Game';
+      manualReconnectBtn.onclick = () => this.attemptGameReconnection();
+    } else {
+      // No active game - show refresh option
+      reconnectionStatus.textContent = context.status || 'Connection lost. Please refresh to continue.';
+      if (reconnectInfo) {
+        reconnectInfo.textContent = 'You don\'t have any saved games. Clicking the button below will refresh the page.';
+      }
+      manualReconnectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Page';
+      manualReconnectBtn.onclick = () => window.location.reload();
+    }
+  }
+
+  /**
+   * Create fallback UI (only used if existing overlay is not available)
+   */
+  createFallbackUI(fallbacks) {
     // Create fallback options UI
     const fallbackContainer = document.createElement('div');
     fallbackContainer.className = 'fallback-options';
@@ -515,6 +566,57 @@ class ConnectionRecoveryManager {
       }));
       
       console.log('💾 Game state preserved for recovery');
+    }
+  }
+
+  /**
+   * Check if there's preserved game state
+   */
+  hasPreservedGameState() {
+    const gameInfo = localStorage.getItem('gameInfo');
+    const preservedState = localStorage.getItem('rummikub_preserved_state');
+    return (gameInfo && gameInfo !== 'null') || (preservedState && preservedState !== 'null');
+  }
+
+  /**
+   * Get preserved game info
+   */
+  getPreservedGameInfo() {
+    const gameInfo = localStorage.getItem('gameInfo');
+    if (gameInfo && gameInfo !== 'null') {
+      try {
+        return JSON.parse(gameInfo);
+      } catch (e) {
+        console.warn('Failed to parse gameInfo from localStorage');
+      }
+    }
+    
+    const preservedState = localStorage.getItem('rummikub_preserved_state');
+    if (preservedState && preservedState !== 'null') {
+      try {
+        return JSON.parse(preservedState);
+      } catch (e) {
+        console.warn('Failed to parse preserved state from localStorage');
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Attempt game reconnection
+   */
+  attemptGameReconnection() {
+    if (this.hasPreservedGameState()) {
+      // Try to reconnect to the preserved game
+      const gameInfo = this.getPreservedGameInfo();
+      if (gameInfo && gameInfo.gameId) {
+        this.socket.emit('rejoin_game', gameInfo);
+        this.showNotification('Attempting to reconnect to your game...', 'info');
+      }
+    } else {
+      // No preserved game, just refresh
+      window.location.reload();
     }
   }
 
@@ -778,18 +880,36 @@ class ConnectionRecoveryManager {
   }
 
   showConnectionLostOverlay() {
-    // Implementation depends on existing overlay system
-    console.log('🔌 Showing connection lost overlay');
+    const overlay = document.getElementById('connectionLostOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      console.log('🔌 Showing connection lost overlay');
+    }
   }
 
   hideConnectionLostOverlay() {
-    // Implementation depends on existing overlay system
-    console.log('🔌 Hiding connection lost overlay');
+    const overlay = document.getElementById('connectionLostOverlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      console.log('🔌 Hiding connection lost overlay');
+    }
   }
 
   createConnectionLostOverlay() {
-    // Implementation depends on existing overlay system
-    return document.createElement('div');
+    // Return existing overlay if available
+    const existingOverlay = document.getElementById('connectionLostOverlay');
+    if (existingOverlay) {
+      return existingOverlay;
+    }
+    
+    // Only create new overlay if none exists (shouldn't happen in normal flow)
+    console.warn('⚠️ Creating new connection lost overlay - existing overlay not found');
+    const overlay = document.createElement('div');
+    overlay.id = 'connectionLostOverlay';
+    overlay.className = 'connection-lost-overlay';
+    overlay.style.display = 'none';
+    document.body.appendChild(overlay);
+    return overlay;
   }
 
   clearReconnectionTimer() {
