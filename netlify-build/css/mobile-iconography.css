@@ -1,0 +1,381 @@
+/**
+ * Mobile Iconography System CSS
+ * Consistent icon system for mobile UI with SVG-based icons
+ * Requirements: 14.3
+ */
+
+/* CSS Custom Properties for Mobile Icons */
+:root {
+  /* Icon Sizes */
+  --mobile-icon-xs: 12px;
+  --mobile-icon-sm: 16px;
+  --mobile-icon-base: 20px;
+  --mobile-icon-md: 24px;
+  --mobile-icon-lg: 32px;
+  --mobile-icon-xl: 40px;
+  --mobile-icon-2xl: 48px;
+  
+  /* Icon Colors */
+  --mobile-icon-primary: var(--mobile-text-primary, #1E293B);
+  --mobile-icon-secondary: var(--mobile-text-secondary, #475569);
+  --mobile-icon-tertiary: var(--mobile-text-tertiary, #64748B);
+  --mobile-icon-inverse: var(--mobile-text-inverse, #FFFFFF);
+  --mobile-icon-accent: var(--mobile-primary-600, #3182CE);
+  --mobile-icon-success: var(--mobile-success-600, #38A169);
+  --mobile-icon-warning: var(--mobile-warning-600, #D97706);
+  --mobile-icon-error: var(--mobile-error-600, #DC2626);
+  
+  /* Icon Stroke Widths */
+  --mobile-icon-stroke-thin: 1;
+  --mobile-icon-stroke-normal: 1.5;
+  --mobile-icon-stroke-thick: 2;
+}
+
+/* Base Icon Styles */
+.mobile-icon {
+  display: inline-block;
+  width: var(--mobile-icon-base);
+  height: var(--mobile-icon-base);
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: var(--mobile-icon-stroke-normal);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* Icon Sizes */
+.mobile-icon-xs { width: var(--mobile-icon-xs); height: var(--mobile-icon-xs); }
+.mobile-icon-sm { width: var(--mobile-icon-sm); height: var(--mobile-icon-sm); }
+.mobile-icon-base { width: var(--mobile-icon-base); height: var(--mobile-icon-base); }
+.mobile-icon-md { width: var(--mobile-icon-md); height: var(--mobile-icon-md); }
+.mobile-icon-lg { width: var(--mobile-icon-lg); height: var(--mobile-icon-lg); }
+.mobile-icon-xl { width: var(--mobile-icon-xl); height: var(--mobile-icon-xl); }
+.mobile-icon-2xl { width: var(--mobile-icon-2xl); height: var(--mobile-icon-2xl); }
+
+/* Icon Colors */
+.mobile-icon-primary { color: var(--mobile-icon-primary); }
+.mobile-icon-secondary { color: var(--mobile-icon-secondary); }
+.mobile-icon-tertiary { color: var(--mobile-icon-tertiary); }
+.mobile-icon-inverse { color: var(--mobile-icon-inverse); }
+.mobile-icon-accent { color: var(--mobile-icon-accent); }
+.mobile-icon-success { color: var(--mobile-icon-success); }
+.mobile-icon-warning { color: var(--mobile-icon-warning); }
+.mobile-icon-error { color: var(--mobile-icon-error); }
+
+/* Icon Stroke Weights */
+.mobile-icon-thin { stroke-width: var(--mobile-icon-stroke-thin); }
+.mobile-icon-normal { stroke-width: var(--mobile-icon-stroke-normal); }
+.mobile-icon-thick { stroke-width: var(--mobile-icon-stroke-thick); }
+
+/* Icon Filled Variants */
+.mobile-icon-filled {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Icon Button Wrapper */
+.mobile-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: none;
+  border-radius: var(--mobile-radius-md, 12px);
+  background: transparent;
+  color: var(--mobile-icon-secondary);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--mobile-duration-150, 150ms) var(--mobile-ease-out, ease-out);
+}
+
+.mobile-icon-button:hover {
+  background-color: var(--mobile-bg-secondary, #F8FAFC);
+  color: var(--mobile-icon-primary);
+}
+
+.mobile-icon-button:active {
+  background-color: var(--mobile-bg-tertiary, #F1F5F9);
+  transform: scale(0.98);
+}
+
+.mobile-icon-button:focus-visible {
+  outline: 2px solid var(--mobile-primary-500, #3182CE);
+  outline-offset: 2px;
+}
+
+.mobile-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon with Text Combinations */
+.mobile-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mobile-space-2, 8px);
+}
+
+.mobile-icon-text-vertical {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mobile-space-1, 4px);
+  text-align: center;
+}
+
+/* SVG Icon Definitions */
+.mobile-icon-svg {
+  display: none;
+}
+
+/* Navigation Icons */
+.mobile-icon-home::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m3 12 2-2m0 0 7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11 2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1m-6 0h6'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-back::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M15 19l-7-7 7-7'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-forward::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M9 5l7 7-7 7'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-menu::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-close::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 18L18 6M6 6l12 12'/%3E%3C/svg%3E");
+}
+
+/* Game Icons */
+.mobile-icon-play::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M14.828 14.828a4 4 0 0 1-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-pause::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M15.75 5.25v13.5m-7.5-13.5v13.5'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-stop::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-shuffle::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-sort::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M3 7h18M3 12h12M3 17h6'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-reset::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99'/%3E%3C/svg%3E");
+}
+
+/* User Interface Icons */
+.mobile-icon-user::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-users::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-settings::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z'/%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-search::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-filter::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9Z'/%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M8 12h8M10 8h4M11 16h2'/%3E%3C/svg%3E");
+}
+
+/* Action Icons */
+.mobile-icon-add::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 4.5v15m7.5-7.5h-15'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-remove::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 12h14'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-edit::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-delete::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-save::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z'/%3E%3C/svg%3E");
+}
+
+/* Status Icons */
+.mobile-icon-check::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4.5 12.75 6 6 9-13.5'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-warning::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-error::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-info::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-loading::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99'/%3E%3C/svg%3E");
+  animation: mobile-icon-spin 1s linear infinite;
+}
+
+@keyframes mobile-icon-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Communication Icons */
+.mobile-icon-message::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-notification::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-mail::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75'/%3E%3C/svg%3E");
+}
+
+/* Media Icons */
+.mobile-icon-image::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-video::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z'/%3E%3C/svg%3E");
+}
+
+.mobile-icon-volume::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.59-.79-1.59-1.75V9.75c0-.966.71-1.75 1.59-1.75H6.75Z'/%3E%3C/svg%3E");
+}
+
+/* Utility Classes for Icon Positioning */
+.mobile-icon-left {
+  margin-right: var(--mobile-space-2, 8px);
+}
+
+.mobile-icon-right {
+  margin-left: var(--mobile-space-2, 8px);
+}
+
+.mobile-icon-top {
+  margin-bottom: var(--mobile-space-1, 4px);
+}
+
+.mobile-icon-bottom {
+  margin-top: var(--mobile-space-1, 4px);
+}
+
+/* Icon Animation Classes */
+.mobile-icon-bounce {
+  animation: mobile-icon-bounce 1s ease-in-out infinite;
+}
+
+@keyframes mobile-icon-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.mobile-icon-pulse {
+  animation: mobile-icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mobile-icon-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.mobile-icon-shake {
+  animation: mobile-icon-shake 0.5s ease-in-out;
+}
+
+@keyframes mobile-icon-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-icon-loading::before,
+  .mobile-icon-bounce,
+  .mobile-icon-pulse,
+  .mobile-icon-shake {
+    animation: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .mobile-icon {
+    stroke-width: var(--mobile-icon-stroke-thick);
+  }
+  
+  .mobile-icon-button {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .mobile-icon-button {
+    background: transparent !important;
+    border: 1px solid #000 !important;
+  }
+  
+  .mobile-icon {
+    color: #000 !important;
+  }
+}

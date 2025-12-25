@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mobile Lobby Demo - J-kube</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="J-kube">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/mobile-foundation.css?v=1">
+    <link rel="stylesheet" href="css/mobile-lobby.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+        }
+        
+        .demo-controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .demo-controls button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <div>Mobile Lobby Demo</div>
+        <button onclick="showLobby()">Show Lobby</button>
+        <button onclick="hideLobby()">Hide Lobby</button>
+        <button onclick="switchToGames()">Games Tab</button>
+        <button onclick="switchToPlayers()">Players Tab</button>
+        <button onclick="switchToInvitations()">Invites Tab</button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/mobile-ui/OrientationManager.js?v=1"></script>
+    <script src="js/mobile-ui/TouchManager.js?v=1"></script>
+    <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script>
+    <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script>
+    <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script>
+    <script src="js/mobile-ui/MobileNavigationController.js?v=1"></script>
+    <script src="js/mobile-ui/MobileUISystem.js?v=1"></script>
+
+    <script>
+        // Demo setup
+        let mobileLobbyScreen;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up demo authentication
+            localStorage.setItem('auth_token', 'demo-token');
+            localStorage.setItem('username', 'DemoUser');
+            
+            // Initialize mobile lobby screen
+            mobileLobbyScreen = new MobileLobbyScreen();
+            window.mobileLobbyScreen = mobileLobbyScreen;
+            
+            // Show lobby by default
+            setTimeout(() => {
+                mobileLobbyScreen.show();
+            }, 500);
+            
+            // Mock API responses for demo
+            setupMockAPI();
+        });
+        
+        function setupMockAPI() {
+            // Mock fetch for demo purposes
+            const originalFetch = window.fetch;
+            window.fetch = async (url, options) => {
+                console.log('Mock API call:', url);
+                
+                if (url.includes('/api/games')) {
+                    return {
+                        ok: true,
+                        json: async () => [
+                            {
+                                id: 'GAME01',
+                                status: 'waiting',
+                                players: [
+                                    { username: 'Alice', id: '1' },
+                                    { username: 'Bob', id: '2' }
+                                ],
+                                maxPlayers: 4,
+                                timerEnabled: true,
+                                createdAt: new Date(Date.now() - 300000).toISOString()
+                            },
+                            {
+                                id: 'GAME02',
+                                status: 'in_progress',
+                                players: [
+                                    { username: 'Charlie', id: '3' },
+                                    { username: 'Diana', id: '4' },
+                                    { username: 'Eve', id: '5' }
+                                ],
+                                maxPlayers: 4,
+                                timerEnabled: false,
+                                createdAt: new Date(Date.now() - 600000).toISOString()
+                            },
+                            {
+                                id: 'GAME03',
+                                status: 'waiting',
+                                players: [
+                                    { username: 'Frank', id: '6' }
+                                ],
+                                maxPlayers: 3,
+                                timerEnabled: true,
+                                createdAt: new Date(Date.now() - 120000).toISOString()
+                            }
+                        ]
+                    };
+                }
+                
+                if (url.includes('/api/players/online')) {
+                    return {
+                        ok: true,
+                        json: async () => [
+                            {
+                                id: '1',
+                                username: 'Alice',
+                                status: 'online',
+                                wins: 15,
+                                gamesPlayed: 42
+                            },
+                            {
+                                id: '2',
+                                username: 'Bob',
+                                status: 'in_game',
+                                wins: 8,
+                                gamesPlayed: 23
+                            },
+                            {
+                                id: '3',
+                                username: 'Charlie',
+                                status: 'online',
+                                wins: 22,
+                                gamesPlayed: 67
+                            },
+                            {
+                                id: '4',
+                                username: 'Diana',
+                                status: 'away',
+                                wins: 12,
+                                gamesPlayed: 35
+                            },
+                            {
+                                id: '5',
+                                username: 'DemoUser',
+                                status: 'online',
+                                wins: 5,
+                                gamesPlayed: 12
+                            }
+                        ]
+                    };
+                }
+                
+                if (url.includes('/api/invitations')) {
+                    return {
+                        ok: true,
+                        json: async () => [
+                            {
+                                id: 'INV01',
+                                fromUser: {
+                                    username: 'Alice',
+                                    id: '1'
+                                },
+                                game: {
+                                    playerCount: 2,
+                                    maxPlayers: 4,
+                                    timerEnabled: true
+                                },
+                                createdAt: new Date(Date.now() - 180000).toISOString()
+                            },
+                            {
+                                id: 'INV02',
+                                fromUser: {
+                                    username: 'Charlie',
+                                    id: '3'
+                                },
+                                game: {
+                                    playerCount: 1,
+                                    maxPlayers: 3,
+                                    timerEnabled: false
+                                },
+                                createdAt: new Date(Date.now() - 60000).toISOString()
+                            }
+                        ]
+                    };
+                }
+                
+                // Handle invitation and challenge endpoints
+                if (url.includes('/api/invitations') && options?.method === 'POST') {
+                    return {
+                        ok: true,
+                        json: async () => ({ success: true, invitationId: 'INV_' + Date.now() })
+                    };
+                }
+                
+                if (url.includes('/api/games/challenge') && options?.method === 'POST') {
+                    return {
+                        ok: true,
+                        json: async () => ({ success: true, gameId: 'CHALLENGE_' + Date.now() })
+                    };
+                }
+                
+                // Default mock response
+                return {
+                    ok: true,
+                    json: async () => ({ success: true })
+                };
+            };
+        }
+        
+        // Demo control functions
+        function showLobby() {
+            if (mobileLobbyScreen) {
+                mobileLobbyScreen.show();
+            }
+        }
+        
+        function hideLobby() {
+            if (mobileLobbyScreen) {
+                mobileLobbyScreen.hide();
+            }
+        }
+        
+        function switchToGames() {
+            if (mobileLobbyScreen) {
+                mobileLobbyScreen.switchTab('games');
+            }
+        }
+        
+        function switchToPlayers() {
+            if (mobileLobbyScreen) {
+                mobileLobbyScreen.switchTab('players');
+            }
+        }
+        
+        function switchToInvitations() {
+            if (mobileLobbyScreen) {
+                mobileLobbyScreen.switchTab('invitations');
+            }
+        }
+    </script>
+</body>
+</html>

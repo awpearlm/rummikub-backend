@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Drawer Component Demo</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/mobile-foundation.css">
+    <link rel="stylesheet" href="css/mobile-game.css">
+    <link rel="stylesheet" href="css/hand-drawer.css">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .demo-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .demo-header {
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .demo-content {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3C3C43;
+            font-size: 16px;
+            position: relative;
+        }
+        
+        .demo-drawer-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+        }
+        
+        .demo-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 300px;
+        }
+        
+        .demo-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(0, 122, 255, 0.1);
+            color: #007AFF;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .demo-button:hover {
+            background: rgba(0, 122, 255, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .demo-button:active {
+            transform: scale(0.95);
+        }
+        
+        .demo-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .demo-log {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            font-family: monospace;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.event {
+            color: #007AFF;
+        }
+        
+        .log-entry.action {
+            color: #34C759;
+        }
+        
+        .log-entry.error {
+            color: #FF3B30;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            Hand Drawer Component Demo
+        </div>
+        
+        <div class="demo-content">
+            <div class="demo-status" id="drawerStatus">
+                Status: Collapsed
+            </div>
+            
+            <div class="demo-controls">
+                <button class="demo-button" id="expandBtn">Expand</button>
+                <button class="demo-button" id="collapseBtn">Collapse</button>
+                <button class="demo-button" id="toggleBtn">Toggle</button>
+                <button class="demo-button" id="addTileBtn">Add Tile</button>
+                <button class="demo-button" id="addMultipleBtn">Add 5 Tiles</button>
+                <button class="demo-button" id="clearTilesBtn">Clear Tiles</button>
+                <button class="demo-button" id="clearLogBtn">Clear Log</button>
+            </div>
+            
+            <div style="text-align: center;">
+                <h2>Hand Drawer Component Test</h2>
+                <p>The drawer is at the bottom of the screen.</p>
+                <p>Try tapping the handle or using the control buttons.</p>
+                <p>You can also swipe up/down on the handle to expand/collapse.</p>
+            </div>
+            
+            <div class="demo-log" id="eventLog">
+                <div class="log-entry">Demo initialized. Ready to test hand drawer.</div>
+            </div>
+        </div>
+        
+        <div class="demo-drawer-container" id="drawerContainer">
+            <!-- Hand drawer will be initialized here -->
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/mobile-ui/HandDrawerComponent.js"></script>
+    <script src="js/mobile-ui/HandDrawerGameIntegration.js"></script>
+    
+    <script>
+        class HandDrawerDemo {
+            constructor() {
+                this.handDrawer = null;
+                this.gameIntegration = null;
+                this.mockGame = null;
+                this.eventLog = document.getElementById('eventLog');
+                this.statusElement = document.getElementById('drawerStatus');
+                
+                this.init();
+            }
+            
+            async init() {
+                try {
+                    // Create mock game instance
+                    this.createMockGame();
+                    
+                    // Initialize hand drawer component
+                    const container = document.getElementById('drawerContainer');
+                    this.handDrawer = new HandDrawerComponent(container);
+                    
+                    // Initialize game integration
+                    this.gameIntegration = new HandDrawerGameIntegration(this.handDrawer, this.mockGame);
+                    
+                    // Setup event listeners
+                    this.setupEventListeners();
+                    
+                    // Setup demo controls
+                    this.setupDemoControls();
+                    
+                    this.log('Hand drawer component and game integration initialized successfully', 'event');
+                    this.updateStatus();
+                    
+                } catch (error) {
+                    this.log(`Error initializing hand drawer: ${error.message}`, 'error');
+                    console.error('Demo initialization error:', error);
+                }
+            }
+            
+            createMockGame() {
+                // Create a mock game instance for testing integration
+                this.mockGame = {
+                    gameState: {
+                        playerHand: [],
+                        deckSize: 50,
+                        currentPlayer: 'player1'
+                    },
+                    isMyTurn: () => true,
+                    hasPlayedTilesThisTurn: false,
+                    
+                    drawTile: () => {
+                        this.log('Mock game: drawTile called', 'action');
+                        this.mockGame.gameState.deckSize--;
+                        
+                        // Add a random tile to hand
+                        const colors = ['red', 'blue', 'yellow', 'black'];
+                        const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+                        
+                        const newTile = {
+                            id: `tile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            color: colors[Math.floor(Math.random() * colors.length)],
+                            number: numbers[Math.floor(Math.random() * numbers.length)],
+                            isJoker: Math.random() < 0.05
+                        };
+                        
+                        this.mockGame.gameState.playerHand.push(newTile);
+                        this.handDrawer.addTile(newTile);
+                    },
+                    
+                    sortHandByColor: () => {
+                        this.log('Mock game: sortHandByColor called', 'action');
+                        // Sort the mock hand
+                        this.mockGame.gameState.playerHand.sort((a, b) => {
+                            if (a.isJoker && b.isJoker) return 0;
+                            if (a.isJoker) return 1;
+                            if (b.isJoker) return -1;
+                            
+                            const colorOrder = { red: 0, blue: 1, yellow: 2, black: 3 };
+                            const colorDiff = colorOrder[a.color] - colorOrder[b.color];
+                            if (colorDiff !== 0) return colorDiff;
+                            
+                            return a.number - b.number;
+                        });
+                    },
+                    
+                    sortHandByNumber: () => {
+                        this.log('Mock game: sortHandByNumber called', 'action');
+                        // Sort the mock hand
+                        this.mockGame.gameState.playerHand.sort((a, b) => {
+                            if (a.isJoker && b.isJoker) return 0;
+                            if (a.isJoker) return 1;
+                            if (b.isJoker) return -1;
+                            
+                            const numberDiff = a.number - b.number;
+                            if (numberDiff !== 0) return numberDiff;
+                            
+                            const colorOrder = { red: 0, blue: 1, yellow: 2, black: 3 };
+                            return colorOrder[a.color] - colorOrder[b.color];
+                        });
+                    },
+                    
+                    showNotification: (message, type) => {
+                        this.log(`Game notification: ${message}`, type);
+                    }
+                };
+            }
+            
+            setupEventListeners() {
+                // Hand drawer events
+                this.handDrawer.on('expanded', () => {
+                    this.log('Drawer expanded', 'event');
+                    this.updateStatus();
+                });
+                
+                this.handDrawer.on('collapsed', () => {
+                    this.log('Drawer collapsed', 'event');
+                    this.updateStatus();
+                });
+                
+                this.handDrawer.on('actionClicked', (data) => {
+                    this.log(`Action clicked: ${data.actionId}`, 'action');
+                });
+                
+                this.handDrawer.on('tileSelectionChanged', (data) => {
+                    this.log(`Tile selection changed: ${data.tileId} (${data.isSelected ? 'selected' : 'deselected'})`, 'action');
+                });
+                
+                this.handDrawer.on('tileAdded', (data) => {
+                    this.log(`Tile added: ${this.getTileDescription(data.tile)}`, 'event');
+                });
+                
+                this.handDrawer.on('tileRemoved', (data) => {
+                    this.log(`Tile removed: ${this.getTileDescription(data.tile)}`, 'event');
+                });
+                
+                this.handDrawer.on('tilesSorted', (data) => {
+                    this.log(`Tiles sorted by: ${data.sortType}`, 'event');
+                });
+                
+                this.handDrawer.on('selectionCleared', () => {
+                    this.log('Selection cleared', 'event');
+                });
+                
+                this.handDrawer.on('allTilesCleared', (data) => {
+                    this.log(`All tiles cleared (${data.clearedCount} tiles)`, 'event');
+                });
+                
+                // Game integration events
+                if (this.gameIntegration) {
+                    this.gameIntegration.on('actionHandled', (data) => {
+                        this.log(`Integration handled action: ${data.actionId} (success: ${data.success})`, 'event');
+                    });
+                    
+                    this.gameIntegration.on('boardResetRequested', () => {
+                        this.log('Board reset requested by integration', 'event');
+                    });
+                }
+            }
+            
+            setupDemoControls() {
+                document.getElementById('expandBtn').addEventListener('click', () => {
+                    this.handDrawer.expand();
+                    this.log('Expand button clicked', 'action');
+                });
+                
+                document.getElementById('collapseBtn').addEventListener('click', () => {
+                    this.handDrawer.collapse();
+                    this.log('Collapse button clicked', 'action');
+                });
+                
+                document.getElementById('toggleBtn').addEventListener('click', () => {
+                    this.handDrawer.toggle();
+                    this.log('Toggle button clicked', 'action');
+                });
+                
+                document.getElementById('clearLogBtn').addEventListener('click', () => {
+                    this.clearLog();
+                });
+                
+                document.getElementById('addTileBtn').addEventListener('click', () => {
+                    this.addRandomTile();
+                });
+                
+                document.getElementById('addMultipleBtn').addEventListener('click', () => {
+                    this.addMultipleTiles(5);
+                });
+                
+                document.getElementById('clearTilesBtn').addEventListener('click', () => {
+                    this.clearAllTiles();
+                });
+            }
+            
+            updateStatus() {
+                const isExpanded = this.handDrawer.getIsExpanded();
+                this.statusElement.textContent = `Status: ${isExpanded ? 'Expanded' : 'Collapsed'}`;
+            }
+            
+            log(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+                
+                this.eventLog.appendChild(entry);
+                this.eventLog.scrollTop = this.eventLog.scrollHeight;
+                
+                // Keep only last 50 entries
+                while (this.eventLog.children.length > 50) {
+                    this.eventLog.removeChild(this.eventLog.firstChild);
+                }
+            }
+            
+            clearLog() {
+                this.eventLog.innerHTML = '<div class="log-entry">Log cleared.</div>';
+            }
+            
+            addRandomTile() {
+                const colors = ['red', 'blue', 'yellow', 'black'];
+                const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+                
+                const isJoker = Math.random() < 0.1; // 10% chance of joker
+                
+                const tile = {
+                    id: `tile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    color: isJoker ? 'red' : colors[Math.floor(Math.random() * colors.length)],
+                    number: isJoker ? 0 : numbers[Math.floor(Math.random() * numbers.length)],
+                    isJoker: isJoker
+                };
+                
+                const success = this.handDrawer.addTile(tile);
+                if (success) {
+                    this.log(`Added tile: ${this.getTileDescription(tile)}`, 'action');
+                } else {
+                    this.log(`Failed to add tile: ${this.getTileDescription(tile)}`, 'error');
+                }
+            }
+            
+            addMultipleTiles(count) {
+                const tiles = [];
+                for (let i = 0; i < count; i++) {
+                    const colors = ['red', 'blue', 'yellow', 'black'];
+                    const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+                    
+                    const isJoker = Math.random() < 0.05; // 5% chance of joker
+                    
+                    tiles.push({
+                        id: `tile_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`,
+                        color: isJoker ? 'red' : colors[Math.floor(Math.random() * colors.length)],
+                        number: isJoker ? 0 : numbers[Math.floor(Math.random() * numbers.length)],
+                        isJoker: isJoker
+                    });
+                }
+                
+                const addedCount = this.handDrawer.addTiles(tiles);
+                this.log(`Added ${addedCount} tiles`, 'action');
+            }
+            
+            clearAllTiles() {
+                const clearedCount = this.handDrawer.clearAllTiles();
+                this.log(`Cleared ${clearedCount} tiles`, 'action');
+            }
+            
+            getTileDescription(tile) {
+                if (tile.isJoker) {
+                    return 'Joker';
+                }
+                return `${tile.color} ${tile.number}`;
+            }
+        }
+        
+        // Initialize demo when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new HandDrawerDemo();
+        });
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                console.log('Orientation changed, updating layout...');
+            }, 100);
+        });
+    </script>
+</body>
+</html>

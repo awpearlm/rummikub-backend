@@ -1,0 +1,765 @@
+/**
+ * Hand Drawer Component CSS
+ * Styles for the sliding drawer interface with smooth animations and touch controls
+ */
+
+/* Main Hand Drawer Container */
+.hand-drawer-component {
+  position: relative;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: height var(--drawer-animation-duration, 300ms) var(--drawer-animation-easing, cubic-bezier(0.4, 0, 0.2, 1));
+  transform: translateZ(0);
+  will-change: height, transform;
+}
+
+/* Drawer Handle */
+.mobile-drawer-handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  padding: 4px;
+  border-radius: 0 0 12px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-drawer-handle:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.mobile-drawer-handle:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.mobile-drawer-handle-indicator {
+  width: 36px;
+  height: 4px;
+  background: #C7C7CC;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  margin-bottom: 2px;
+}
+
+.hand-drawer-component.expanded .mobile-drawer-handle-indicator {
+  transform: rotate(180deg);
+  background: #007AFF;
+}
+
+.mobile-drawer-handle:hover .mobile-drawer-handle-indicator {
+  background: #8E8E93;
+  width: 42px;
+}
+
+.drawer-hint-text {
+  font-size: 10px;
+  color: #8E8E93;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-drawer-handle:hover .drawer-hint-text {
+  opacity: 1;
+  color: #007AFF;
+}
+
+/* Dragging State */
+.hand-drawer-component.dragging {
+  transition: none;
+}
+
+.hand-drawer-component.dragging .mobile-drawer-handle-indicator {
+  background: #007AFF;
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+/* Tiles Container */
+.hand-drawer-tiles-container {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  bottom: 56px;
+  padding: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: translateZ(0);
+  will-change: opacity, transform;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hand-drawer-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+  justify-content: center;
+  align-content: start;
+  min-height: 100%;
+}
+
+/* Empty State */
+.hand-drawer-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8E8E93;
+  text-align: center;
+  padding: 20px;
+}
+
+.empty-state-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+.empty-state-text {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #3C3C43;
+}
+
+.empty-state-hint {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Action Bar */
+.mobile-game-action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Action Buttons */
+.action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.action-button:hover {
+  background: rgba(0, 122, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.action-button:active {
+  transform: scale(0.95);
+  background: rgba(0, 122, 255, 0.2);
+}
+
+.action-button-icon {
+  font-size: 16px;
+  margin-bottom: 2px;
+  line-height: 1;
+}
+
+.action-button-label {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+/* Specific Action Button Styles */
+.action-button-draw {
+  background: rgba(52, 199, 89, 0.1);
+  color: #34C759;
+}
+
+.action-button-draw:hover {
+  background: rgba(52, 199, 89, 0.15);
+}
+
+.action-button-draw:active {
+  background: rgba(52, 199, 89, 0.2);
+}
+
+.action-button-sort-color {
+  background: rgba(255, 149, 0, 0.1);
+  color: #FF9500;
+}
+
+.action-button-sort-color:hover {
+  background: rgba(255, 149, 0, 0.15);
+}
+
+.action-button-sort-color:active {
+  background: rgba(255, 149, 0, 0.2);
+}
+
+.action-button-sort-number {
+  background: rgba(88, 86, 214, 0.1);
+  color: #5856D6;
+}
+
+.action-button-sort-number:hover {
+  background: rgba(88, 86, 214, 0.15);
+}
+
+.action-button-sort-number:active {
+  background: rgba(88, 86, 214, 0.2);
+}
+
+.action-button-reset {
+  background: rgba(142, 142, 147, 0.1);
+  color: #8E8E93;
+}
+
+.action-button-reset:hover {
+  background: rgba(142, 142, 147, 0.15);
+}
+
+.action-button-reset:active {
+  background: rgba(142, 142, 147, 0.2);
+}
+
+/* Disabled State */
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.action-button:disabled:hover {
+  background: rgba(0, 122, 255, 0.1);
+  transform: none;
+}
+
+/* State Classes */
+.hand-drawer-component.collapsed .hand-drawer-tiles-container {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.hand-drawer-component.expanded .hand-drawer-tiles-container {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.hand-drawer-component.collapsed .mobile-game-action-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hand-drawer-component.expanded .mobile-game-action-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Touch Feedback */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.touch-feedback:active {
+  opacity: 0.7;
+}
+
+/* Animation Performance */
+.hand-drawer-component,
+.hand-drawer-tiles-container,
+.mobile-game-action-bar {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .hand-drawer-tiles-container {
+    padding: 12px;
+  }
+  
+  .hand-drawer-tiles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 6px;
+  }
+  
+  .mobile-game-action-bar {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  
+  .action-button {
+    width: 48px;
+    height: 36px;
+  }
+  
+  .action-button-icon {
+    font-size: 14px;
+  }
+  
+  .action-button-label {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hand-drawer-tiles-container {
+    padding: 8px;
+  }
+  
+  .hand-drawer-tiles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 4px;
+  }
+  
+  .mobile-game-action-bar {
+    gap: 6px;
+    padding: 0 8px;
+    height: 48px;
+  }
+  
+  .action-button {
+    width: 44px;
+    height: 32px;
+  }
+  
+  .action-button-icon {
+    font-size: 12px;
+  }
+  
+  .action-button-label {
+    font-size: 8px;
+  }
+  
+  .mobile-drawer-handle {
+    width: 70px;
+    height: 28px;
+  }
+  
+  .mobile-drawer-handle-indicator {
+    width: 32px;
+    height: 3px;
+  }
+  
+  .drawer-hint-text {
+    font-size: 9px;
+  }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  .hand-drawer-component,
+  .mobile-drawer-handle-indicator,
+  .hand-drawer-tiles-container,
+  .mobile-game-action-bar,
+  .action-button {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .hand-drawer-component {
+    border-top: 2px solid rgba(0, 0, 0, 0.3);
+  }
+  
+  .mobile-drawer-handle {
+    background: rgba(255, 255, 255, 1);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+  
+  .mobile-drawer-handle-indicator {
+    background: #000;
+  }
+  
+  .action-button {
+    border: 1px solid currentColor;
+  }
+  
+  .mobile-game-action-bar {
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Focus Visible Support */
+.mobile-drawer-handle:focus-visible {
+  outline: 3px solid #007AFF;
+  outline-offset: 2px;
+}
+
+.action-button:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Loading State */
+.hand-drawer-component.loading {
+  pointer-events: none;
+}
+
+.hand-drawer-component.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 2px solid rgba(0, 122, 255, 0.3);
+  border-top: 2px solid #007AFF;
+  border-radius: 50%;
+  animation: drawer-loading-spin 1s linear infinite;
+  z-index: 1000;
+}
+
+@keyframes drawer-loading-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error State */
+.hand-drawer-component.error {
+  border-top: 2px solid #FF3B30;
+}
+
+.hand-drawer-component.error .mobile-drawer-handle {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.hand-drawer-component.error .mobile-drawer-handle-indicator {
+  background: #FF3B30;
+}
+
+/* Custom Scrollbar for Tiles Container */
+.hand-drawer-tiles-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hand-drawer-tiles-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
+.hand-drawer-tiles-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.hand-drawer-tiles-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* CSS Custom Properties for Dynamic Configuration */
+:root {
+  --drawer-animation-duration: 300ms;
+  --drawer-animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --drawer-collapsed-height: 80px;
+  --drawer-expanded-height: 240px;
+  --drawer-tile-size: 48px;
+  --drawer-tile-gap: 8px;
+  --drawer-action-bar-height: 56px;
+}
+
+/* Utility Classes */
+.drawer-no-transition {
+  transition: none !important;
+}
+
+.drawer-hardware-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.drawer-blur-background {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Hand Tiles */
+.hand-tile {
+  position: relative;
+  width: var(--tile-size, 48px);
+  height: var(--tile-size, 48px);
+  border-radius: 8px;
+  background: white;
+  border: 2px solid #E5E5EA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.hand-tile:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #C7C7CC;
+}
+
+.hand-tile:active,
+.hand-tile.touch-active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.hand-tile-content {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Tile Colors */
+.hand-tile.tile-red {
+  color: #FF3B30;
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.hand-tile.tile-red:hover {
+  border-color: rgba(255, 59, 48, 0.5);
+  background: rgba(255, 59, 48, 0.05);
+}
+
+.hand-tile.tile-blue {
+  color: #007AFF;
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.hand-tile.tile-blue:hover {
+  border-color: rgba(0, 122, 255, 0.5);
+  background: rgba(0, 122, 255, 0.05);
+}
+
+.hand-tile.tile-yellow {
+  color: #FF9500;
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+.hand-tile.tile-yellow:hover {
+  border-color: rgba(255, 149, 0, 0.5);
+  background: rgba(255, 149, 0, 0.05);
+}
+
+.hand-tile.tile-black {
+  color: #1C1C1E;
+  border-color: rgba(28, 28, 30, 0.3);
+}
+
+.hand-tile.tile-black:hover {
+  border-color: rgba(28, 28, 30, 0.5);
+  background: rgba(28, 28, 30, 0.05);
+}
+
+/* Joker Tiles */
+.hand-tile.tile-joker {
+  background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+  color: white;
+  border-color: transparent;
+}
+
+.hand-tile.tile-joker:hover {
+  background: linear-gradient(135deg, #FF5252, #26C6DA);
+  transform: scale(1.1);
+}
+
+.hand-tile.tile-joker .tile-joker-symbol {
+  font-size: 20px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Selected State */
+.hand-tile.selected {
+  border-color: #007AFF;
+  border-width: 3px;
+  background: rgba(0, 122, 255, 0.1);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2),
+              0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.hand-tile.selected:hover {
+  transform: scale(1.1);
+}
+
+.hand-tile.selected .hand-tile-selection-indicator {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Selection Indicator */
+.hand-tile-selection-indicator {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #007AFF;
+  border: 2px solid white;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.hand-tile-selection-indicator::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+/* Multi-touch Active State */
+.hand-tile.multi-touch-active {
+  border-color: #FF9500;
+  background: rgba(255, 149, 0, 0.1);
+  transform: scale(1.02);
+}
+
+/* Disabled State */
+.hand-tile.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Dragging State */
+.hand-tile.dragging {
+  opacity: 0.8;
+  transform: scale(1.1) rotate(5deg);
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Animation Classes */
+.hand-tile.tile-added {
+  animation: tile-added 0.3s ease-out;
+}
+
+@keyframes tile-added {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hand-tile.tile-removed {
+  animation: tile-removed 0.2s ease-in forwards;
+}
+
+@keyframes tile-removed {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* Responsive Tile Sizes */
+@media (max-width: 768px) {
+  .hand-tile {
+    width: var(--tile-size, 44px);
+    height: var(--tile-size, 44px);
+    border-radius: 6px;
+  }
+  
+  .hand-tile-content {
+    font-size: 16px;
+  }
+  
+  .hand-tile.tile-joker .tile-joker-symbol {
+    font-size: 18px;
+  }
+  
+  .hand-tile-selection-indicator {
+    width: 14px;
+    height: 14px;
+    top: -3px;
+    right: -3px;
+  }
+  
+  .hand-tile-selection-indicator::after {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hand-tile {
+    width: var(--tile-size, 40px);
+    height: var(--tile-size, 40px);
+    border-radius: 4px;
+  }
+  
+  .hand-tile-content {
+    font-size: 14px;
+  }
+  
+  .hand-tile.tile-joker .tile-joker-symbol {
+    font-size: 16px;
+  }
+  
+  .hand-tile-selection-indicator {
+    width: 12px;
+    height: 12px;
+    top: -2px;
+    right: -2px;
+  }
+  
+  .hand-tile-selection-indicator::after {
+    font-size: 8px;
+  }
+}

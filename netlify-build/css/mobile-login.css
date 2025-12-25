@@ -1,0 +1,539 @@
+/**
+ * Mobile Login Screen Styles
+ * Portrait-optimized login interface with touch-friendly interactions
+ * Implements keyboard-aware layout adjustments and visual feedback
+ */
+
+/* Mobile Login Screen Container */
+.mobile-login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-mobile-overlay);
+    overflow: hidden;
+}
+
+.mobile-login-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--mobile-padding);
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+    transition: padding-bottom var(--mobile-transition-normal) ease;
+}
+
+/* Header Section */
+.mobile-login-header {
+    text-align: center;
+    padding: 40px 0 30px;
+    color: white;
+}
+
+.mobile-login-logo h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-login-logo p {
+    font-size: 1.1rem;
+    margin: 0;
+    opacity: 0.9;
+    font-weight: 300;
+}
+
+/* Form Section */
+.mobile-login-form {
+    flex: 1;
+    background: white;
+    border-radius: 24px 24px 0 0;
+    padding: 32px 24px 24px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.mobile-login-form::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: #E5E7EB;
+    border-radius: 2px;
+}
+
+/* Form Groups */
+.mobile-form-group {
+    margin-bottom: 24px;
+}
+
+.mobile-form-label {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+/* Input Container */
+.mobile-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mobile-input {
+    width: 100%;
+    height: var(--touch-target-comfortable);
+    padding: 12px 16px;
+    padding-right: 48px; /* Space for icon */
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    font-family: inherit;
+    background: white;
+    transition: all var(--mobile-transition-fast) ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.mobile-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.mobile-input.mobile-error {
+    border-color: #EF4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.mobile-input.mobile-error:focus {
+    border-color: #EF4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Input Icons */
+.mobile-input-icon {
+    position: absolute;
+    right: 16px;
+    color: #9CA3AF;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-input-container.focused .mobile-input-icon {
+    color: #667eea;
+}
+
+/* Password Toggle */
+.mobile-password-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #9CA3AF;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all var(--mobile-transition-fast) ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-password-toggle:hover,
+.mobile-password-toggle:focus {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.mobile-password-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Form Errors */
+.mobile-form-error {
+    display: none;
+    color: #EF4444;
+    font-size: 0.875rem;
+    margin-top: 6px;
+    padding-left: 4px;
+}
+
+/* Checkbox Group */
+.mobile-checkbox-group {
+    margin: 20px 0;
+}
+
+.mobile-checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px 4px;
+    border-radius: 8px;
+    transition: background-color var(--mobile-transition-fast) ease;
+}
+
+.mobile-checkbox-label:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.mobile-checkbox {
+    display: none;
+}
+
+.mobile-checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #D1D5DB;
+    border-radius: 4px;
+    margin-right: 12px;
+    position: relative;
+    transition: all var(--mobile-transition-fast) ease;
+    flex-shrink: 0;
+}
+
+.mobile-checkbox:checked + .mobile-checkbox-custom {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.mobile-checkbox:checked + .mobile-checkbox-custom::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.mobile-checkbox-text {
+    font-size: 0.95rem;
+    color: #374151;
+    user-select: none;
+}
+
+/* Buttons */
+.mobile-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: var(--touch-target-large);
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--mobile-transition-fast) ease;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-button-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.mobile-button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.mobile-button-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.mobile-button-primary:disabled {
+    opacity: 0.7;
+    transform: none;
+    cursor: not-allowed;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.2);
+}
+
+.mobile-button-secondary {
+    background: #F3F4F6;
+    color: #374151;
+    border: 2px solid #E5E7EB;
+}
+
+.mobile-button-secondary:hover {
+    background: #E5E7EB;
+    border-color: #D1D5DB;
+}
+
+.mobile-button-secondary:active {
+    background: #D1D5DB;
+}
+
+/* Loading Button */
+.mobile-loading-button.loading {
+    pointer-events: none;
+}
+
+.button-loading {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.loading-spinner {
+    animation: mobile-spin 1s linear infinite;
+}
+
+/* Messages */
+.mobile-message-container {
+    margin: 16px 0;
+}
+
+.mobile-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mobile-message-error {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+}
+
+.mobile-message-error::before {
+    content: '⚠';
+    font-size: 1.1rem;
+}
+
+.mobile-message-success {
+    background: #F0FDF4;
+    color: #16A34A;
+    border: 1px solid #BBF7D0;
+}
+
+.mobile-message-success::before {
+    content: '✓';
+    font-size: 1.1rem;
+}
+
+/* Footer Section */
+.mobile-login-footer {
+    padding: 20px 0;
+    text-align: center;
+}
+
+.mobile-login-links {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.mobile-link {
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all var(--mobile-transition-fast) ease;
+    opacity: 0.9;
+}
+
+.mobile-link:hover,
+.mobile-link:focus {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+}
+
+.mobile-link:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Touch Feedback */
+.touch-active {
+    transform: scale(0.98);
+}
+
+.touch-active.mobile-button {
+    transform: scale(0.98) translateY(0);
+}
+
+/* Keyboard Visible State */
+.mobile-login-screen.keyboard-visible .mobile-login-header {
+    padding: 20px 0 15px;
+}
+
+.mobile-login-screen.keyboard-visible .mobile-login-logo h1 {
+    font-size: 2rem;
+}
+
+.mobile-login-screen.keyboard-visible .mobile-login-form {
+    border-radius: 16px 16px 0 0;
+}
+
+/* Responsive Adjustments */
+@media (max-height: 600px) {
+    .mobile-login-header {
+        padding: 20px 0 15px;
+    }
+    
+    .mobile-login-logo h1 {
+        font-size: 2rem;
+    }
+    
+    .mobile-login-form {
+        padding: 24px 20px 20px;
+    }
+    
+    .mobile-form-group {
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-height: 500px) {
+    .mobile-login-header {
+        padding: 15px 0 10px;
+    }
+    
+    .mobile-login-logo h1 {
+        font-size: 1.8rem;
+    }
+    
+    .mobile-login-logo p {
+        font-size: 1rem;
+    }
+    
+    .mobile-form-group {
+        margin-bottom: 16px;
+    }
+}
+
+/* Landscape Orientation (Emergency Fallback) */
+@media (orientation: landscape) and (max-height: 500px) {
+    .mobile-login-screen {
+        background: white;
+    }
+    
+    .mobile-login-content {
+        flex-direction: row;
+        align-items: center;
+        max-width: none;
+        padding: 20px;
+    }
+    
+    .mobile-login-header {
+        flex: 0 0 200px;
+        padding: 0 20px 0 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+    }
+    
+    .mobile-login-form {
+        flex: 1;
+        border-radius: 16px;
+        margin: 0;
+    }
+    
+    .mobile-login-footer {
+        display: none;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .mobile-input {
+        border-width: 3px;
+    }
+    
+    .mobile-button {
+        border: 2px solid currentColor;
+    }
+    
+    .mobile-checkbox-custom {
+        border-width: 3px;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .mobile-input,
+    .mobile-button,
+    .mobile-checkbox-custom,
+    .mobile-password-toggle,
+    .mobile-link,
+    .loading-spinner {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Focus Visible Support */
+.mobile-input:focus-visible,
+.mobile-button:focus-visible,
+.mobile-checkbox-label:focus-visible,
+.mobile-link:focus-visible {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Dark Mode Support (Future Enhancement) */
+@media (prefers-color-scheme: dark) {
+    .mobile-login-form {
+        background: #1F2937;
+        color: #F9FAFB;
+    }
+    
+    .mobile-form-label {
+        color: #F9FAFB;
+    }
+    
+    .mobile-input {
+        background: #374151;
+        border-color: #4B5563;
+        color: #F9FAFB;
+    }
+    
+    .mobile-input:focus {
+        border-color: #667eea;
+    }
+    
+    .mobile-checkbox-text {
+        color: #F9FAFB;
+    }
+    
+    .mobile-button-secondary {
+        background: #374151;
+        color: #F9FAFB;
+        border-color: #4B5563;
+    }
+}
