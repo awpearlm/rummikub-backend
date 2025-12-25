@@ -490,18 +490,35 @@ class MobileLobbyScreen {
                 `;
             }
 
-            // Fetch games from API
+            // Fetch games from API with better error handling
             const response = await fetch('/api/games', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Failed to load games');
+                // Check if we got HTML instead of JSON (common server error)
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    console.error('Server returned HTML instead of JSON for /api/games');
+                    throw new Error('Server configuration error - API endpoints not properly configured');
+                }
+                throw new Error(`Failed to load games: ${response.status} ${response.statusText}`);
             }
 
-            const games = await response.json();
+            let games;
+            try {
+                games = await response.json();
+            } catch (jsonError) {
+                console.error('Failed to parse games JSON response:', jsonError);
+                // Try to get the response text to see what we actually received
+                const responseText = await response.text();
+                console.error('Response text:', responseText.substring(0, 200));
+                throw new Error('Server returned invalid JSON response');
+            }
             
             // Check if games have changed (for silent updates)
             const gamesChanged = !silent || JSON.stringify(this.games) !== JSON.stringify(games);
@@ -520,18 +537,33 @@ class MobileLobbyScreen {
         } catch (error) {
             console.error('Error loading games:', error);
             
+            // If this is the first load and we're getting server errors, show mock data
+            if (!silent && this.games.length === 0 && error.message.includes('Server configuration error')) {
+                console.log('Showing mock games data due to server configuration issues');
+                this.games = this.getMockGamesData();
+                this.renderGames();
+                this.showToast('Using demo data - server API not configured', 'warning');
+                return;
+            }
+            
             // Only show error state if not a silent update
             if (!silent) {
                 gamesList.innerHTML = `
                     <div class="error-state">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Unable to Load Games</h3>
-                        <p>Please check your connection and try again</p>
-                        <button class="retry-btn" onclick="window.mobileLobbyScreen.loadGames()">
+                        <p>${error.message}</p>
+                        <button class="retry-btn" onclick="window.mobileLobbyScreen?.loadGames()">
                             <i class="fas fa-sync-alt"></i> Retry
+                        </button>
+                        <button class="demo-btn" onclick="window.mobileLobbyScreen?.loadMockData()">
+                            <i class="fas fa-play"></i> Try Demo Mode
                         </button>
                     </div>
                 `;
+            } else {
+                // For silent updates, show a temporary error indicator
+                this.showToast(`Failed to update games: ${error.message}`, 'error');
             }
         }
     }
@@ -634,18 +666,34 @@ class MobileLobbyScreen {
                 `;
             }
 
-            // Fetch online players from API
+            // Fetch online players from API with better error handling
             const response = await fetch('/api/players/online', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Failed to load players');
+                // Check if we got HTML instead of JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    console.error('Server returned HTML instead of JSON for /api/players/online');
+                    throw new Error('Server configuration error - API endpoints not properly configured');
+                }
+                throw new Error(`Failed to load players: ${response.status} ${response.statusText}`);
             }
 
-            const players = await response.json();
+            let players;
+            try {
+                players = await response.json();
+            } catch (jsonError) {
+                console.error('Failed to parse players JSON response:', jsonError);
+                const responseText = await response.text();
+                console.error('Response text:', responseText.substring(0, 200));
+                throw new Error('Server returned invalid JSON response');
+            }
             
             // Check if players have changed
             const playersChanged = !silent || JSON.stringify(this.players) !== JSON.stringify(players);
@@ -663,17 +711,31 @@ class MobileLobbyScreen {
         } catch (error) {
             console.error('Error loading players:', error);
             
+            // If this is the first load and we're getting server errors, show mock data
+            if (!silent && this.players.length === 0 && error.message.includes('Server configuration error')) {
+                console.log('Showing mock players data due to server configuration issues');
+                this.players = this.getMockPlayersData();
+                this.renderPlayers();
+                this.showToast('Using demo data - server API not configured', 'warning');
+                return;
+            }
+            
             if (!silent) {
                 playersList.innerHTML = `
                     <div class="error-state">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Unable to Load Players</h3>
-                        <p>Please check your connection and try again</p>
-                        <button class="retry-btn" onclick="window.mobileLobbyScreen.loadPlayers()">
+                        <p>${error.message}</p>
+                        <button class="retry-btn" onclick="window.mobileLobbyScreen?.loadPlayers()">
                             <i class="fas fa-sync-alt"></i> Retry
+                        </button>
+                        <button class="demo-btn" onclick="window.mobileLobbyScreen?.loadMockData()">
+                            <i class="fas fa-play"></i> Try Demo Mode
                         </button>
                     </div>
                 `;
+            } else {
+                this.showToast(`Failed to update players: ${error.message}`, 'error');
             }
         }
     }
@@ -1308,6 +1370,100 @@ class MobileLobbyScreen {
         
         // Start real-time updates for current tab
         this.setupRealTimeUpdates(this.activeTab);
+    }
+
+    // Mock data methods for demo mode
+    getMockGamesData() {
+        return [
+            {
+                id: 'demo-1',
+                players: [
+                    { username: 'Alice' },
+                    { username: 'Bob' }
+                ],
+                maxPlayers: 4,
+                status: 'waiting',
+                timerEnabled: true,
+                createdAt: new Date(Date.now() - 300000).toISOString() // 5 minutes ago
+            },
+            {
+                id: 'demo-2',
+                players: [
+                    { username: 'Charlie' },
+                    { username: 'Diana' },
+                    { username: 'Eve' }
+                ],
+                maxPlayers: 4,
+                status: 'waiting',
+                timerEnabled: false,
+                createdAt: new Date(Date.now() - 600000).toISOString() // 10 minutes ago
+            },
+            {
+                id: 'demo-3',
+                players: [
+                    { username: 'Frank' },
+                    { username: 'Grace' },
+                    { username: 'Henry' },
+                    { username: 'Ivy' }
+                ],
+                maxPlayers: 4,
+                status: 'in_progress',
+                timerEnabled: true,
+                createdAt: new Date(Date.now() - 900000).toISOString() // 15 minutes ago
+            }
+        ];
+    }
+
+    getMockPlayersData() {
+        return [
+            {
+                id: 'player-1',
+                username: 'Alice',
+                status: 'online',
+                wins: 15,
+                gamesPlayed: 23
+            },
+            {
+                id: 'player-2',
+                username: 'Bob',
+                status: 'in_game',
+                wins: 8,
+                gamesPlayed: 12
+            },
+            {
+                id: 'player-3',
+                username: 'Charlie',
+                status: 'online',
+                wins: 22,
+                gamesPlayed: 30
+            },
+            {
+                id: 'player-4',
+                username: 'Diana',
+                status: 'away',
+                wins: 5,
+                gamesPlayed: 8
+            }
+        ];
+    }
+
+    loadMockData() {
+        console.log('Loading mock data for demo mode...');
+        
+        // Load mock games
+        this.games = this.getMockGamesData();
+        this.renderGames();
+        
+        // Load mock players
+        this.players = this.getMockPlayersData();
+        this.renderPlayers();
+        
+        // Clear invitations for demo
+        this.invitations = [];
+        this.renderInvitations();
+        this.updateInvitationsBadge();
+        
+        this.showToast('Demo mode activated - using sample data', 'success');
     }
 
     hide() {

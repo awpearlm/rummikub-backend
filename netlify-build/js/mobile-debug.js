@@ -5,6 +5,9 @@
 
 // Mobile debugging helper
 function initMobileDebug() {
+    // Debug mode disabled - return early
+    return;
+    
     if (!isMobileDevice()) return;
     
     console.log('🔧 Mobile Debug Mode Enabled');

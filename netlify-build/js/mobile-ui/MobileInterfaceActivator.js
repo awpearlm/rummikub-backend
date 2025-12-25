@@ -475,6 +475,322 @@ class MobileInterfaceActivator {
                 pointer-events: none;
             }
             
+            /* Ensure mobile lobby screen is properly styled */
+            .mobile-lobby-screen {
+                display: flex !important;
+                flex-direction: column;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            
+            /* Mobile lobby header improvements */
+            .mobile-lobby-header {
+                padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .lobby-title h1 {
+                color: white;
+                font-size: 24px;
+                font-weight: 700;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .user-info {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+            }
+            
+            .username {
+                color: white;
+                font-weight: 600;
+                font-size: 16px;
+            }
+            
+            .connection-status {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            /* Mobile lobby content */
+            .mobile-lobby-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: white;
+                border-radius: 20px 20px 0 0;
+                margin-top: 10px;
+                overflow: hidden;
+            }
+            
+            /* Tab styling */
+            .mobile-lobby-tabs {
+                display: flex;
+                background: #f8f9fa;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .tab-btn {
+                flex: 1;
+                padding: 16px 12px;
+                background: none;
+                border: none;
+                font-size: 14px;
+                font-weight: 500;
+                color: #6c757d;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                position: relative;
+                transition: all 0.2s ease;
+                min-height: 44px;
+                cursor: pointer;
+            }
+            
+            .tab-btn.active {
+                color: #667eea;
+                background: white;
+            }
+            
+            .tab-btn i {
+                font-size: 18px;
+            }
+            
+            .tab-badge {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: #dc3545;
+                color: white;
+                border-radius: 10px;
+                padding: 2px 6px;
+                font-size: 10px;
+                min-width: 16px;
+                text-align: center;
+                display: none;
+            }
+            
+            /* Tab content */
+            .tab-content {
+                flex: 1;
+                padding: 20px;
+                display: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .tab-content.active {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            /* Loading and error states */
+            .loading-state, .error-state, .empty-state {
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+            }
+            
+            .loading-state i, .error-state i, .empty-state i {
+                font-size: 48px;
+                margin-bottom: 16px;
+                display: block;
+                color: #dee2e6;
+            }
+            
+            .error-state i {
+                color: #dc3545;
+            }
+            
+            .loading-state i {
+                color: #667eea;
+            }
+            
+            .error-state h3, .empty-state h3 {
+                margin: 0 0 8px 0;
+                color: #495057;
+                font-size: 18px;
+            }
+            
+            .error-state p, .empty-state p {
+                margin: 0 0 16px 0;
+                font-size: 14px;
+                line-height: 1.5;
+            }
+            
+            /* Buttons */
+            .retry-btn, .demo-btn, .create-game-btn {
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+                margin: 4px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                transition: all 0.2s ease;
+            }
+            
+            .retry-btn:hover, .demo-btn:hover, .create-game-btn:hover {
+                background: #5a6fd8;
+                transform: translateY(-1px);
+            }
+            
+            .demo-btn {
+                background: #28a745;
+            }
+            
+            .demo-btn:hover {
+                background: #218838;
+            }
+            
+            /* Game cards */
+            .mobile-game-card {
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 12px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                transition: all 0.2s ease;
+            }
+            
+            .mobile-game-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            }
+            
+            .game-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            
+            .game-title {
+                margin: 0;
+                font-size: 18px;
+                color: #212529;
+                font-weight: 600;
+            }
+            
+            .game-status {
+                background: #e9ecef;
+                color: #495057;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            .game-status.waiting {
+                background: #d4edda;
+                color: #155724;
+            }
+            
+            .game-status.in_progress {
+                background: #fff3cd;
+                color: #856404;
+            }
+            
+            .player-count {
+                color: #6c757d;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            /* Floating Action Button */
+            .floating-action-btn {
+                position: fixed;
+                bottom: env(safe-area-inset-bottom, 20px);
+                right: 20px;
+                width: 56px;
+                height: 56px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                font-size: 24px;
+                cursor: pointer;
+                box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+                transition: all 0.3s ease;
+                z-index: 1100;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .floating-action-btn:hover {
+                transform: scale(1.1);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            }
+            
+            /* Toast notifications */
+            .mobile-toast {
+                position: fixed;
+                top: 100px;
+                left: 50%;
+                transform: translateX(-50%) translateY(-100px);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 2000;
+                opacity: 0;
+                transition: all 0.3s ease;
+                max-width: 90%;
+                text-align: center;
+            }
+            
+            .mobile-toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            
+            .mobile-toast.success {
+                background: rgba(16, 185, 129, 0.9);
+            }
+            
+            .mobile-toast.error {
+                background: rgba(239, 68, 68, 0.9);
+            }
+            
+            .mobile-toast.warning {
+                background: rgba(245, 158, 11, 0.9);
+            }
+            
+            .toast-content {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
             /* Screen transition animations */
             .transition-slide-left .mobile-screen.entering {
                 transform: translateX(-100%);

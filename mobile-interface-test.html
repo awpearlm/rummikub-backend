@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mobile Interface Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .test-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-result {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .warning { border-left: 4px solid #f59e0b; }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        #results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Mobile Interface Test</h1>
+        <p>This page tests if the mobile interface is working correctly.</p>
+        
+        <div class="test-actions">
+            <button onclick="testMobileDetection()">Test Mobile Detection</button>
+            <button onclick="testMobileActivation()">Test Mobile Activation</button>
+            <button onclick="testAPIEndpoints()">Test API Endpoints</button>
+            <button onclick="runFullDiagnostic()">Full Diagnostic</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong><br>${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function testMobileDetection() {
+            addResult('Testing mobile device detection...', 'info');
+            
+            const userAgent = navigator.userAgent;
+            const mobileUserAgents = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            const userAgentMatch = mobileUserAgents.test(userAgent);
+            const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const screenWidth = window.screen.width;
+            const viewportWidth = window.innerWidth;
+            
+            addResult(`User Agent: ${userAgent}`, 'info');
+            addResult(`Mobile User Agent Match: ${userAgentMatch}`, userAgentMatch ? 'success' : 'warning');
+            addResult(`Touch Support: ${hasTouchSupport}`, hasTouchSupport ? 'success' : 'warning');
+            addResult(`Screen Width: ${screenWidth}px`, 'info');
+            addResult(`Viewport Width: ${viewportWidth}px`, 'info');
+            addResult(`Max Touch Points: ${navigator.maxTouchPoints || 0}`, 'info');
+            
+            const isMobile = userAgentMatch || hasTouchSupport || viewportWidth <= 768;
+            addResult(`Overall Mobile Detection: ${isMobile}`, isMobile ? 'success' : 'error');
+        }
+
+        function testMobileActivation() {
+            addResult('Testing mobile interface activation...', 'info');
+            
+            // Check if mobile interface classes exist
+            const bodyClasses = Array.from(document.body.classList);
+            const htmlClasses = Array.from(document.documentElement.classList);
+            
+            addResult(`Body Classes: ${bodyClasses.join(', ') || 'none'}`, 'info');
+            addResult(`HTML Classes: ${htmlClasses.join(', ') || 'none'}`, 'info');
+            
+            // Check for mobile screens
+            const mobileScreens = document.querySelectorAll('.mobile-screen, .mobile-lobby-screen, .mobile-fallback-interface');
+            addResult(`Mobile Screens Found: ${mobileScreens.length}`, mobileScreens.length > 0 ? 'success' : 'warning');
+            
+            mobileScreens.forEach((screen, index) => {
+                const styles = window.getComputedStyle(screen);
+                addResult(`Screen ${index}: display=${styles.display}, visibility=${styles.visibility}, z-index=${styles.zIndex}`, 'info');
+            });
+            
+            // Check for desktop elements
+            const desktopElements = document.querySelectorAll('.desktop-hidden-for-mobile');
+            addResult(`Desktop Elements Hidden: ${desktopElements.length}`, desktopElements.length > 0 ? 'success' : 'warning');
+        }
+
+        async function testAPIEndpoints() {
+            addResult('Testing API endpoints...', 'info');
+            
+            const endpoints = [
+                '/api/games',
+                '/api/players/online',
+                '/api/invitations'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    addResult(`Testing ${endpoint}...`, 'info');
+                    const response = await fetch(endpoint, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'test-token'}`
+                        }
+                    });
+                    
+                    const contentType = response.headers.get('content-type');
+                    addResult(`${endpoint}: Status ${response.status}, Content-Type: ${contentType}`, 
+                        response.ok ? 'success' : 'error');
+                    
+                    if (contentType && contentType.includes('text/html')) {
+                        addResult(`⚠️ ${endpoint} returned HTML instead of JSON - this causes the "Unexpected token '<'" error`, 'error');
+                    }
+                    
+                } catch (error) {
+                    addResult(`${endpoint}: Error - ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function runFullDiagnostic() {
+            addResult('Running full diagnostic...', 'info');
+            document.getElementById('results').innerHTML = '';
+            
+            testMobileDetection();
+            setTimeout(() => testMobileActivation(), 500);
+            setTimeout(() => testAPIEndpoints(), 1000);
+            
+            setTimeout(() => {
+                addResult('✅ Full diagnostic complete!', 'success');
+                addResult('If you see API errors returning HTML instead of JSON, that\'s the main issue causing mobile interface problems.', 'warning');
+            }, 2000);
+        }
+
+        // Auto-run basic tests on load
+        window.addEventListener('load', () => {
+            addResult('Mobile Interface Test Page Loaded', 'success');
+            testMobileDetection();
+        });
+    </script>
+</body>
+</html>

@@ -534,8 +534,62 @@
     <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script>
     <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script>
     <script src="js/mobile-debug.js?v=1"></script>
+    <script src="mobile-interface-fix.js?v=1"></script>
     <script src="js/mobileTouch.js?v=1"></script>
     <script src="js/mobileOptimizations.js?v=1"></script>
+    
+    <!-- Global Mobile Interface Helpers -->
+    <script>
+        // Global helper functions for mobile interface debugging and control
+        window.forceMobileInterface = function() {
+            console.log('🔧 Forcing mobile interface activation...');
+            localStorage.setItem('force_mobile_interface', 'true');
+            if (window.mobileInterfaceActivator) {
+                window.mobileInterfaceActivator.forceMobileActivation();
+            } else {
+                window.location.reload();
+            }
+        };
+        
+        window.disableForceMobile = function() {
+            console.log('🔧 Disabling force mobile mode...');
+            localStorage.removeItem('force_mobile_interface');
+            window.location.reload();
+        };
+        
+        window.debugMobileInterface = function() {
+            if (window.mobileInterfaceActivator && window.mobileInterfaceActivator.debugMobileInterface) {
+                return window.mobileInterfaceActivator.debugMobileInterface();
+            } else {
+                console.log('Mobile interface activator not available');
+                return null;
+            }
+        };
+        
+        window.testMobileInterface = function() {
+            window.open('mobile-interface-test.html', '_blank');
+        };
+        
+        // Auto-expose mobile lobby screen for debugging
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.mobileUISystem) {
+                    const lobbyScreen = window.mobileUISystem.getComponent('mobileLobbyScreen');
+                    if (lobbyScreen) {
+                        window.mobileLobbyScreen = lobbyScreen;
+                        console.log('📱 Mobile lobby screen exposed as window.mobileLobbyScreen');
+                    }
+                }
+            }, 3000);
+        });
+        
+        console.log('📱 Mobile Interface Helpers loaded:');
+        console.log('  - forceMobileInterface() - Force mobile interface activation');
+        console.log('  - disableForceMobile() - Disable force mobile mode');
+        console.log('  - debugMobileInterface() - Show debug information');
+        console.log('  - testMobileInterface() - Open mobile interface test page');
+        console.log('  - fixMobileInterface() - Run comprehensive fix');
+    </script>
             <script src="game.js"></script>
 </body>
 </html>
