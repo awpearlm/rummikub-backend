@@ -546,6 +546,9 @@
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     
+    <!-- PRODUCTION HOTFIX: Load FIRST to disable mobile UI system -->
+    <script src="mobile-ui-disable-hotfix.js?v=1"></script>
+    
     <!-- CSS Loading Optimization -->
     <script src="js/css-loader.js?v=1"></script>
     
@@ -557,24 +560,26 @@
     
     <script src="safe-events.js?v=1"></script>
     <script src="js/connectionRecovery.js?v=1"></script>
-    <script src="js/mobile-ui/OrientationManager.js?v=1"></script>
-    <script src="js/mobile-ui/TouchManager.js?v=1"></script>
-    <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script>
-    <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script>
-    <script src="js/mobile-ui/PlayerAvatarSystem.js?v=1"></script>
-    <script src="js/mobile-ui/MobileUISystem.js?v=1"></script>
-    <script src="js/mobile-ui/MobileLoginScreen.js?v=1"></script>
-    <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script>
-    <script src="js/mobile-ui/MobileGameCreationScreen.js?v=1"></script>
-    <script src="js/mobile-ui/MobileGameScreen.js?v=1"></script>
-    <script src="js/mobile-ui/MobileNavigationController.js?v=1"></script>
-    <script src="js/mobile-ui/MobileInteractionRouter.js?v=1"></script>
-    <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script>
-    <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script>
-    <script src="js/mobileTouch.js?v=1"></script>
-    <script src="js/mobileOptimizations.js?v=1"></script>
+    <!-- MOBILE UI SCRIPTS DISABLED - Using responsive desktop UI instead -->
+    <!-- <script src="js/mobile-ui/OrientationManager.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/TouchManager.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/PlayerAvatarSystem.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileUISystem.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileLoginScreen.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileGameCreationScreen.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileGameScreen.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileNavigationController.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileInteractionRouter.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script> -->
+    <!-- <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script> -->
+    <!-- <script src="js/mobileTouch.js?v=1"></script> -->
+    <!-- <script src="js/mobileOptimizations.js?v=1"></script> -->
     
-    <!-- Global Mobile Interface Helpers -->
+    <!-- MOBILE INTERFACE HELPERS DISABLED - Using responsive desktop UI instead -->
+    <!--
     <script>
         // Global helper functions for mobile interface debugging and control
         window.forceMobileInterface = function() {
@@ -626,6 +631,7 @@
         console.log('  - testMobileInterface() - Open mobile interface test page');
         console.log('  - fixMobileInterface() - Run comprehensive fix');
     </script>
+    -->
             <script src="game.js"></script>
 </body>
 </html>
