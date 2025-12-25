@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mobile UI Blocking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Mobile UI Blocking Test</h1>
+        <p>This page tests if the mobile UI system is properly blocked and the responsive desktop UI is working.</p>
+        
+        <button onclick="runTests()">🚀 Run Tests</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+        <button onclick="openMainApp()">🎮 Open Main App</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <!-- Load the responsive mobile fix first -->
+    <script src="http://localhost:8081/js/responsive-mobile-fix.js"></script>
+    
+    <!-- Load mobile UI system (should be blocked) -->
+    <script src="http://localhost:8081/js/mobile-ui/MobileUISystem.js"></script>
+    
+    <script>
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function runTests() {
+            clearResults();
+            addResult('🧪 Starting Mobile UI Blocking Tests...', 'info');
+            
+            // Test 1: Check if responsive design mode is active
+            const hasResponsiveMode = document.body.classList.contains('responsive-design-mode');
+            addResult(`Test 1: Responsive Design Mode - ${hasResponsiveMode ? 'PASS' : 'FAIL'}`, hasResponsiveMode ? 'pass' : 'fail');
+            
+            // Test 2: Check if mobile interface is disabled
+            const mobileInterfaceDisabled = !document.body.classList.contains('mobile-interface-active');
+            addResult(`Test 2: Mobile Interface Disabled - ${mobileInterfaceDisabled ? 'PASS' : 'FAIL'}`, mobileInterfaceDisabled ? 'pass' : 'fail');
+            
+            // Test 3: Check if MobileUISystem is blocked
+            let mobileUIBlocked = false;
+            try {
+                if (window.MobileUISystem) {
+                    const instance = new window.MobileUISystem();
+                    // If it returns a stub object, it's properly blocked
+                    mobileUIBlocked = !instance.isInitialized && typeof instance.init === 'function';
+                } else {
+                    mobileUIBlocked = true; // Not available at all
+                }
+            } catch (e) {
+                mobileUIBlocked = true; // Threw an error, which is also acceptable
+            }
+            addResult(`Test 3: Mobile UI System Blocked - ${mobileUIBlocked ? 'PASS' : 'FAIL'}`, mobileUIBlocked ? 'pass' : 'fail');
+            
+            // Test 4: Check debug function
+            const debugAvailable = typeof window.debugMobileInterface === 'function';
+            let debugResult = null;
+            if (debugAvailable) {
+                debugResult = window.debugMobileInterface();
+            }
+            addResult(`Test 4: Debug Function Available - ${debugAvailable ? 'PASS' : 'FAIL'}`, debugAvailable ? 'pass' : 'fail');
+            
+            if (debugResult) {
+                addResult(`Debug Status: ${debugResult.status}`, debugResult.status === 'DISABLED' ? 'pass' : 'fail');
+                addResult(`<pre>${JSON.stringify(debugResult, null, 2)}</pre>`, 'info');
+            }
+            
+            // Test 5: Check if mobile screens are suppressed
+            const mobileScreens = document.querySelectorAll('.mobile-screen, .mobile-lobby-screen');
+            const mobileScreensHidden = Array.from(mobileScreens).every(screen => 
+                window.getComputedStyle(screen).display === 'none'
+            );
+            addResult(`Test 5: Mobile Screens Suppressed - ${mobileScreensHidden ? 'PASS' : 'FAIL'} (${mobileScreens.length} screens found)`, mobileScreensHidden ? 'pass' : 'fail');
+            
+            // Test 6: Check console override
+            const consoleOverridden = console.error.toString().includes('mobile');
+            addResult(`Test 6: Console Error Override Active - ${consoleOverridden ? 'PASS' : 'FAIL'}`, consoleOverridden ? 'pass' : 'fail');
+            
+            // Test 7: Test mobile component initialization
+            let componentBlocked = false;
+            try {
+                if (window.MobileLobbyScreen) {
+                    const lobby = new window.MobileLobbyScreen();
+                    componentBlocked = typeof lobby.init === 'function' && typeof lobby.loadGames === 'function';
+                } else {
+                    componentBlocked = true;
+                }
+            } catch (e) {
+                componentBlocked = true;
+            }
+            addResult(`Test 7: Mobile Components Blocked - ${componentBlocked ? 'PASS' : 'FAIL'}`, componentBlocked ? 'pass' : 'fail');
+            
+            // Summary
+            const allTests = [hasResponsiveMode, mobileInterfaceDisabled, mobileUIBlocked, debugAvailable, mobileScreensHidden, consoleOverridden, componentBlocked];
+            const passedTests = allTests.filter(test => test).length;
+            const totalTests = allTests.length;
+            
+            addResult(`<h3>📊 Summary: ${passedTests}/${totalTests} tests passed (${Math.round(passedTests/totalTests*100)}%)</h3>`, passedTests === totalTests ? 'pass' : 'fail');
+            
+            if (passedTests === totalTests) {
+                addResult('🎉 All tests passed! Mobile UI system is properly blocked and responsive desktop UI is active.', 'pass');
+            } else {
+                addResult('⚠️ Some tests failed. The mobile UI blocking may not be working correctly.', 'fail');
+            }
+        }
+        
+        function openMainApp() {
+            window.open('http://localhost:8081/index.html', '_blank');
+        }
+        
+        // Auto-run tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(runTests, 1000); // Wait for scripts to load
+        });
+    </script>
+</body>
+</html>

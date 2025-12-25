@@ -972,19 +972,33 @@ class MobileUISystem {
     }
 }
 
-// Auto-initialize when DOM is ready
+// Auto-initialize when DOM is ready - DISABLED for responsive desktop UI
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize on touch devices or mobile browsers
+    // Mobile UI System initialization disabled - using responsive desktop UI instead
+    console.log('🚫 Mobile UI System auto-initialization disabled - using responsive desktop UI');
+    
+    // Check if responsive mobile fix is active
+    if (document.body.classList.contains('responsive-design-mode')) {
+        console.log('✅ Responsive desktop UI is active and working correctly');
+    }
+    
+    // Only initialize on touch devices or mobile browsers - DISABLED
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                      ('ontouchstart' in window) ||
                      (navigator.maxTouchPoints > 0);
     
     if (isMobile) {
-        window.mobileUISystem = new MobileUISystem();
-        console.log('Mobile UI System auto-initialized');
+        // Mobile UI System initialization blocked - using responsive desktop UI
+        console.log('🚫 Mobile device detected but mobile UI system disabled - using responsive desktop UI');
         
-        // Enhance existing desktop buttons for mobile
-        enhanceDesktopButtonsForMobile();
+        // Don't initialize mobile UI system
+        // window.mobileUISystem = new MobileUISystem();
+        // console.log('Mobile UI System auto-initialized');
+        
+        // Enhance existing desktop buttons for mobile - keep this for touch optimization
+        if (typeof enhanceDesktopButtonsForMobile === 'function') {
+            enhanceDesktopButtonsForMobile();
+        }
     }
 });
 

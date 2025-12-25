@@ -89,6 +89,12 @@
     // Run immediately
     ensureDesktopUIVisible();
     
+    // Ensure game pause overlay is hidden (mobile UI might trigger it incorrectly)
+    const gamePauseOverlay = document.getElementById('gamePauseOverlay');
+    if (gamePauseOverlay) {
+        gamePauseOverlay.style.display = 'none';
+    }
+    
     // Run when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', ensureDesktopUIVisible);
@@ -300,6 +306,29 @@
     
     // Enhanced mobile component suppression with better error handling
     function preventMobileInterfaceActivation() {
+        // Block mobile UI system initialization completely
+        window.MobileUISystem = function() {
+            console.log('🚫 Mobile UI System initialization blocked - using responsive desktop UI');
+            return {
+                init: () => Promise.resolve(),
+                components: new Map(),
+                isInitialized: false,
+                currentScreen: null,
+                screenHistory: [],
+                config: {},
+                eventCallbacks: new Map(),
+                emit: () => {},
+                on: () => {},
+                off: () => {},
+                getComponent: () => null,
+                showScreen: () => Promise.resolve(),
+                hideScreen: () => Promise.resolve(),
+                navigateToScreen: () => Promise.resolve(),
+                goBack: () => Promise.resolve(),
+                destroy: () => Promise.resolve()
+            };
+        };
+        
         // Override global mobile interface functions with enhanced error handling
         window.forceMobileInterface = function() {
             console.warn('🚫 Mobile interface activation blocked - using responsive desktop UI');
@@ -437,6 +466,29 @@
             return originalFetch.apply(this, arguments);
         };
         
+        // Block mobile-triggered game pause events
+        const originalShowGamePauseOverlay = window.showGamePauseOverlay;
+        if (typeof originalShowGamePauseOverlay === 'function') {
+            window.showGamePauseOverlay = function(pauseData) {
+                // Check if this is triggered by mobile components
+                const stack = new Error().stack || '';
+                const isMobileTriggered = (
+                    stack.includes('MobileUISystem') ||
+                    stack.includes('mobile-ui/') ||
+                    stack.includes('mobileTouch.js') ||
+                    stack.includes('mobileOptimizations.js')
+                );
+                
+                if (isMobileTriggered) {
+                    console.log('🚫 Mobile-triggered game pause blocked');
+                    return;
+                }
+                
+                // Allow desktop-triggered game pauses
+                return originalShowGamePauseOverlay.apply(this, arguments);
+            };
+        }
+        
         // Clear any force mobile flags
         localStorage.removeItem('force_mobile_interface');
         sessionStorage.removeItem('force_mobile_interface');
@@ -502,7 +554,7 @@
     
     preventMobileInterfaceActivation();
     
-    // Monitor for any attempts to hide desktop UI
+    // Monitor for any attempts to hide desktop UI or show mobile overlays
     function monitorDesktopUIVisibility() {
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
@@ -514,6 +566,16 @@
                         if (element.style.display === 'none' && !element.classList.contains('screen')) {
                             console.warn('🔧 Desktop UI element was hidden, restoring visibility:', element.id || element.className);
                             element.style.display = '';
+                        }
+                    }
+                    
+                    // Ensure game pause overlay stays hidden unless there's a real game pause
+                    if (element.id === 'gamePauseOverlay' && element.style.display !== 'none') {
+                        // Check if this is a legitimate game pause (has actual game data)
+                        const hasGameData = document.querySelector('#currentGameId')?.textContent?.trim();
+                        if (!hasGameData) {
+                            console.warn('🚫 Game pause overlay shown without active game, hiding it');
+                            element.style.display = 'none';
                         }
                     }
                 }
@@ -537,6 +599,15 @@
             subtree: true,
             attributeFilter: ['style', 'class']
         });
+        
+        // Also monitor the game pause overlay specifically
+        const gamePauseOverlay = document.getElementById('gamePauseOverlay');
+        if (gamePauseOverlay) {
+            observer.observe(gamePauseOverlay, {
+                attributes: true,
+                attributeFilter: ['style']
+            });
+        }
     }
     
     // Start monitoring after DOM is ready
