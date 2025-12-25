@@ -1,8 +1,11 @@
 // Safe Events Helper Functions
 function addSafeEventListener(elementId, eventType, callback) {
+    console.log(`🔧 addSafeEventListener called for ${elementId} (${eventType})`);
     const element = document.getElementById(elementId);
     if (element) {
+        console.log(`✅ Element found: ${elementId}`);
         element.addEventListener(eventType, callback);
+        console.log(`✅ Event listener added to ${elementId}`);
         
         // For mobile compatibility, also add touch events for click events
         if (eventType === 'click') {

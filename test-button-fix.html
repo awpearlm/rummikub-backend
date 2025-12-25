@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Button Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; }
+        .modal-footer { margin-top: 20px; text-align: right; }
+    </style>
+</head>
+<body>
+    <h1>Test "Go to my game" Button</h1>
+    
+    <button onclick="showModal()" class="btn btn-primary">Open Settings Modal</button>
+    
+    <div id="gameSettingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Game Settings</h3>
+            <div>
+                <label>
+                    <input type="checkbox" id="settingsEnableTimer" checked>
+                    Enable Turn Timer (2 mins)
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="output"></div>
+
+    <script src="http://localhost:8082/safe-events.js"></script>
+    <script>
+        function showModal() {
+            document.getElementById('gameSettingsModal').classList.add('show');
+        }
+        
+        function hideModal() {
+            document.getElementById('gameSettingsModal').classList.remove('show');
+        }
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+        
+        // Test the button functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            log('DOM loaded, setting up event listeners');
+            
+            // Test if addSafeEventListener exists
+            if (typeof addSafeEventListener === 'function') {
+                log('✅ addSafeEventListener function found');
+                
+                addSafeEventListener('createGameWithSettingsBtn', 'click', () => {
+                    log('🎮 "Go to my game" button clicked!');
+                    const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                    log(`Timer enabled: ${timerEnabled}`);
+                    hideModal();
+                    log('Modal closed');
+                });
+                
+                addSafeEventListener('cancelSettingsBtn', 'click', () => {
+                    log('❌ Cancel button clicked');
+                    hideModal();
+                });
+                
+                log('✅ Event listeners added');
+            } else {
+                log('❌ addSafeEventListener function not found');
+                
+                // Fallback to regular event listeners
+                document.getElementById('createGameWithSettingsBtn').addEventListener('click', () => {
+                    log('🎮 "Go to my game" button clicked! (fallback)');
+                    hideModal();
+                });
+                
+                document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+                    log('❌ Cancel button clicked (fallback)');
+                    hideModal();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

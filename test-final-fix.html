@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final Button Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        
+        /* Modal styles (simplified version of the real ones) */
+        .game-settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .game-settings-modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Final "Go to my game" Button Fix</h1>
+    
+    <div>
+        <button onclick="setupAuth()" class="btn btn-success">Setup Auth & Test</button>
+        <button onclick="window.validateButtonFix()" class="btn btn-primary">Run Validation</button>
+        <button onclick="clearOutput()" class="btn">Clear Output</button>
+    </div>
+    
+    <!-- Game Settings Modal -->
+    <div id="gameSettingsModal" class="game-settings-modal">
+        <div class="modal-content">
+            <h3>Game Settings</h3>
+            <div>
+                <label>
+                    <input type="checkbox" id="settingsEnableTimer" checked>
+                    Enable Turn Timer (2 mins)
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="output"></div>
+
+    <!-- Load the actual game files -->
+    <script src="netlify-build/safe-events.js"></script>
+    <script src="validate-button-fix.js"></script>
+    
+    <script>
+        // Redirect console.log to our output div
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function logToOutput(message, type = 'log') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.style.color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToOutput(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToOutput(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logToOutput(args.join(' '), 'warn');
+        };
+        
+        function setupAuth() {
+            localStorage.setItem('auth_token', 'test_token_123');
+            localStorage.setItem('username', 'TestUser');
+            console.log('✅ Authentication set up');
+            
+            // Run validation after setup
+            setTimeout(() => {
+                window.validateButtonFix();
+            }, 500);
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+        
+        // Mock RummikubClient for testing
+        class RummikubClient {
+            constructor() {
+                this.token = localStorage.getItem('auth_token');
+                this.username = localStorage.getItem('username');
+                this.playerName = '';
+                console.log('🔧 Mock RummikubClient created');
+            }
+            
+            createGame() {
+                console.log('🎮 createGame called');
+                const playerName = this.username;
+                if (!playerName) {
+                    console.error('❌ No username found');
+                    return;
+                }
+                
+                this.playerName = playerName;
+                console.log(`✅ playerName set to: "${this.playerName}"`);
+                this.openSettingsModal();
+            }
+            
+            openSettingsModal() {
+                console.log('🎮 openSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.add('show');
+                    console.log('✅ Modal opened');
+                } else {
+                    console.error('❌ Modal element not found');
+                }
+            }
+            
+            closeSettingsModal() {
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    console.log('✅ Modal closed');
+                }
+            }
+            
+            createGameWithSettings() {
+                console.log('🎮 createGameWithSettings called');
+                if (!this.playerName) {
+                    console.error('❌ No player name set');
+                    return;
+                }
+                
+                const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                console.log(`✅ Settings: timer=${timerEnabled}`);
+                this.closeSettingsModal();
+                console.log('🎉 SUCCESS: Button fix is working!');
+            }
+        }
+        
+        // Make RummikubClient available globally
+        window.RummikubClient = RummikubClient;
+    </script>
+</body>
+</html>

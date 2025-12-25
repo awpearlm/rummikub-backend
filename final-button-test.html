@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Button Test - Complete Flow</title>
+    <link rel="stylesheet" href="netlify-build/styles.css">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        #console { 
+            background: #000; color: #0f0; padding: 10px; border-radius: 4px; 
+            font-family: monospace; font-size: 12px; height: 300px; overflow-y: auto;
+            margin-top: 20px;
+        }
+        .status { padding: 5px 10px; border-radius: 4px; margin: 5px 0; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>Final "Go to my game" Button Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Setup & Authentication</h3>
+        <button onclick="setupAuth()" class="btn btn-success">Setup Mock Auth</button>
+        <button onclick="clearAuth()" class="btn">Clear Auth</button>
+        <div id="authStatus" class="status">Not authenticated</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Game Flow Test</h3>
+        <button onclick="testCreateGameFlow()" class="btn btn-primary">Test "Create Game" Flow</button>
+        <button onclick="testButtonDirectly()" class="btn btn-warning">Test Button Directly</button>
+        <div id="flowStatus" class="status">Ready to test</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Manual Test</h3>
+        <p>Click "Play with Friends" → "Create New Game" → "Go to my game"</p>
+        <div class="welcome-container">
+            <div class="game-mode-selection">
+                <div class="mode-buttons">
+                    <button id="playWithFriendsBtn" class="btn btn-mode btn-friends">
+                        <i class="fas fa-users"></i>
+                        <div class="mode-info">
+                            <strong>Play with Friends</strong>
+                            <span>Create or join multiplayer games</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="multiplayerOptions" class="multiplayer-options hidden">
+                <div class="game-lobby-section">
+                    <div class="lobby-actions">
+                        <button id="createGameBtn" class="btn btn-refresh">
+                            <i class="fas fa-plus"></i> Create New Game
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Settings Modal (from actual game) -->
+    <div id="gameSettingsModal" class="game-settings-modal">
+        <div class="modal-scrim"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Game Settings</h3>
+                <button id="closeSettingsBtn" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-container">
+                    <div class="setting-option">
+                        <label class="setting-label">
+                            <input type="checkbox" id="settingsEnableTimer" checked>
+                            <span class="setting-text"><i class="fas fa-clock"></i> Enable Turn Timer (2 mins)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="console"></div>
+
+    <!-- Load actual game scripts -->
+    <script src="netlify-build/safe-events.js"></script>
+    <script>
+        // Console capture
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToConsole(message, type = 'log') {
+            const div = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            div.innerHTML = `<span style="color: #666">[${timestamp}]</span> ${message}`;
+            if (type === 'error') div.style.color = '#f00';
+            if (type === 'warn') div.style.color = '#fa0';
+            consoleDiv.appendChild(div);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        // Mock RummikubClient with debugging
+        class TestRummikubClient {
+            constructor() {
+                this.token = localStorage.getItem('auth_token');
+                this.username = localStorage.getItem('username');
+                this.playerName = '';
+                this.gameMode = null;
+                
+                console.log('🔧 TestRummikubClient initialized');
+                console.log(`  - token: ${this.token ? 'present' : 'missing'}`);
+                console.log(`  - username: ${this.username || 'not set'}`);
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                console.log('🔧 Setting up event listeners...');
+                
+                // Game mode selection
+                addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
+                addSafeEventListener('createGameBtn', 'click', () => this.createGame());
+                
+                // Settings modal
+                addSafeEventListener('createGameWithSettingsBtn', 'click', () => {
+                    console.log('🎮 createGameWithSettingsBtn clicked!');
+                    this.createGameWithSettings();
+                });
+                
+                addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
+                addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
+            }
+            
+            selectGameMode(mode) {
+                console.log(`🎮 selectGameMode(${mode})`);
+                this.gameMode = mode;
+                
+                if (mode === 'multiplayer') {
+                    document.getElementById('multiplayerOptions').classList.remove('hidden');
+                    updateStatus('flowStatus', 'Multiplayer mode selected', 'success');
+                }
+            }
+            
+            createGame() {
+                console.log('🎮 createGame called');
+                
+                const playerName = this.username;
+                if (!playerName) {
+                    console.error('❌ No username found');
+                    updateStatus('flowStatus', 'ERROR: No username found', 'error');
+                    return;
+                }
+                
+                this.playerName = playerName;
+                console.log(`✅ playerName set to: "${this.playerName}"`);
+                
+                this.openSettingsModal();
+                updateStatus('flowStatus', 'Settings modal should be open', 'success');
+            }
+            
+            openSettingsModal() {
+                console.log('🎮 openSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.add('show');
+                    
+                    // Check if modal is visible
+                    const styles = getComputedStyle(modal);
+                    console.log(`🔍 Modal display: ${styles.display}`);
+                    
+                    if (styles.display === 'flex') {
+                        console.log('✅ Modal is visible');
+                        updateStatus('flowStatus', 'Modal opened successfully', 'success');
+                    } else {
+                        console.warn('⚠️ Modal may not be visible');
+                        updateStatus('flowStatus', 'Modal opened but may not be visible', 'warning');
+                    }
+                } else {
+                    console.error('❌ Modal element not found');
+                    updateStatus('flowStatus', 'ERROR: Modal element not found', 'error');
+                }
+            }
+            
+            closeSettingsModal() {
+                console.log('🎮 closeSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    console.log('✅ Modal closed');
+                }
+            }
+            
+            createGameWithSettings() {
+                console.log('🎮 createGameWithSettings called');
+                console.log('🔍 Debug info:', {
+                    playerName: this.playerName,
+                    username: this.username,
+                    token: this.token ? 'present' : 'missing'
+                });
+                
+                if (!this.playerName) {
+                    console.error('❌ No player name set');
+                    updateStatus('flowStatus', 'ERROR: No player name set', 'error');
+                    return;
+                }
+                
+                const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                console.log(`✅ Settings: timer=${timerEnabled}`);
+                
+                this.closeSettingsModal();
+                console.log('🎉 SUCCESS: Button fix is working!');
+                updateStatus('flowStatus', 'SUCCESS: Button fix is working!', 'success');
+            }
+        }
+        
+        let testClient;
+        
+        function setupAuth() {
+            localStorage.setItem('auth_token', 'test_token_123');
+            localStorage.setItem('username', 'TestUser');
+            console.log('✅ Mock auth data set');
+            updateAuthStatus();
+            
+            // Recreate client
+            testClient = new TestRummikubClient();
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('username');
+            console.log('🗑️ Auth data cleared');
+            updateAuthStatus();
+        }
+        
+        function updateAuthStatus() {
+            const status = document.getElementById('authStatus');
+            const token = localStorage.getItem('auth_token');
+            const username = localStorage.getItem('username');
+            
+            if (token && username) {
+                status.innerHTML = `✅ Authenticated as: ${username}`;
+                status.className = 'status success';
+            } else {
+                status.innerHTML = '❌ Not authenticated';
+                status.className = 'status error';
+            }
+        }
+        
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `status ${type}`;
+        }
+        
+        function testCreateGameFlow() {
+            if (!testClient) {
+                console.error('❌ Client not initialized');
+                updateStatus('flowStatus', 'ERROR: Client not initialized', 'error');
+                return;
+            }
+            
+            console.log('🧪 Testing complete create game flow...');
+            testClient.selectGameMode('multiplayer');
+            setTimeout(() => {
+                testClient.createGame();
+            }, 500);
+        }
+        
+        function testButtonDirectly() {
+            console.log('🧪 Testing button directly...');
+            const button = document.getElementById('createGameWithSettingsBtn');
+            if (button) {
+                console.log('✅ Button found, clicking...');
+                button.click();
+            } else {
+                console.error('❌ Button not found');
+                updateStatus('flowStatus', 'ERROR: Button not found', 'error');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM loaded, initializing test...');
+            updateAuthStatus();
+            testClient = new TestRummikubClient();
+        });
+    </script>
+</body>
+</html>

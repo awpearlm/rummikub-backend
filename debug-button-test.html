@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; }
+        .modal-footer { margin-top: 20px; text-align: right; }
+        #output { margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #007bff; }
+        .error { border-left-color: #dc3545; color: #dc3545; }
+        .success { border-left-color: #28a745; color: #28a745; }
+    </style>
+</head>
+<body>
+    <h1>Debug "Go to my game" Button Issue</h1>
+    
+    <div>
+        <h3>Test Steps:</h3>
+        <ol>
+            <li>Set up mock authentication data</li>
+            <li>Open settings modal</li>
+            <li>Click "Go to my game" button</li>
+            <li>Check if function is called properly</li>
+        </ol>
+    </div>
+    
+    <button onclick="setupMockAuth()" class="btn">1. Setup Mock Auth</button>
+    <button onclick="showModal()" class="btn btn-primary">2. Open Settings Modal</button>
+    
+    <div id="gameSettingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Game Settings</h3>
+            <div>
+                <label>
+                    <input type="checkbox" id="settingsEnableTimer" checked>
+                    Enable Turn Timer (2 mins)
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="output">
+        <h3>Debug Output:</h3>
+    </div>
+
+    <script>
+        // Mock the RummikubClient class for testing
+        class MockRummikubClient {
+            constructor() {
+                this.token = localStorage.getItem('auth_token');
+                this.username = localStorage.getItem('username');
+                this.playerName = '';
+                this.timerEnabled = false;
+                
+                log(`Constructor: token=${this.token}, username=${this.username}`);
+            }
+            
+            createGame() {
+                const playerName = this.username;
+                if (!playerName) {
+                    log('❌ ERROR: No username found!', 'error');
+                    return;
+                }
+                
+                this.playerName = playerName;
+                log(`✅ createGame: playerName set to "${this.playerName}"`, 'success');
+                showModal();
+            }
+            
+            createGameWithSettings() {
+                log(`🎮 createGameWithSettings called`);
+                log(`  - this.playerName: "${this.playerName}"`);
+                log(`  - this.username: "${this.username}"`);
+                
+                if (!this.playerName) {
+                    log('❌ ERROR: playerName is not set!', 'error');
+                    return;
+                }
+                
+                const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                this.timerEnabled = timerEnabled;
+                log(`✅ Settings: timer=${timerEnabled}`, 'success');
+                
+                hideModal();
+                log('✅ Modal closed, would create game now', 'success');
+            }
+            
+            closeSettingsModal() {
+                hideModal();
+            }
+        }
+        
+        // Create mock client instance
+        let mockClient;
+        
+        function setupMockAuth() {
+            localStorage.setItem('auth_token', 'mock_token_123');
+            localStorage.setItem('username', 'TestUser');
+            log('✅ Mock auth data set in localStorage', 'success');
+            
+            // Recreate client to pick up new auth data
+            mockClient = new MockRummikubClient();
+        }
+        
+        function showModal() {
+            document.getElementById('gameSettingsModal').classList.add('show');
+            log('Modal opened');
+        }
+        
+        function hideModal() {
+            document.getElementById('gameSettingsModal').classList.remove('show');
+            log('Modal closed');
+        }
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = new Date().toLocaleTimeString() + ': ' + message;
+            output.appendChild(entry);
+            console.log(message);
+        }
+        
+        // Safe event listener function (simplified version)
+        function addSafeEventListener(elementId, eventType, callback) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.addEventListener(eventType, callback);
+                log(`✅ Event listener added to ${elementId}`);
+                return true;
+            } else {
+                log(`❌ Element not found: ${elementId}`, 'error');
+                return false;
+            }
+        }
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            log('DOM loaded, setting up test environment');
+            
+            // Create initial mock client
+            mockClient = new MockRummikubClient();
+            
+            // Set up event listeners
+            addSafeEventListener('createGameWithSettingsBtn', 'click', () => {
+                log('🎮 "Go to my game" button clicked!');
+                if (mockClient) {
+                    mockClient.createGameWithSettings();
+                } else {
+                    log('❌ ERROR: mockClient not initialized', 'error');
+                }
+            });
+            
+            addSafeEventListener('cancelSettingsBtn', 'click', () => {
+                log('❌ Cancel button clicked');
+                hideModal();
+            });
+            
+            log('✅ Test environment ready');
+        });
+    </script>
+</body>
+</html>

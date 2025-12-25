@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        #output { margin-top: 20px; padding: 10px; background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>Simple Button Test</h1>
+    
+    <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+    
+    <div id="output"></div>
+
+    <script src="netlify-build/safe-events.js"></script>
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            log('DOM loaded');
+            
+            // Test if addSafeEventListener exists
+            if (typeof addSafeEventListener === 'function') {
+                log('✅ addSafeEventListener function found');
+                
+                const result = addSafeEventListener('createGameWithSettingsBtn', 'click', () => {
+                    log('🎮 Button clicked successfully!');
+                });
+                
+                if (result) {
+                    log('✅ Event listener added successfully');
+                } else {
+                    log('❌ Failed to add event listener');
+                }
+            } else {
+                log('❌ addSafeEventListener function not found');
+            }
+        });
+    </script>
+</body>
+</html>
