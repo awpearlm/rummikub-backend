@@ -37,6 +37,9 @@
     <link rel="stylesheet" href="css/mobile-typography-states.css?v=1">
     <link rel="stylesheet" href="css/mobile-iconography.css?v=1">
     
+    <!-- Responsive Mobile Adaptation CSS - Simple responsive design instead of complex mobile system -->
+    <link rel="stylesheet" href="css/responsive-mobile-adaptation.css?v=1">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -478,45 +481,45 @@
             }
         });
 
-        // Initialize Mobile Interface Activator
+        // Mobile Interface Activator DISABLED - User requested desktop UI with responsive design only
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof MobileInterfaceActivator !== 'undefined') {
-                window.mobileInterfaceActivator = new MobileInterfaceActivator();
-                console.log('Mobile Interface Activator initialized');
-                
-                // Expose force activation method globally for debugging
-                window.forceMobileInterface = () => {
-                    if (window.mobileInterfaceActivator) {
-                        window.mobileInterfaceActivator.forceMobileActivation();
-                    } else {
-                        console.error('Mobile Interface Activator not available');
-                    }
+            console.log('Mobile Interface Activator DISABLED by user request - using responsive desktop UI');
+            
+            // Remove any force mobile flags that might be set
+            localStorage.removeItem('force_mobile_interface');
+            
+            // Ensure desktop UI is visible
+            document.body.classList.remove('mobile-interface-active', 'mobile-device', 'mobile-optimized');
+            document.documentElement.classList.remove('mobile-interface');
+            
+            // Add responsive design class instead
+            document.body.classList.add('responsive-design-mode');
+            
+            // Expose debug methods for troubleshooting (but don't activate mobile interface)
+            window.debugMobileInterface = () => {
+                return {
+                    status: 'DISABLED',
+                    reason: 'User requested desktop UI with responsive design only',
+                    mobileInterfaceActivator: false,
+                    responsiveMode: true
                 };
-                
-                window.disableForceMobile = () => {
-                    if (window.mobileInterfaceActivator) {
-                        window.mobileInterfaceActivator.disableForceMobile();
-                    } else {
-                        console.error('Mobile Interface Activator not available');
-                    }
-                };
-                
-                // Expose debug method globally
-                window.debugMobileInterface = () => {
-                    if (window.mobileInterfaceActivator) {
-                        return window.mobileInterfaceActivator.debugMobileInterface();
-                    } else {
-                        console.error('Mobile Interface Activator not available');
-                        return null;
-                    }
-                };
-                
-            } else {
-                console.warn('MobileInterfaceActivator not available');
-            }
+            };
+            
+            window.forceMobileInterface = () => {
+                console.warn('Mobile interface activation disabled by user request');
+                console.log('User wants desktop UI to adapt based on screen size instead');
+            };
+            
+            window.disableForceMobile = () => {
+                console.log('Mobile interface already disabled');
+            };
         });
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- Responsive Mobile Fix - Load early to prevent mobile interface activation -->
+    <script src="js/responsive-mobile-fix.js?v=1"></script>
+    
     <script src="safe-events.js?v=1"></script>
     <script src="js/connectionRecovery.js?v=1"></script>
     <script src="js/mobile-ui/OrientationManager.js?v=1"></script>
