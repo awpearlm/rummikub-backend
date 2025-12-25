@@ -274,3 +274,67 @@ This implementation plan converts the mobile UI system design into discrete codi
 - Mobile testing should include real device validation, not just simulators
 - Performance testing is crucial for mobile user experience
 - Accessibility compliance is required for all interactive elements
+
+## Production Issues - Critical Fixes
+
+- [x] 16. Fix mobile button callback execution
+  - [x] 16.1 Implement game client initialization detection
+    - Wait for RummikubClient instance to be fully loaded
+    - Monitor for game.js initializeEventListeners() completion
+    - Add proper timing coordination between mobile debug and game initialization
+    - _Requirements: 1.1, 1.2_
+  
+  - [x] 16.2 Hook directly into game client methods
+    - Replace button click simulation with direct method calls
+    - Call client.selectGameMode() directly from touch handlers
+    - Bypass DOM event system for more reliable execution
+    - Add fallback mechanisms for different initialization states
+    - _Requirements: 1.1, 1.2_
+  
+  - [x] 16.3 Enhance mobile debug system with game integration
+    - Add game client detection and status reporting
+    - Implement direct method invocation testing
+    - Provide detailed diagnostics for initialization timing issues
+    - Add real-time callback execution verification
+    - _Requirements: 1.1, 1.2_
+
+- [x] 17. Activate mobile UI interface replacement
+  - [x] 17.1 Implement automatic mobile interface activation
+    - Detect mobile devices and hide desktop interface automatically
+    - Show mobile lobby screen instead of desktop welcome screen
+    - Ensure mobile screens are properly initialized and visible
+    - _Requirements: 2.1, 2.2, 2.3_
+  
+  - [x] 17.2 Route mobile interactions to mobile components
+    - Connect mobile UI buttons to mobile screen navigation
+    - Ensure mobile lobby, game creation, and game screens work properly
+    - Implement proper screen transitions for mobile workflow
+    - _Requirements: 2.1, 2.2, 2.3_
+  
+  - [x] 17.3 Add mobile interface toggle and fallback
+    - Provide option to switch between mobile and desktop interfaces
+    - Add fallback to desktop interface if mobile components fail
+    - Ensure cross-compatibility between mobile and desktop modes
+    - _Requirements: 2.1, 2.2, 2.3_
+
+- [x] 18. Document database index conflict for backend team
+  - [x] 18.1 Create backend issue documentation
+    - Document the MongoDB index naming conflict error
+    - Provide specific error details and suggested resolution
+    - Note that this is a backend deployment issue, not frontend
+    - _Requirements: Backend team responsibility_
+  
+  - [x] 18.2 Verify frontend changes are unrelated to database issue
+    - Confirm mobile UI changes don't affect database operations
+    - Ensure frontend can deploy independently of database fix
+    - Document that mobile UI fixes can proceed without database resolution
+    - _Requirements: Backend team responsibility_
+
+## Notes
+
+- Tasks 16-17 are critical production fixes for mobile functionality
+- Task 16 addresses the callback execution issue preventing button interactions
+- Task 17 ensures mobile users see the mobile interface instead of desktop
+- Task 18 documents the database issue for backend team resolution
+- These tasks should be completed in order: 16 → 17 → 18
+- Tasks 16 and 17 can be deployed independently of the database fix

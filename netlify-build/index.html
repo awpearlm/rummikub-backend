@@ -461,6 +461,16 @@
                 window.location.href = 'login.html';
             }
         });
+
+        // Initialize Mobile Interface Activator
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof MobileInterfaceActivator !== 'undefined') {
+                window.mobileInterfaceActivator = new MobileInterfaceActivator();
+                console.log('Mobile Interface Activator initialized');
+            } else {
+                console.warn('MobileInterfaceActivator not available');
+            }
+        });
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="safe-events.js?v=1"></script>
@@ -470,6 +480,14 @@
     <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script>
     <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script>
     <script src="js/mobile-ui/MobileUISystem.js?v=1"></script>
+    <script src="js/mobile-ui/MobileLoginScreen.js?v=1"></script>
+    <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script>
+    <script src="js/mobile-ui/MobileGameCreationScreen.js?v=1"></script>
+    <script src="js/mobile-ui/MobileGameScreen.js?v=1"></script>
+    <script src="js/mobile-ui/MobileNavigationController.js?v=1"></script>
+    <script src="js/mobile-ui/MobileInteractionRouter.js?v=1"></script>
+    <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script>
+    <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script>
     <script src="js/mobile-debug.js?v=1"></script>
     <script src="js/mobileTouch.js?v=1"></script>
     <script src="js/mobileOptimizations.js?v=1"></script>
