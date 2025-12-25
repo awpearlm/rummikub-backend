@@ -755,7 +755,7 @@ class MobileLobbyScreen {
         }
 
         const playersHTML = this.players.map(player => this.createPlayerCard(player)).join('');
-        playersList.innerHTML = playersHTML;
+        playersList.innerHTML = playersHTML;layersHTML;
     }
 
     createPlayerCard(player) {

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mobile UI Styled Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .test-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .test-content {
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .test-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .status {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 10px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status.success { border-left: 4px solid #10b981; }
+        .status.error { border-left: 4px solid #ef4444; }
+        .status.warning { border-left: 4px solid #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1><i class="fas fa-mobile-alt"></i> Mobile UI Test</h1>
+        <p>Testing mobile interface styling and functionality</p>
+    </div>
+    
+    <div class="test-content">
+        <div class="status" id="device-status">
+            <h3>Device Detection</h3>
+            <p id="device-info">Checking...</p>
+        </div>
+        
+        <div class="status" id="mobile-status">
+            <h3>Mobile Interface Status</h3>
+            <p id="mobile-info">Checking...</p>
+        </div>
+        
+        <button class="test-btn" onclick="testMobileInterface()">
+            <i class="fas fa-play"></i> Test Mobile Interface
+        </button>
+        
+        <button class="test-btn" onclick="forceEmergencyFix()">
+            <i class="fas fa-wrench"></i> Force Emergency Fix
+        </button>
+        
+        <button class="test-btn" onclick="openMainApp()">
+            <i class="fas fa-external-link-alt"></i> Open Main App
+        </button>
+        
+        <div class="status" id="test-results">
+            <h3>Test Results</h3>
+            <div id="results-content">Click "Test Mobile Interface" to run tests</div>
+        </div>
+    </div>
+
+    <script>
+        // Device detection
+        function detectDevice() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                             ('ontouchstart' in window) ||
+                             (navigator.maxTouchPoints > 0);
+            
+            const deviceInfo = document.getElementById('device-info');
+            const deviceStatus = document.getElementById('device-status');
+            
+            if (isMobile) {
+                deviceInfo.innerHTML = `
+                    ✅ Mobile device detected<br>
+                    User Agent: ${navigator.userAgent.substring(0, 50)}...<br>
+                    Touch Support: ${'ontouchstart' in window ? 'Yes' : 'No'}<br>
+                    Max Touch Points: ${navigator.maxTouchPoints || 0}<br>
+                    Screen: ${window.screen.width}x${window.screen.height}<br>
+                    Viewport: ${window.innerWidth}x${window.innerHeight}
+                `;
+                deviceStatus.className = 'status success';
+            } else {
+                deviceInfo.innerHTML = `
+                    ⚠️ Desktop device detected<br>
+                    You can still test mobile interface by forcing it<br>
+                    User Agent: ${navigator.userAgent.substring(0, 50)}...
+                `;
+                deviceStatus.className = 'status warning';
+            }
+        }
+        
+        function checkMobileInterface() {
+            const mobileInfo = document.getElementById('mobile-info');
+            const mobileStatus = document.getElementById('mobile-status');
+            
+            // Check for mobile interface elements
+            const mobileScreens = document.querySelectorAll('.mobile-screen, .mobile-lobby-screen, .emergency-mobile-interface');
+            const mobileClasses = document.body.classList.contains('mobile-interface-active');
+            
+            if (mobileScreens.length > 0 || mobileClasses) {
+                mobileInfo.innerHTML = `
+                    ✅ Mobile interface is active<br>
+                    Mobile screens found: ${mobileScreens.length}<br>
+                    Body has mobile classes: ${mobileClasses ? 'Yes' : 'No'}<br>
+                    Emergency fix available: ${typeof window.emergencyMobileActivation !== 'undefined' ? 'Yes' : 'No'}
+                `;
+                mobileStatus.className = 'status success';
+            } else {
+                mobileInfo.innerHTML = `
+                    ❌ Mobile interface not active<br>
+                    No mobile screens found<br>
+                    Emergency fix available: ${typeof window.emergencyMobileActivation !== 'undefined' ? 'Yes' : 'No'}
+                `;
+                mobileStatus.className = 'status error';
+            }
+        }
+        
+        function testMobileInterface() {
+            const results = document.getElementById('results-content');
+            results.innerHTML = 'Running tests...';
+            
+            const tests = [];
+            
+            // Test 1: Font Awesome icons
+            tests.push({
+                name: 'Font Awesome Icons',
+                result: document.querySelector('link[href*="font-awesome"]') ? 'Pass' : 'Fail',
+                details: 'Checking if Font Awesome CSS is loaded'
+            });
+            
+            // Test 2: Inter font
+            tests.push({
+                name: 'Inter Font',
+                result: document.querySelector('link[href*="Inter"]') ? 'Pass' : 'Fail',
+                details: 'Checking if Inter font is loaded'
+            });
+            
+            // Test 3: Viewport meta tag
+            const viewport = document.querySelector('meta[name="viewport"]');
+            tests.push({
+                name: 'Viewport Meta Tag',
+                result: viewport ? 'Pass' : 'Fail',
+                details: viewport ? viewport.content : 'Not found'
+            });
+            
+            // Test 4: Touch events
+            tests.push({
+                name: 'Touch Events Support',
+                result: 'ontouchstart' in window ? 'Pass' : 'Fail',
+                details: `Touch points: ${navigator.maxTouchPoints || 0}`
+            });
+            
+            // Test 5: CSS Custom Properties
+            tests.push({
+                name: 'CSS Custom Properties',
+                result: CSS.supports('color', 'var(--test)') ? 'Pass' : 'Fail',
+                details: 'Checking CSS variables support'
+            });
+            
+            // Display results
+            let resultsHTML = '<h4>Test Results:</h4>';
+            tests.forEach(test => {
+                const status = test.result === 'Pass' ? '✅' : '❌';
+                resultsHTML += `
+                    <div style="margin: 8px 0; padding: 8px; background: ${test.result === 'Pass' ? '#f0f9ff' : '#fef2f2'}; border-radius: 4px;">
+                        ${status} <strong>${test.name}</strong>: ${test.result}<br>
+                        <small style="color: #666;">${test.details}</small>
+                    </div>
+                `;
+            });
+            
+            results.innerHTML = resultsHTML;
+        }
+        
+        function forceEmergencyFix() {
+            if (typeof window.emergencyMobileActivation !== 'undefined') {
+                window.emergencyMobileActivation();
+                setTimeout(() => {
+                    checkMobileInterface();
+                    alert('Emergency mobile fix applied! Check the mobile interface status above.');
+                }, 1000);
+            } else {
+                // Load emergency fix script
+                const script = document.createElement('script');
+                script.src = 'mobile-ui-emergency-fix.js';
+                script.onload = () => {
+                    setTimeout(() => {
+                        if (typeof window.emergencyMobileActivation !== 'undefined') {
+                            window.emergencyMobileActivation();
+                            setTimeout(() => {
+                                checkMobileInterface();
+                                alert('Emergency mobile fix loaded and applied!');
+                            }, 1000);
+                        }
+                    }, 500);
+                };
+                document.head.appendChild(script);
+            }
+        }
+        
+        function openMainApp() {
+            window.open('index.html', '_blank');
+        }
+        
+        // Auto-run checks on load
+        document.addEventListener('DOMContentLoaded', () => {
+            detectDevice();
+            checkMobileInterface();
+            
+            // Auto-run tests
+            setTimeout(testMobileInterface, 500);
+            
+            // Recheck mobile interface every 2 seconds
+            setInterval(checkMobileInterface, 2000);
+        });
+        
+        console.log('📱 Mobile UI Test Page loaded');
+    </script>
+</body>
+</html>
