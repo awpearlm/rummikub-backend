@@ -294,8 +294,43 @@ class RummikubClient {
         // Game settings modal events
         addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
         addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
-        addSafeEventListener('createGameWithSettingsBtn', 'click', () => this.createGameWithSettings());
-        addSafeEventListener('createBotGameWithSettingsBtn', 'click', () => this.createBotGameWithSettings());
+        // Test if the button exists when setting up event listeners
+        const testButton = document.getElementById('createGameWithSettingsBtn');
+        console.log('🔍 Button test during initialization:', {
+            buttonExists: !!testButton,
+            buttonVisible: testButton ? getComputedStyle(testButton).display !== 'none' : false
+        });
+        
+        const eventListenerResult = addSafeEventListener('createGameWithSettingsBtn', 'click', () => {
+            console.log('🎮 createGameWithSettingsBtn clicked!');
+            this.createGameWithSettings();
+        });
+        
+        // Add fallback event listener if the safe one failed
+        if (!eventListenerResult && testButton) {
+            console.warn('⚠️ Safe event listener failed, adding fallback...');
+            testButton.addEventListener('click', () => {
+                console.log('🎮 createGameWithSettingsBtn clicked (fallback)!');
+                this.createGameWithSettings();
+            });
+        }
+        addSafeEventListener('createBotGameWithSettingsBtn', 'click', () => {
+            console.log('🤖 createBotGameWithSettingsBtn clicked!');
+            this.createBotGameWithSettings();
+        });
+        
+        // Add fallback for bot game button
+        const botGameButton = document.getElementById('createBotGameWithSettingsBtn');
+        if (botGameButton) {
+            console.log('🔍 Bot game button found during initialization');
+            // Add fallback event listener
+            botGameButton.addEventListener('click', () => {
+                console.log('🤖 createBotGameWithSettingsBtn clicked (fallback)!');
+                this.createBotGameWithSettings();
+            });
+        } else {
+            console.warn('⚠️ Bot game button not found during initialization');
+        }
         addSafeEventListener('gameSettingsModal', 'click', (event) => {
             if (event.target.classList.contains('modal-scrim')) {
                 this.closeSettingsModal();
@@ -894,19 +929,65 @@ class RummikubClient {
         console.log('👤 Player name:', playerName);
         
         if (!playerName) {
+            console.error('❌ No username found for bot game');
             this.showNotification('Please log in to play', 'error');
             return;
         }
         
         this.playerName = playerName;
-        this.botDifficulty = document.getElementById('botDifficulty').value;
-        this.botCount = parseInt(document.getElementById('botCount').value);
+        
+        // Get bot settings from the form
+        const botDifficultyElement = document.getElementById('botDifficulty');
+        const botCountElement = document.getElementById('botCount');
+        
+        if (botDifficultyElement && botCountElement) {
+            this.botDifficulty = botDifficultyElement.value;
+            this.botCount = parseInt(botCountElement.value);
+            console.log('🤖 Bot settings retrieved:', {
+                difficulty: this.botDifficulty,
+                count: this.botCount
+            });
+        } else {
+            console.error('❌ Could not find bot settings elements', {
+                botDifficultyElement: !!botDifficultyElement,
+                botCountElement: !!botCountElement
+            });
+            // Set defaults
+            this.botDifficulty = 'medium';
+            this.botCount = 1;
+            console.log('🤖 Using default bot settings:', {
+                difficulty: this.botDifficulty,
+                count: this.botCount
+            });
+        }
         
         // Open the settings modal in bot mode
+        console.log('🤖 Opening bot settings modal...');
         this.openBotSettingsModal();
     }
 
     createBotGameWithSettings() {
+        console.log('🤖 createBotGameWithSettings called');
+        console.log('🔍 Bot game debug info:', {
+            playerName: this.playerName,
+            username: this.username,
+            botDifficulty: this.botDifficulty,
+            botCount: this.botCount,
+            token: this.token ? 'present' : 'missing'
+        });
+        
+        // Check if playerName is set, if not use username
+        if (!this.playerName && this.username) {
+            console.log('⚠️ Bot game: playerName not set, using username');
+            this.playerName = this.username;
+        }
+        
+        if (!this.playerName) {
+            console.error('❌ ERROR: No player name available for bot game');
+            this.showNotification('Error: Player name not found. Please refresh and try again.', 'error');
+            return;
+        }
+        
         // Get settings from the modal
         const timerEnabled = document.getElementById('settingsEnableTimer').checked;
         this.timerEnabled = timerEnabled;
@@ -919,24 +1000,36 @@ class RummikubClient {
         
         this.showLoadingScreen();
         console.log('📡 Emitting createBotGame event with settings...');
-        this.socket.emit('createBotGame', { 
+        
+        const gameData = { 
             playerName: this.playerName, 
             difficulty: this.botDifficulty,
             botCount: this.botCount,
             timerEnabled: this.timerEnabled
-        });
+        };
+        
+        console.log('📡 Bot game data being sent:', gameData);
+        this.socket.emit('createBotGame', gameData);
     }
 
     createGame() {
+        console.log('🎮 createGame called');
         // Use the authenticated username
         const playerName = this.username;
+        console.log('🔍 Debug info:', {
+            username: this.username,
+            token: this.token ? 'present' : 'missing'
+        });
+        
         if (!playerName) {
+            console.error('❌ No username found');
             this.showNotification('Please log in first', 'error');
             return;
         }
         
         // Show the settings modal instead of creating the game immediately
         this.playerName = playerName;
+        console.log(`✅ playerName set to: "${this.playerName}"`);
         this.openSettingsModal();
     }
 
@@ -4223,6 +4316,19 @@ class RummikubClient {
     showGamePauseOverlay(pauseData) {
         const overlay = document.getElementById('gamePauseOverlay');
         if (!overlay) return;
+        
+        // Don't show game pause overlay if we're not actually in a game
+        const currentGameId = document.getElementById('currentGameId');
+        const gameScreen = document.getElementById('gameScreen');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        
+        // If we're on the welcome screen or don't have a game ID, don't show pause overlay
+        if (!currentGameId || !currentGameId.textContent.trim() || 
+            !gameScreen || !gameScreen.classList.contains('active') ||
+            (welcomeScreen && welcomeScreen.classList.contains('active'))) {
+            console.log('🚫 Ignoring game pause - not in an active game');
+            return;
+        }
 
         // Update pause information
         const pauseTitle = document.getElementById('pauseTitle');
@@ -4724,14 +4830,52 @@ RummikubClient.prototype.closeGameLogModal = closeGameLogModal;
 
 // Add the settings modal methods to the prototype
 RummikubClient.prototype.openSettingsModal = function() {
+    console.log('🎮 openSettingsModal called');
     const modal = document.getElementById('gameSettingsModal');
     if (modal) {
+        // Ensure styles are loaded by checking if the modal has proper styling
+        const initialStyles = getComputedStyle(modal);
+        console.log('🔍 Initial modal styles:', {
+            position: initialStyles.position,
+            display: initialStyles.display
+        });
+        
         modal.classList.add('show');
+        
+        // Debug modal visibility after adding show class
+        const modalStyles = getComputedStyle(modal);
+        console.log('🔍 Modal debug info after show:', {
+            display: modalStyles.display,
+            visibility: modalStyles.visibility,
+            zIndex: modalStyles.zIndex,
+            position: modalStyles.position
+        });
+        
+        // If the modal is not displaying as flex, the styles might not be loaded
+        if (modalStyles.display !== 'flex') {
+            console.warn('⚠️ Modal styles may not be loaded properly. Trying fallback...');
+            // Force display as fallback
+            modal.style.display = 'flex';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '1000';
+        }
+        
         // Copy the current timer setting to the modal
         const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
         document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
         // Prevent scrolling of background content
         document.body.style.overflow = 'hidden';
+        
+        console.log('✅ Modal should be visible now');
+    } else {
+        console.error('❌ Modal element not found!');
     }
 };
 
@@ -4748,21 +4892,91 @@ RummikubClient.prototype.closeSettingsModal = function() {
 };
 
 RummikubClient.prototype.openBotSettingsModal = function() {
+    console.log('🤖 openBotSettingsModal called');
     const modal = document.getElementById('gameSettingsModal');
     if (modal) {
+        // Ensure styles are loaded by checking if the modal has proper styling
+        const initialStyles = getComputedStyle(modal);
+        console.log('🔍 Initial bot modal styles:', {
+            position: initialStyles.position,
+            display: initialStyles.display
+        });
+        
         modal.classList.add('show');
+        
+        // Debug modal visibility after adding show class
+        const modalStyles = getComputedStyle(modal);
+        console.log('🔍 Bot modal debug info after show:', {
+            display: modalStyles.display,
+            visibility: modalStyles.visibility,
+            zIndex: modalStyles.zIndex,
+            position: modalStyles.position
+        });
+        
+        // If the modal is not displaying as flex, the styles might not be loaded
+        if (modalStyles.display !== 'flex') {
+            console.warn('⚠️ Bot modal styles may not be loaded properly. Trying fallback...');
+            // Force display as fallback
+            modal.style.display = 'flex';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '1000';
+        }
+        
         // Copy the current timer setting to the modal
         const currentTimerSetting = document.getElementById('enableTimer')?.checked || true;
         document.getElementById('settingsEnableTimer').checked = currentTimerSetting;
+        
         // Show bot game button instead of regular game button
-        document.getElementById('createGameWithSettingsBtn').style.display = 'none';
-        document.getElementById('createBotGameWithSettingsBtn').style.display = 'inline-block';
+        const createGameBtn = document.getElementById('createGameWithSettingsBtn');
+        const createBotGameBtn = document.getElementById('createBotGameWithSettingsBtn');
+        
+        if (createGameBtn && createBotGameBtn) {
+            createGameBtn.style.display = 'none';
+            createBotGameBtn.style.display = 'inline-block';
+            console.log('✅ Bot game button should be visible now');
+        } else {
+            console.error('❌ Could not find modal buttons', {
+                createGameBtn: !!createGameBtn,
+                createBotGameBtn: !!createBotGameBtn
+            });
+        }
+        
         // Prevent scrolling of background content
         document.body.style.overflow = 'hidden';
+        
+        console.log('✅ Bot settings modal should be visible now');
+    } else {
+        console.error('❌ Bot settings modal element not found!');
     }
 };
 
 RummikubClient.prototype.createGameWithSettings = function() {
+    console.log('🎮 createGameWithSettings called');
+    console.log('🔍 Debug info:', {
+        playerName: this.playerName,
+        username: this.username,
+        token: this.token ? 'present' : 'missing'
+    });
+    
+    // Check if playerName is set, if not use username
+    if (!this.playerName && this.username) {
+        console.log('⚠️ playerName not set, using username');
+        this.playerName = this.username;
+    }
+    
+    if (!this.playerName) {
+        console.error('❌ ERROR: No player name available');
+        this.showNotification('Error: Player name not found. Please refresh and try again.', 'error');
+        return;
+    }
+    
     // Get settings from the modal
     const timerEnabled = document.getElementById('settingsEnableTimer').checked;
     this.timerEnabled = timerEnabled;
