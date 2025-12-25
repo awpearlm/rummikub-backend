@@ -51,21 +51,24 @@ function addSafeEventListener(elementId, eventType, callback) {
                     
                     console.log(`🔧 Touch triggered callback for ${elementId}`);
                     
-                    // Create a synthetic click event and trigger the callback
-                    const syntheticEvent = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        clientX: touchEndX,
-                        clientY: touchEndY
-                    });
-                    
-                    // Call the callback directly
+                    // Try multiple methods to ensure the callback is triggered
                     try {
-                        callback(syntheticEvent);
+                        // Method 1: Call the callback directly
+                        callback(e);
+                        console.log(`🔧 Direct callback executed for ${elementId}`);
                     } catch (error) {
-                        console.error(`Error in touch callback for ${elementId}:`, error);
+                        console.error(`Error in direct callback for ${elementId}:`, error);
                     }
+                    
+                    // Method 2: Also trigger a click event as backup
+                    setTimeout(() => {
+                        try {
+                            element.click();
+                            console.log(`🔧 Backup click() called for ${elementId}`);
+                        } catch (error) {
+                            console.error(`Error in backup click for ${elementId}:`, error);
+                        }
+                    }, 10);
                 }
             }, { passive: false });
             
