@@ -114,14 +114,28 @@ class RummikubClient {
         
         this.socket.on('reconnect', (attemptNumber) => {
             console.log(`✅ Reconnected after ${attemptNumber} attempts!`);
+            console.log(`🔍 Reconnect state check: gameId=${this.gameId}, playerName=${this.playerName}, justCreatedGame=${this.justCreatedGame}, justJoinedGame=${this.justJoinedGame}`);
             this.showNotification('Reconnected successfully! Resuming game...', 'success');
             this.updateConnectionStatus('connected');
             this.hideConnectionLostOverlay();
             
-            // If we're in a game, rejoin it
-            if (this.gameId && this.playerName) {
-                console.log(`Rejoining game ${this.gameId} as ${this.playerName}`);
+            // If we're in a game, rejoin it (but not if we just created/joined)
+            if (this.gameId && this.playerName && !this.justCreatedGame && !this.justJoinedGame) {
+                console.log(`🔄 Rejoining game ${this.gameId} as ${this.playerName}`);
                 this.rejoinGame(this.gameId, this.playerName);
+            } else if (this.justCreatedGame || this.justJoinedGame) {
+                console.log('🚫 Skipping automatic rejoin - just created/joined game');
+                // For newly created/joined games, just sync the game state without rejoining
+                if (this.gameId) {
+                    console.log('🔄 Syncing game state for newly created/joined game:', this.gameId);
+                    this.socket.emit('getGameState', { gameId: this.gameId });
+                }
+            } else if (this.gameId) {
+                // We have a game ID but no player name - just sync state
+                console.log('🔄 Reconnected - requesting latest game state for game:', this.gameId);
+                this.socket.emit('getGameState', { gameId: this.gameId });
+            } else {
+                console.log('🔍 No game to rejoin - staying in current state');
             }
         });
         
@@ -319,6 +333,7 @@ class RummikubClient {
         this.socket.on('gameCreated', (data) => {
             this.gameId = data.gameId;
             this.gameState = data.gameState;
+            this.justCreatedGame = true; // Flag to prevent automatic rejoin
             this.showGameScreen();
             this.updateGameState();
             this.showNotification(`Game created! Share code: ${data.gameId}`, 'success');
@@ -328,11 +343,17 @@ class RummikubClient {
             
             // Start tracking activity
             this.startInactivityCheck();
+            
+            // Clear the flag after a longer delay to prevent reconnection issues
+            setTimeout(() => {
+                this.justCreatedGame = false;
+            }, 10000); // Increased from 5000 to 10000ms
         });
 
         this.socket.on('gameJoined', (data) => {
             this.gameId = data.gameId;
             this.gameState = data.gameState;
+            this.justJoinedGame = true; // Flag to prevent automatic rejoin
             this.showGameScreen();
             this.updateGameState();
             this.showNotification('Joined game successfully!', 'success');
@@ -342,6 +363,11 @@ class RummikubClient {
             
             // Start tracking activity
             this.startInactivityCheck();
+            
+            // Clear the flag after a longer delay to prevent reconnection issues
+            setTimeout(() => {
+                this.justJoinedGame = false;
+            }, 10000); // Increased from 5000 to 10000ms
         });
 
         this.socket.on('botGameCreated', (data) => {
@@ -391,14 +417,34 @@ class RummikubClient {
             }
             // 🐛 END DEBUG LOGGING
             
+            console.log('🎮 Game state updated', data);
+            const wasMyTurn = this.isMyTurn();
+            
             // Store the previous board state before updating
             if (this.gameState && this.gameState.board) {
                 this.previousBoardState = JSON.parse(JSON.stringify(this.gameState.board));
             }
             
+            // Sort the board sets before updating the game state
+            if (data.gameState && data.gameState.board) {
+                this.sortAllBoardSets(data.gameState.board);
+            }
+            
             this.gameState = data.gameState;
             this.cleanPlayerHand(); // Ensure no undefined elements in hand
+            
+            // If turn changed from me to someone else, clear any selections
+            if (wasMyTurn && !this.isMyTurn()) {
+                this.selectedTiles = [];
+            }
+            
             this.updateGameState();
+            
+            // Check if board has been restored to its original state (happens after undo)
+            // This needs to be after updateGameState since it depends on the updated state
+            if (this.isMyTurn()) {
+                this.hasBoardStateChanged(); // This will now reset hasPlayedTilesThisTurn if board matches snapshot
+            }
             
             // Reset inactivity timer whenever we get a game state update
             this.resetInactivityTimer();
@@ -532,15 +578,7 @@ class RummikubClient {
             this.showRefreshButton();
         });
 
-        this.socket.on('reconnect', () => {
-            this.showNotification('Reconnected! Syncing game state...', 'success');
-            
-            // Request the latest game state after reconnection
-            if (this.gameId) {
-                console.log('🔄 Reconnected - requesting latest game state for game:', this.gameId);
-                this.socket.emit('getGameState', { gameId: this.gameId });
-            }
-        });
+
 
         // Bot game events
         this.socket.on('botGameCreated', (data) => {
@@ -614,31 +652,7 @@ class RummikubClient {
             this.showNotification('Board restored to turn start', 'info');
         });
 
-        // General game state updates
-        this.socket.on('gameStateUpdate', (data) => {
-            console.log('🎮 Game state updated', data);
-            const wasMyTurn = this.isMyTurn();
-            
-            // Sort the board sets before updating the game state
-            if (data.gameState && data.gameState.board) {
-                this.sortAllBoardSets(data.gameState.board);
-            }
-            
-            this.gameState = data.gameState;
-            
-            // If turn changed from me to someone else, clear any selections
-            if (wasMyTurn && !this.isMyTurn()) {
-                this.selectedTiles = [];
-            }
-            
-            this.updateGameState();
-            
-            // Check if board has been restored to its original state (happens after undo)
-            // This needs to be after updateGameState since it depends on the updated state
-            if (this.isMyTurn()) {
-                this.hasBoardStateChanged(); // This will now reset hasPlayedTilesThisTurn if board matches snapshot
-            }
-        });
+
 
         // Player connection status events
         this.socket.on('playerStatusUpdate', (data) => {
