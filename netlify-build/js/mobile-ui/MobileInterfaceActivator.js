@@ -213,6 +213,11 @@ class MobileInterfaceActivator {
     showMobileInterface() {
         console.log('Showing mobile interface elements...');
         
+        // For now, always show fallback interface until mobile UI system is working
+        console.log('Forcing fallback mobile interface for debugging');
+        this.showFallbackMobileInterface();
+        return;
+        
         // Determine which mobile screen to show based on authentication
         const isAuthenticated = this.isUserAuthenticated();
         
@@ -252,9 +257,12 @@ class MobileInterfaceActivator {
                     this.transitionToLobby();
                 });
             } else {
-                console.warn('Mobile login screen component not available');
+                console.warn('Mobile login screen component not available - showing fallback');
                 this.showFallbackMobileInterface();
             }
+        } else {
+            console.warn('Mobile UI System not available - showing fallback');
+            this.showFallbackMobileInterface();
         }
     }
 
@@ -273,9 +281,12 @@ class MobileInterfaceActivator {
                 // Set up navigation handlers
                 this.setupLobbyNavigationHandlers(lobbyScreen);
             } else {
-                console.warn('Mobile lobby screen component not available');
+                console.warn('Mobile lobby screen component not available - showing fallback');
                 this.showFallbackMobileInterface();
             }
+        } else {
+            console.warn('Mobile UI System not available - showing fallback');
+            this.showFallbackMobileInterface();
         }
     }
 

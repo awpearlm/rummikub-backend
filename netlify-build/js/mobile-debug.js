@@ -22,9 +22,10 @@ function initMobileDebug() {
         border-radius: 5px;
         font-family: monospace;
         font-size: 12px;
-        z-index: 10000;
+        z-index: 10001;
         max-width: 200px;
         pointer-events: none;
+        opacity: 0.7;
     `;
     debugOverlay.innerHTML = `
         <div>📱 Mobile Debug</div>
