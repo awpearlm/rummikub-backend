@@ -430,12 +430,281 @@ class MobileInterfaceActivator {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 display: flex;
                 flex-direction: column;
+                color: white;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                overflow: hidden;
+            }
+            
+            /* Mobile Lobby Header */
+            .mobile-lobby-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .lobby-title h1 {
+                color: white;
+                font-size: 24px;
+                font-weight: 700;
+                margin: 0 0 4px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .lobby-title p {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 14px;
+                margin: 0;
+            }
+
+            .user-info {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+            }
+
+            .username {
+                color: white;
+                font-weight: 600;
+                font-size: 16px;
+            }
+
+            .connection-status {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            /* Mobile Lobby Content */
+            .mobile-lobby-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: white;
+                border-radius: 20px 20px 0 0;
+                margin-top: 10px;
+                overflow: hidden;
+            }
+
+            /* Lobby Tabs */
+            .lobby-tabs {
+                display: flex;
+                background: #f8f9fa;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .tab-button {
+                flex: 1;
+                padding: 16px 12px;
+                background: none;
+                border: none;
+                font-size: 14px;
+                font-weight: 500;
+                color: #6c757d;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                position: relative;
+                transition: all 0.2s ease;
+                min-height: 44px;
+            }
+
+            .tab-button.active {
+                color: #667eea;
+                background: white;
+            }
+
+            .tab-button i {
+                font-size: 18px;
+            }
+
+            .invite-count {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: #dc3545;
+                color: white;
+                border-radius: 10px;
+                padding: 2px 6px;
+                font-size: 10px;
+                min-width: 16px;
+                text-align: center;
+            }
+
+            /* Tab Content */
+            .tab-content {
+                flex: 1;
+                padding: 20px;
+                display: none;
+                overflow-y: auto;
+            }
+
+            .tab-content.active {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Games List */
+            .games-list {
+                flex: 1;
+                margin-bottom: 20px;
+            }
+
+            .loading-games, .loading-players {
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+            }
+
+            .loading-games i, .loading-players i {
+                font-size: 24px;
+                margin-bottom: 10px;
+                display: block;
+            }
+
+            .no-games, .no-invites {
+                text-align: center;
+                padding: 40px 20px;
+                color: #6c757d;
+            }
+
+            .no-games i, .no-invites i {
+                font-size: 48px;
+                margin-bottom: 16px;
+                display: block;
+                color: #dee2e6;
+            }
+
+            .no-games h3, .no-invites h3 {
+                margin: 0 0 8px 0;
+                color: #495057;
+            }
+
+            .no-games p, .no-invites p {
+                margin: 0;
+                font-size: 14px;
+            }
+
+            /* Mobile Game Cards */
+            .mobile-game-card {
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 12px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .game-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+
+            .game-card-header h3 {
+                margin: 0;
+                font-size: 18px;
+                color: #212529;
+            }
+
+            .game-status {
+                background: #e9ecef;
+                color: #495057;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+
+            .game-card-info {
+                margin-bottom: 12px;
+            }
+
+            .player-count {
+                color: #6c757d;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .game-card-actions {
+                display: flex;
+                gap: 8px;
+            }
+
+            /* Lobby Actions */
+            .lobby-actions {
+                display: flex;
+                gap: 12px;
+                margin-top: auto;
+            }
+
+            .lobby-actions .btn {
+                flex: 1;
+                padding: 12px 16px;
+                border: none;
+                border-radius: 8px;
+                font-weight: 500;
+                display: flex;
                 align-items: center;
                 justify-content: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+                min-height: 44px;
+                cursor: pointer;
+            }
+
+            .btn-primary {
+                background: #667eea;
                 color: white;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                text-align: center;
-                padding: 20px;
+            }
+
+            .btn-primary:hover {
+                background: #5a6fd8;
+            }
+
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+
+            .btn-secondary:hover {
+                background: #5a6268;
+            }
+
+            .btn-sm {
+                padding: 8px 12px;
+                font-size: 12px;
+                min-height: 32px;
+            }
+
+            /* Mobile Debug Toggle */
+            .mobile-debug-toggle {
+                position: absolute;
+                bottom: env(safe-area-inset-bottom, 20px);
+                right: 20px;
+                z-index: 1001;
+            }
+
+            .mobile-debug-toggle button {
+                background: rgba(0,0,0,0.7);
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
             }
             
             .mobile-fallback-interface h1 {
@@ -736,24 +1005,249 @@ class MobileInterfaceActivator {
     showFallbackMobileInterface() {
         console.log('Showing fallback mobile interface...');
         
+        // Create a proper mobile lobby interface as fallback
         const fallbackInterface = document.createElement('div');
-        fallbackInterface.className = 'mobile-fallback-interface';
+        fallbackInterface.className = 'mobile-fallback-interface mobile-lobby-screen';
         fallbackInterface.innerHTML = `
-            <h1>🎮 J-kube Mobile</h1>
-            <p>Welcome to the mobile version of J-kube!<br>
-            The mobile interface is loading...</p>
-            <div class="fallback-actions">
-                <button onclick="window.location.reload()">
-                    🔄 Reload Page
-                </button>
+            <div class="mobile-lobby-header">
+                <div class="lobby-title">
+                    <h1><i class="fas fa-chess-board"></i> J-kube Mobile</h1>
+                    <p>Play Rummikub with friends</p>
+                </div>
+                <div class="user-info">
+                    <span class="username">${localStorage.getItem('username') || 'Player'}</span>
+                    <span class="connection-status">
+                        <i class="fas fa-circle" style="color: #4CAF50;"></i> Online
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mobile-lobby-content">
+                <div class="lobby-tabs">
+                    <button class="tab-button active" data-tab="games">
+                        <i class="fas fa-gamepad"></i> Games
+                    </button>
+                    <button class="tab-button" data-tab="players">
+                        <i class="fas fa-users"></i> Players
+                    </button>
+                    <button class="tab-button" data-tab="invites">
+                        <i class="fas fa-envelope"></i> Invites
+                        <span class="invite-count">0</span>
+                    </button>
+                </div>
+                
+                <div class="tab-content active" id="games-tab">
+                    <div class="games-list">
+                        <div class="loading-games">
+                            <i class="fas fa-spinner fa-spin"></i> Loading games...
+                        </div>
+                    </div>
+                    <div class="lobby-actions">
+                        <button id="mobile-create-game-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Game
+                        </button>
+                        <button id="mobile-refresh-btn" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="players-tab">
+                    <div class="players-list">
+                        <div class="loading-players">
+                            <i class="fas fa-spinner fa-spin"></i> Loading players...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="invites-tab">
+                    <div class="invites-list">
+                        <div class="no-invites">
+                            <i class="fas fa-inbox"></i>
+                            <h3>No Invitations</h3>
+                            <p>You don't have any game invitations yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mobile-debug-toggle">
                 <button onclick="window.mobileInterfaceActivator.switchToDesktop()">
-                    💻 Use Desktop Version
+                    💻 Desktop Mode
                 </button>
             </div>
         `;
         
         document.body.appendChild(fallbackInterface);
         this.mobileElements.push(fallbackInterface);
+        
+        // Set up basic tab functionality
+        this.setupFallbackTabNavigation(fallbackInterface);
+        
+        // Set up basic game functionality
+        this.setupFallbackGameActions(fallbackInterface);
+        
+        // Load games list
+        this.loadGamesForFallback(fallbackInterface);
+    }
+
+    /**
+     * Set up tab navigation for fallback interface
+     */
+    setupFallbackTabNavigation(container) {
+        const tabButtons = container.querySelectorAll('.tab-button');
+        const tabContents = container.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Update active tab button
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update active tab content
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${tabName}-tab`) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Set up game actions for fallback interface
+     */
+    setupFallbackGameActions(container) {
+        const createGameBtn = container.querySelector('#mobile-create-game-btn');
+        const refreshBtn = container.querySelector('#mobile-refresh-btn');
+        
+        if (createGameBtn) {
+            createGameBtn.addEventListener('click', () => {
+                // Use existing game creation functionality
+                if (window.createGameBtn) {
+                    window.createGameBtn.click();
+                } else {
+                    // Fallback to direct game creation
+                    this.createGameFallback();
+                }
+            });
+        }
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.loadGamesForFallback(container);
+            });
+        }
+    }
+
+    /**
+     * Load games list for fallback interface
+     */
+    loadGamesForFallback(container) {
+        const gamesContainer = container.querySelector('.games-list');
+        if (!gamesContainer) return;
+        
+        // Show loading state
+        gamesContainer.innerHTML = `
+            <div class="loading-games">
+                <i class="fas fa-spinner fa-spin"></i> Loading games...
+            </div>
+        `;
+        
+        // Try to use existing games loading functionality
+        if (window.refreshGames && typeof window.refreshGames === 'function') {
+            window.refreshGames().then(() => {
+                // Copy games from desktop interface
+                this.copyGamesFromDesktop(gamesContainer);
+            }).catch(() => {
+                this.showNoGamesMessage(gamesContainer);
+            });
+        } else {
+            // Fallback to no games message
+            setTimeout(() => {
+                this.showNoGamesMessage(gamesContainer);
+            }, 1000);
+        }
+    }
+
+    /**
+     * Copy games from desktop interface to mobile fallback
+     */
+    copyGamesFromDesktop(mobileContainer) {
+        const desktopGamesList = document.querySelector('#gamesList');
+        if (desktopGamesList) {
+            const games = desktopGamesList.querySelectorAll('.game-item');
+            if (games.length > 0) {
+                mobileContainer.innerHTML = '';
+                games.forEach(game => {
+                    const mobileGame = this.createMobileGameCard(game);
+                    mobileContainer.appendChild(mobileGame);
+                });
+            } else {
+                this.showNoGamesMessage(mobileContainer);
+            }
+        } else {
+            this.showNoGamesMessage(mobileContainer);
+        }
+    }
+
+    /**
+     * Create mobile game card from desktop game item
+     */
+    createMobileGameCard(desktopGame) {
+        const gameCard = document.createElement('div');
+        gameCard.className = 'mobile-game-card';
+        
+        const gameId = desktopGame.querySelector('.game-id')?.textContent || 'Unknown';
+        const playerCount = desktopGame.querySelector('.player-count')?.textContent || '0/4';
+        const status = desktopGame.querySelector('.game-status')?.textContent || 'Waiting';
+        
+        gameCard.innerHTML = `
+            <div class="game-card-header">
+                <h3>Game ${gameId}</h3>
+                <span class="game-status">${status}</span>
+            </div>
+            <div class="game-card-info">
+                <span class="player-count">
+                    <i class="fas fa-users"></i> ${playerCount}
+                </span>
+            </div>
+            <div class="game-card-actions">
+                <button class="btn btn-primary btn-sm" onclick="window.joinGame?.('${gameId}')">
+                    <i class="fas fa-sign-in-alt"></i> Join
+                </button>
+            </div>
+        `;
+        
+        return gameCard;
+    }
+
+    /**
+     * Show no games message
+     */
+    showNoGamesMessage(container) {
+        container.innerHTML = `
+            <div class="no-games">
+                <i class="fas fa-gamepad"></i>
+                <h3>No Games Available</h3>
+                <p>Create a new game to get started!</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Create game fallback
+     */
+    createGameFallback() {
+        // Try to use existing create game functionality
+        if (window.showGameSettings && typeof window.showGameSettings === 'function') {
+            window.showGameSettings();
+        } else {
+            alert('Game creation is not available. Please try refreshing the page.');
+        }
     }
 
     /**
