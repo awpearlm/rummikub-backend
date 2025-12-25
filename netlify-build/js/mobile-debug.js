@@ -22,10 +22,11 @@ function initMobileDebug() {
         border-radius: 5px;
         font-family: monospace;
         font-size: 12px;
-        z-index: 10001;
+        z-index: 999;
         max-width: 200px;
         pointer-events: none;
-        opacity: 0.7;
+        opacity: 0.5;
+        display: none;
     `;
     debugOverlay.innerHTML = `
         <div>📱 Mobile Debug</div>
@@ -160,8 +161,9 @@ function initMobileDebug() {
         padding: 10px 15px;
         border-radius: 5px;
         font-size: 14px;
-        z-index: 10001;
+        z-index: 999;
         touch-action: manipulation;
+        display: none;
     `;
     testButton.addEventListener('click', () => {
         updateDebugInfo('callback', 'Test button works!');
@@ -183,8 +185,9 @@ function initMobileDebug() {
         padding: 10px 15px;
         border-radius: 5px;
         font-size: 14px;
-        z-index: 10001;
+        z-index: 999;
         touch-action: manipulation;
+        display: none;
     `;
     diagnosticButton.addEventListener('click', () => {
         runComprehensiveDiagnostics();
@@ -205,8 +208,9 @@ function initMobileDebug() {
         padding: 10px 15px;
         border-radius: 5px;
         font-size: 14px;
-        z-index: 10001;
+        z-index: 999;
         touch-action: manipulation;
+        display: none;
     `;
     methodTestButton.addEventListener('click', () => {
         testDirectMethodInvocation();
@@ -227,8 +231,9 @@ function initMobileDebug() {
         padding: 10px 15px;
         border-radius: 5px;
         font-size: 14px;
-        z-index: 10001;
+        z-index: 999;
         touch-action: manipulation;
+        display: none;
     `;
     callbackTestButton.addEventListener('click', () => {
         testCallbackExecution();

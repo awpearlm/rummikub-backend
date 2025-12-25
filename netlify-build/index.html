@@ -501,6 +501,16 @@
                     }
                 };
                 
+                // Expose debug method globally
+                window.debugMobileInterface = () => {
+                    if (window.mobileInterfaceActivator) {
+                        return window.mobileInterfaceActivator.debugMobileInterface();
+                    } else {
+                        console.error('Mobile Interface Activator not available');
+                        return null;
+                    }
+                };
+                
             } else {
                 console.warn('MobileInterfaceActivator not available');
             }
@@ -513,6 +523,7 @@
     <script src="js/mobile-ui/TouchManager.js?v=1"></script>
     <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script>
     <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script>
+    <script src="js/mobile-ui/PlayerAvatarSystem.js?v=1"></script>
     <script src="js/mobile-ui/MobileUISystem.js?v=1"></script>
     <script src="js/mobile-ui/MobileLoginScreen.js?v=1"></script>
     <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script>

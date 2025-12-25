@@ -192,22 +192,36 @@ class MobileInterfaceActivator {
         
         // Initialize new mobile UI system
         if (typeof MobileUISystem !== 'undefined') {
+            console.log('Creating new MobileUISystem instance...');
             this.mobileUISystem = new MobileUISystem();
             window.mobileUISystem = this.mobileUISystem;
             
             // Wait for initialization to complete
             await new Promise((resolve, reject) => {
                 if (this.mobileUISystem.isReady()) {
+                    console.log('MobileUISystem was already ready');
                     resolve();
                 } else {
-                    this.mobileUISystem.on('initialized', resolve);
+                    console.log('Waiting for MobileUISystem initialization...');
+                    this.mobileUISystem.on('initialized', () => {
+                        console.log('MobileUISystem initialization event received');
+                        resolve();
+                    });
                     // Timeout after 10 seconds
-                    setTimeout(() => reject(new Error('Mobile UI system initialization timeout')), 10000);
+                    setTimeout(() => {
+                        console.warn('MobileUISystem initialization timeout - proceeding anyway');
+                        resolve(); // Don't reject, just proceed
+                    }, 10000);
                 }
             });
             
             console.log('Mobile UI system initialized successfully');
         } else {
+            console.error('MobileUISystem class not available - available classes:', {
+                MobileUISystem: typeof MobileUISystem,
+                MobileLobbyScreen: typeof MobileLobbyScreen,
+                MobileLoginScreen: typeof MobileLoginScreen
+            });
             throw new Error('MobileUISystem class not available');
         }
     }
@@ -221,12 +235,19 @@ class MobileInterfaceActivator {
         // Desktop elements to hide
         const desktopSelectors = [
             '#welcomeScreen',
-            '#gameScreen .game-container',
+            '#gameScreen',
+            '#loadingScreen',
             '.profile-bubble',
             '.welcome-container',
             '.game-header-bar',
             '.game-layout',
-            '.player-hand-section'
+            '.player-hand-section',
+            '#toast-container',
+            '#connectionLostOverlay',
+            '#gamePauseOverlay',
+            '#victoryOverlay',
+            '#turnNotificationOverlay',
+            '#gameSettingsModal'
         ];
         
         desktopSelectors.forEach(selector => {
@@ -255,11 +276,6 @@ class MobileInterfaceActivator {
      */
     showMobileInterface() {
         console.log('Showing mobile interface elements...');
-        
-        // For now, always show fallback interface until mobile UI system is working
-        console.log('Forcing fallback mobile interface for debugging');
-        this.showFallbackMobileInterface();
-        return;
         
         // Determine which mobile screen to show based on authentication
         const isAuthenticated = this.isUserAuthenticated();
@@ -318,6 +334,7 @@ class MobileInterfaceActivator {
         if (this.mobileUISystem) {
             const lobbyScreen = this.mobileUISystem.getComponent('mobileLobbyScreen');
             if (lobbyScreen) {
+                console.log('Found mobile lobby screen component, showing...');
                 lobbyScreen.show();
                 this.mobileElements.push(lobbyScreen.screenElement);
                 
@@ -405,6 +422,22 @@ class MobileInterfaceActivator {
             
             .mobile-interface-active .desktop-hidden-for-mobile {
                 display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+            
+            /* Ensure mobile screens are visible */
+            .mobile-interface-active .mobile-screen,
+            .mobile-interface-active .mobile-lobby-screen,
+            .mobile-interface-active .mobile-login-screen,
+            .mobile-interface-active .mobile-game-screen,
+            .mobile-interface-active .mobile-game-creation-screen {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+                z-index: 1000 !important;
             }
             
             .mobile-interface {
@@ -1129,6 +1162,9 @@ class MobileInterfaceActivator {
                 <button onclick="window.mobileInterfaceActivator.switchToDesktop()">
                     💻 Desktop Mode
                 </button>
+                <button onclick="window.debugMobileInterface()">
+                    🔧 Debug Info
+                </button>
             </div>
         `;
         
@@ -1384,6 +1420,58 @@ class MobileInterfaceActivator {
                 isActivated: this.isActivated
             });
         }
+    }
+
+    /**
+     * Debug method to check mobile interface status
+     */
+    debugMobileInterface() {
+        console.log('🔧 Mobile Interface Debug Status:');
+        console.log('- isMobile:', this.isMobile);
+        console.log('- isActivated:', this.isActivated);
+        console.log('- mobileUISystem:', !!this.mobileUISystem);
+        console.log('- mobileUISystem.isReady():', this.mobileUISystem?.isReady());
+        console.log('- desktopElements hidden:', this.desktopElements.length);
+        console.log('- mobileElements shown:', this.mobileElements.length);
+        
+        if (this.mobileUISystem) {
+            console.log('- Available components:', Array.from(this.mobileUISystem.components.keys()));
+            const lobbyScreen = this.mobileUISystem.getComponent('mobileLobbyScreen');
+            console.log('- mobileLobbyScreen:', !!lobbyScreen);
+            if (lobbyScreen) {
+                console.log('- lobbyScreen.isVisible:', lobbyScreen.isVisible);
+                console.log('- lobbyScreen.screenElement:', !!lobbyScreen.screenElement);
+                if (lobbyScreen.screenElement) {
+                    console.log('- lobbyScreen display:', lobbyScreen.screenElement.style.display);
+                    console.log('- lobbyScreen in DOM:', document.body.contains(lobbyScreen.screenElement));
+                }
+            }
+        }
+        
+        // Check body classes
+        console.log('- Body classes:', Array.from(document.body.classList));
+        
+        // Check for visible mobile screens
+        const mobileScreens = document.querySelectorAll('.mobile-screen, .mobile-lobby-screen, .mobile-fallback-interface');
+        console.log('- Mobile screens in DOM:', mobileScreens.length);
+        mobileScreens.forEach((screen, index) => {
+            console.log(`  Screen ${index}:`, {
+                className: screen.className,
+                display: window.getComputedStyle(screen).display,
+                visibility: window.getComputedStyle(screen).visibility,
+                zIndex: window.getComputedStyle(screen).zIndex
+            });
+        });
+        
+        return {
+            isMobile: this.isMobile,
+            isActivated: this.isActivated,
+            mobileUISystemReady: this.mobileUISystem?.isReady(),
+            componentsCount: this.mobileUISystem?.components.size || 0,
+            desktopElementsHidden: this.desktopElements.length,
+            mobileElementsShown: this.mobileElements.length,
+            mobileScreensInDOM: mobileScreens.length
+        };
     }
 
     /**
