@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Loading Optimization Test</title>
+    
+    <!-- Critical CSS inlined -->
+    <style data-critical>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0; padding: 20px; line-height: 1.5;
+            background: #f9fafb;
+        }
+        .test-container { 
+            max-width: 800px; margin: 0 auto; 
+            background: white; padding: 20px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn { 
+            padding: 12px 16px; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: 500; min-height: 44px;
+            background: #667eea; color: white; margin: 8px;
+        }
+        .btn:hover { background: #5a6fd8; }
+        .status { 
+            padding: 12px; border-radius: 8px; margin: 12px 0;
+            background: #f0f9ff; border: 1px solid #e0f2fe;
+        }
+        .success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .loading { background: #fffbeb; border-color: #fed7aa; color: #92400e; }
+        @media (max-width: 768px) {
+            .test-container { margin: 10px; padding: 15px; }
+            .btn { width: 100%; margin: 4px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>CSS Loading Optimization Test</h1>
+        <p>This page tests the CSS loading optimization implementation.</p>
+        
+        <div id="status" class="status loading">
+            🔄 Testing CSS loading optimization...
+        </div>
+        
+        <div class="test-results">
+            <h3>Test Results:</h3>
+            <ul id="results-list">
+                <li>Initializing tests...</li>
+            </ul>
+        </div>
+        
+        <div class="actions">
+            <button class="btn" onclick="runTests()">Run Tests</button>
+            <button class="btn" onclick="showMetrics()">Show Performance Metrics</button>
+            <button class="btn" onclick="testResponsive()">Test Responsive Behavior</button>
+        </div>
+        
+        <div id="metrics" style="display: none;">
+            <h3>Performance Metrics:</h3>
+            <pre id="metrics-data"></pre>
+        </div>
+    </div>
+
+    <!-- Load CSS optimization scripts -->
+    <script src="js/css-loader.js?v=1"></script>
+    <script src="js/performance-monitor.js?v=1"></script>
+    
+    <script>
+        let testResults = [];
+        
+        function updateStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function addResult(test, passed, details = '') {
+            testResults.push({ test, passed, details });
+            updateResultsList();
+        }
+        
+        function updateResultsList() {
+            const list = document.getElementById('results-list');
+            list.innerHTML = testResults.map(result => 
+                `<li style="color: ${result.passed ? 'green' : 'red'}">
+                    ${result.passed ? '✅' : '❌'} ${result.test}
+                    ${result.details ? ` - ${result.details}` : ''}
+                </li>`
+            ).join('');
+        }
+        
+        async function runTests() {
+            testResults = [];
+            updateStatus('Running CSS optimization tests...', 'loading');
+            
+            // Test 1: CSS Loader exists
+            if (window.cssLoader) {
+                addResult('CSS Loader initialized', true);
+            } else {
+                addResult('CSS Loader initialized', false, 'cssLoader not found');
+            }
+            
+            // Test 2: Performance Monitor exists
+            if (window.performanceMonitor) {
+                addResult('Performance Monitor initialized', true);
+            } else {
+                addResult('Performance Monitor initialized', false, 'performanceMonitor not found');
+            }
+            
+            // Test 3: Critical CSS loaded
+            const criticalStyle = document.querySelector('style[data-critical]');
+            if (criticalStyle) {
+                addResult('Critical CSS inlined', true);
+            } else {
+                addResult('Critical CSS inlined', false, 'No critical style found');
+            }
+            
+            // Test 4: CSS Loader methods work
+            if (window.cssLoader) {
+                try {
+                    const metrics = window.cssLoader.getMetrics();
+                    addResult('CSS Loader metrics available', true, `${Object.keys(metrics).length} metrics`);
+                } catch (e) {
+                    addResult('CSS Loader metrics available', false, e.message);
+                }
+            }
+            
+            // Test 5: Performance Monitor methods work
+            if (window.performanceMonitor) {
+                try {
+                    const metrics = window.performanceMonitor.getMetrics();
+                    addResult('Performance Monitor metrics available', true, `${Object.keys(metrics).length} metrics`);
+                } catch (e) {
+                    addResult('Performance Monitor metrics available', false, e.message);
+                }
+            }
+            
+            // Test 6: Responsive CSS classes work
+            const testElement = document.createElement('div');
+            testElement.className = 'btn';
+            document.body.appendChild(testElement);
+            const styles = window.getComputedStyle(testElement);
+            const hasMinHeight = parseInt(styles.minHeight) >= 44;
+            document.body.removeChild(testElement);
+            
+            addResult('Responsive button styles applied', hasMinHeight, `min-height: ${styles.minHeight}`);
+            
+            // Test 7: Media queries work
+            const isMobile = window.innerWidth <= 768;
+            const testContainer = document.querySelector('.test-container');
+            const containerStyles = window.getComputedStyle(testContainer);
+            const hasResponsiveMargin = isMobile ? 
+                parseInt(containerStyles.margin) <= 10 : 
+                parseInt(containerStyles.marginLeft) > 10;
+            
+            addResult('Media queries working', hasResponsiveMargin, `Current width: ${window.innerWidth}px`);
+            
+            // Final status
+            const passedTests = testResults.filter(r => r.passed).length;
+            const totalTests = testResults.length;
+            
+            if (passedTests === totalTests) {
+                updateStatus(`✅ All ${totalTests} tests passed!`, 'success');
+            } else {
+                updateStatus(`❌ ${passedTests}/${totalTests} tests passed`, 'error');
+            }
+        }
+        
+        function showMetrics() {
+            const metricsDiv = document.getElementById('metrics');
+            const metricsData = document.getElementById('metrics-data');
+            
+            let allMetrics = {};
+            
+            if (window.cssLoader) {
+                allMetrics.cssLoader = window.cssLoader.getMetrics();
+            }
+            
+            if (window.performanceMonitor) {
+                allMetrics.performanceMonitor = window.performanceMonitor.getMetrics();
+            }
+            
+            // Add browser performance metrics
+            if (performance.getEntriesByType) {
+                allMetrics.navigation = performance.getEntriesByType('navigation')[0];
+                allMetrics.paint = performance.getEntriesByType('paint');
+            }
+            
+            metricsData.textContent = JSON.stringify(allMetrics, null, 2);
+            metricsDiv.style.display = 'block';
+        }
+        
+        function testResponsive() {
+            updateStatus('Testing responsive behavior...', 'loading');
+            
+            // Simulate different viewport sizes
+            const originalWidth = window.innerWidth;
+            
+            // Test mobile styles
+            if (window.innerWidth > 768) {
+                alert('To test responsive behavior, resize your browser window to less than 768px width and run this test again.');
+            } else {
+                alert('Mobile responsive styles are active! Check the button layout and container margins.');
+            }
+            
+            updateStatus('Responsive test completed', 'success');
+        }
+        
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000);
+        });
+    </script>
+</body>
+</html>

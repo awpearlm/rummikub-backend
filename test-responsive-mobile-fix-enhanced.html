@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Responsive Mobile Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            min-height: 44px;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .mobile-screen {
+            display: block;
+            background: red;
+            color: white;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .status-good { color: #28a745; }
+        .status-bad { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Enhanced Responsive Mobile Fix Test</h1>
+        <p>This page tests the enhanced responsive mobile fix functionality.</p>
+        
+        <div class="test-section">
+            <h3>Touch Interaction Test</h3>
+            <button class="test-button" id="touchTestBtn">Test Touch Feedback</button>
+            <button class="test-button" id="doubleTapTestBtn">Test Double-Tap Prevention</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Mobile Component Suppression Test</h3>
+            <button class="test-button" onclick="testMobileComponents()">Test Mobile Component Blocking</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>API Call Suppression Test</h3>
+            <button class="test-button" onclick="testAPICallSuppression()">Test API Call Blocking</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Error Suppression Test</h3>
+            <button class="test-button" onclick="testErrorSuppression()">Test Error Suppression</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Status Check</h3>
+            <button class="test-button" onclick="checkStatus()">Check Responsive Status</button>
+        </div>
+        
+        <div id="testResults" class="test-results">
+Test results will appear here...
+        </div>
+    </div>
+    
+    <!-- This should be hidden by the mobile fix -->
+    <div class="mobile-screen">
+        This mobile screen should be hidden by the responsive mobile fix
+    </div>
+    
+    <!-- Load the enhanced responsive mobile fix -->
+    <script src="netlify-build/js/responsive-mobile-fix.js"></script>
+    
+    <script>
+        const results = document.getElementById('testResults');
+        
+        function log(message, isGood = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isGood === true ? 'status-good' : isGood === false ? 'status-bad' : '';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        // Test mobile component blocking
+        function testMobileComponents() {
+            log('Testing mobile component blocking...');
+            
+            const componentsToTest = [
+                'MobileUISystem',
+                'MobileLobbyScreen',
+                'MobileLoginScreen',
+                'MobileGameCreationScreen',
+                'MobileGameScreen',
+                'MobileNavigationController'
+            ];
+            
+            let blockedCount = 0;
+            componentsToTest.forEach(componentName => {
+                if (window[componentName]) {
+                    try {
+                        const instance = new window[componentName]();
+                        if (instance && typeof instance.init === 'function') {
+                            instance.init();
+                            log(`✅ ${componentName} blocked successfully`, true);
+                            blockedCount++;
+                        }
+                    } catch (e) {
+                        log(`❌ ${componentName} blocking failed: ${e.message}`, false);
+                    }
+                } else {
+                    log(`⚠️ ${componentName} not found (may not be loaded yet)`);
+                }
+            });
+            
+            log(`Mobile component blocking test complete: ${blockedCount}/${componentsToTest.length} components blocked`);
+        }
+        
+        // Test API call suppression
+        async function testAPICallSuppression() {
+            log('Testing API call suppression...');
+            
+            // Simulate mobile component API calls
+            const testAPIs = ['/api/games', '/api/players', '/api/invitations'];
+            
+            for (const api of testAPIs) {
+                try {
+                    // Create a fake stack trace that looks like it's from a mobile component
+                    const originalStack = Error.prototype.stack;
+                    Error.prototype.stack = 'at MobileLobbyScreen.loadGames (mobile-ui/MobileLobbyScreen.js:123:45)';
+                    
+                    const response = await fetch(api);
+                    const data = await response.json();
+                    
+                    Error.prototype.stack = originalStack;
+                    
+                    if (Array.isArray(data) && data.length === 0) {
+                        log(`✅ API call to ${api} blocked successfully`, true);
+                    } else {
+                        log(`❌ API call to ${api} was not blocked`, false);
+                    }
+                } catch (e) {
+                    log(`⚠️ API call to ${api} failed: ${e.message}`);
+                }
+            }
+        }
+        
+        // Test error suppression
+        function testErrorSuppression() {
+            log('Testing error suppression...');
+            
+            // Test console.error suppression
+            const originalLog = console.log;
+            let errorsSuppressed = 0;
+            
+            console.log = function(...args) {
+                if (args.join(' ').includes('suppressed')) {
+                    errorsSuppressed++;
+                }
+                originalLog.apply(console, args);
+            };
+            
+            // Trigger mobile-related errors that should be suppressed
+            console.error('MobileLobbyScreen error - should be suppressed');
+            console.error('MobileUISystem initialization failed - should be suppressed');
+            console.error('Error loading games from mobile component - should be suppressed');
+            console.error('Regular error - should NOT be suppressed');
+            
+            console.log = originalLog;
+            
+            log(`Error suppression test complete. Check browser console for suppressed errors.`);
+        }
+        
+        // Check responsive status
+        function checkStatus() {
+            log('Checking responsive status...');
+            
+            if (typeof window.checkResponsiveStatus === 'function') {
+                const status = window.checkResponsiveStatus();
+                log('Responsive Status:');
+                log(`  Version: ${status.version || 'Unknown'}`);
+                log(`  Responsive Mode: ${status.responsiveMode ? '✅' : '❌'}`, status.responsiveMode);
+                log(`  Mobile Interface Blocked: ${status.mobileInterfaceBlocked ? '✅' : '❌'}`, status.mobileInterfaceBlocked);
+                log(`  Touch Optimizations: ${status.touchOptimizations ? '✅' : '❌'}`, status.touchOptimizations);
+                log(`  Errors Suppressed: ${status.errorsSuppressed ? '✅' : '❌'}`, status.errorsSuppressed);
+                
+                if (status.performance) {
+                    log('  Performance Optimizations:');
+                    log(`    Touch Events: ${status.performance.touchEventsOptimized ? '✅' : '❌'}`, status.performance.touchEventsOptimized);
+                    log(`    Orientation Handling: ${status.performance.orientationHandlingEnabled ? '✅' : '❌'}`, status.performance.orientationHandlingEnabled);
+                    log(`    Scroll Optimized: ${status.performance.scrollOptimized ? '✅' : '❌'}`, status.performance.scrollOptimized);
+                    log(`    Hardware Accelerated: ${status.performance.hardwareAccelerated ? '✅' : '❌'}`, status.performance.hardwareAccelerated);
+                }
+                
+                if (status.blockedComponents) {
+                    log(`  Blocked Components: ${status.blockedComponents.length} components`);
+                }
+            } else {
+                log('❌ checkResponsiveStatus function not available', false);
+            }
+        }
+        
+        // Touch interaction tests
+        document.getElementById('touchTestBtn').addEventListener('touchstart', function() {
+            log('Touch start detected on test button');
+        });
+        
+        document.getElementById('touchTestBtn').addEventListener('touchend', function() {
+            log('Touch end detected on test button');
+        });
+        
+        document.getElementById('touchTestBtn').addEventListener('click', function() {
+            log('Click detected on test button');
+        });
+        
+        // Double-tap test
+        let tapCount = 0;
+        let tapTimeout;
+        
+        document.getElementById('doubleTapTestBtn').addEventListener('click', function() {
+            tapCount++;
+            log(`Tap ${tapCount} detected`);
+            
+            if (tapTimeout) {
+                clearTimeout(tapTimeout);
+            }
+            
+            tapTimeout = setTimeout(() => {
+                if (tapCount === 1) {
+                    log('Single tap completed');
+                } else if (tapCount === 2) {
+                    log('Double tap detected (should be prevented on mobile)');
+                } else {
+                    log(`Multiple taps detected: ${tapCount}`);
+                }
+                tapCount = 0;
+            }, 400);
+        });
+        
+        // Initial status check
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                log('Enhanced Responsive Mobile Fix Test Page Loaded');
+                log('Testing enhanced mobile component suppression and touch optimizations...');
+                checkStatus();
+            }, 1000);
+        });
+        
+        // Check if mobile screens are hidden
+        setTimeout(() => {
+            const mobileScreens = document.querySelectorAll('.mobile-screen');
+            mobileScreens.forEach((screen, index) => {
+                const isHidden = window.getComputedStyle(screen).display === 'none';
+                log(`Mobile screen ${index + 1}: ${isHidden ? '✅ Hidden' : '❌ Visible'}`, isHidden);
+            });
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive UI Validation Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .validation-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .validation-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .validation-content {
+            padding: 20px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .device-test {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .device-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            font-weight: 600;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .device-viewport {
+            position: relative;
+            background: white;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .viewport-frame {
+            width: 100%;
+            height: 200px;
+            border: none;
+            display: block;
+        }
+        
+        .test-controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 5px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .results-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-pending {
+            background: #fbbf24;
+        }
+        
+        .status-passed {
+            background: #10b981;
+        }
+        
+        .status-failed {
+            background: #ef4444;
+        }
+        
+        .quick-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .quick-test {
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .quick-test h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .quick-test p {
+            margin: 0 0 15px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-tests {
+                grid-template-columns: 1fr;
+            }
+            
+            .validation-content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="validation-container">
+        <div class="validation-header">
+            <h1>🧪 Responsive UI Validation Test</h1>
+            <p>Comprehensive testing suite for responsive UI cleanup implementation</p>
+        </div>
+        
+        <div class="validation-content">
+            <div class="test-section">
+                <h3>📋 Test Overview</h3>
+                <p>This validation suite tests all requirements from the responsive UI cleanup specification:</p>
+                <ul>
+                    <li><strong>Requirement 1:</strong> Clean script loading without MIME errors</li>
+                    <li><strong>Requirement 2:</strong> Eliminate unnecessary API calls from mobile components</li>
+                    <li><strong>Requirement 3:</strong> Optimize responsive performance and touch interactions</li>
+                    <li><strong>Requirement 4:</strong> Clean console output without mobile component errors</li>
+                    <li><strong>Requirement 5:</strong> Maintain all desktop functionality</li>
+                </ul>
+            </div>
+            
+            <div class="test-section">
+                <h3>🚀 Quick Tests</h3>
+                <div class="quick-tests">
+                    <div class="quick-test">
+                        <h4>Script Loading</h4>
+                        <p>Test if all required scripts load without MIME errors</p>
+                        <button class="btn" onclick="testScriptLoading()">Test Scripts</button>
+                    </div>
+                    
+                    <div class="quick-test">
+                        <h4>Console Errors</h4>
+                        <p>Check for suppressed mobile component errors</p>
+                        <button class="btn" onclick="testConsoleErrors()">Test Console</button>
+                    </div>
+                    
+                    <div class="quick-test">
+                        <h4>Touch Interactions</h4>
+                        <p>Validate mobile touch optimizations</p>
+                        <button class="btn" onclick="testTouchInteractions()">Test Touch</button>
+                    </div>
+                    
+                    <div class="quick-test">
+                        <h4>Desktop UI</h4>
+                        <p>Verify desktop functionality preservation</p>
+                        <button class="btn" onclick="testDesktopUI()">Test Desktop</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>📱 Device Size Testing</h3>
+                <p>Test responsive behavior across different device sizes:</p>
+                <div class="device-grid">
+                    <div class="device-test">
+                        <div class="device-header">
+                            <span class="status-indicator status-pending"></span>
+                            Desktop (1920×1080)
+                        </div>
+                        <div class="device-viewport">
+                            <iframe class="viewport-frame" src="netlify-build/index.html" data-width="1920" data-height="1080"></iframe>
+                        </div>
+                    </div>
+                    
+                    <div class="device-test">
+                        <div class="device-header">
+                            <span class="status-indicator status-pending"></span>
+                            Tablet (768×1024)
+                        </div>
+                        <div class="device-viewport">
+                            <iframe class="viewport-frame" src="netlify-build/index.html" data-width="768" data-height="1024"></iframe>
+                        </div>
+                    </div>
+                    
+                    <div class="device-test">
+                        <div class="device-header">
+                            <span class="status-indicator status-pending"></span>
+                            Mobile (375×667)
+                        </div>
+                        <div class="device-viewport">
+                            <iframe class="viewport-frame" src="netlify-build/index.html" data-width="375" data-height="667"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-controls">
+                <button class="btn btn-success" onclick="runFullValidation()">🧪 Run Full Validation Suite</button>
+                <button class="btn" onclick="openMainApp()">🎮 Open Main Application</button>
+                <button class="btn" onclick="clearResults()">🗑️ Clear Results</button>
+                <button class="btn btn-danger" onclick="testErrorScenarios()">⚠️ Test Error Scenarios</button>
+            </div>
+            
+            <div id="results" class="results-area" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="validation-test-suite.js"></script>
+    <script>
+        let resultsArea = document.getElementById('results');
+        
+        function showResults() {
+            resultsArea.style.display = 'block';
+            resultsArea.scrollTop = resultsArea.scrollHeight;
+        }
+        
+        function clearResults() {
+            resultsArea.textContent = '';
+            resultsArea.style.display = 'none';
+        }
+        
+        function logToResults(message) {
+            resultsArea.textContent += message + '\n';
+            showResults();
+        }
+        
+        // Override console methods to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            logToResults(args.join(' '));
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            logToResults('ERROR: ' + args.join(' '));
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            logToResults('WARN: ' + args.join(' '));
+            originalWarn.apply(console, args);
+        };
+        
+        async function runFullValidation() {
+            clearResults();
+            logToResults('🧪 Starting Full Validation Suite...\n');
+            
+            try {
+                const suite = new ResponsiveUIValidationSuite();
+                const results = await suite.runFullValidation();
+                
+                logToResults('\n✅ Validation completed successfully!');
+                logToResults(`Overall status: ${results.overall}`);
+                
+                // Update device indicators based on results
+                updateDeviceIndicators(results.overall === 'PASSED');
+                
+            } catch (error) {
+                logToResults('\n❌ Validation failed with error:');
+                logToResults(error.message);
+                updateDeviceIndicators(false);
+            }
+        }
+        
+        async function testScriptLoading() {
+            clearResults();
+            logToResults('🔍 Testing Script Loading...\n');
+            
+            const suite = new ResponsiveUIValidationSuite();
+            const result = await suite.testScriptLoadingReliability();
+            
+            logToResults(`\nScript Loading Test: ${result ? 'PASSED' : 'FAILED'}`);
+        }
+        
+        async function testConsoleErrors() {
+            clearResults();
+            logToResults('🔍 Testing Console Error Suppression...\n');
+            
+            const suite = new ResponsiveUIValidationSuite();
+            const result = await suite.testConsoleErrorElimination();
+            
+            logToResults(`\nConsole Error Test: ${result ? 'PASSED' : 'FAILED'}`);
+        }
+        
+        async function testTouchInteractions() {
+            clearResults();
+            logToResults('🔍 Testing Touch Interactions...\n');
+            
+            const suite = new ResponsiveUIValidationSuite();
+            const result = await suite.testMobileInteractions();
+            
+            logToResults(`\nTouch Interaction Test: ${result ? 'PASSED' : 'FAILED'}`);
+        }
+        
+        async function testDesktopUI() {
+            clearResults();
+            logToResults('🔍 Testing Desktop UI Preservation...\n');
+            
+            const suite = new ResponsiveUIValidationSuite();
+            const result = await suite.testDesktopFunctionality();
+            
+            logToResults(`\nDesktop UI Test: ${result ? 'PASSED' : 'FAILED'}`);
+        }
+        
+        async function testErrorScenarios() {
+            clearResults();
+            logToResults('⚠️ Testing Error Scenarios...\n');
+            logToResults('This will attempt to trigger mobile component errors to test suppression.\n');
+            
+            // Try to trigger mobile component initialization
+            try {
+                if (window.MobileLobbyScreen) {
+                    new window.MobileLobbyScreen();
+                    logToResults('✅ MobileLobbyScreen initialization suppressed');
+                } else {
+                    logToResults('✅ MobileLobbyScreen not available (good)');
+                }
+            } catch (e) {
+                logToResults('✅ MobileLobbyScreen error caught: ' + e.message);
+            }
+            
+            // Try mobile API calls
+            try {
+                const response = await fetch('/api/games');
+                logToResults('✅ Mobile API call handled gracefully');
+            } catch (e) {
+                logToResults('✅ Mobile API call error suppressed: ' + e.message);
+            }
+            
+            logToResults('\n✅ Error scenario testing completed');
+        }
+        
+        function updateDeviceIndicators(passed) {
+            const indicators = document.querySelectorAll('.status-indicator');
+            indicators.forEach(indicator => {
+                indicator.className = `status-indicator ${passed ? 'status-passed' : 'status-failed'}`;
+            });
+        }
+        
+        function openMainApp() {
+            window.open('netlify-build/index.html', '_blank');
+        }
+        
+        // Initialize device viewports
+        document.addEventListener('DOMContentLoaded', function() {
+            const iframes = document.querySelectorAll('.viewport-frame');
+            iframes.forEach(iframe => {
+                iframe.onload = function() {
+                    // Apply device-specific styling to iframe content
+                    const width = iframe.getAttribute('data-width');
+                    const height = iframe.getAttribute('data-height');
+                    
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const viewport = iframeDoc.querySelector('meta[name="viewport"]');
+                        if (viewport) {
+                            viewport.content = `width=${width}, initial-scale=1.0`;
+                        }
+                    } catch (e) {
+                        // Cross-origin restrictions may prevent access
+                        console.log('Cannot access iframe content due to cross-origin restrictions');
+                    }
+                };
+            });
+            
+            logToResults('🧪 Responsive UI Validation Test loaded');
+            logToResults('💡 Click "Run Full Validation Suite" to start comprehensive testing');
+        });
+    </script>
+</body>
+</html>

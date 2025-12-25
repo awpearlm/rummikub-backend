@@ -18,30 +18,59 @@
     <meta name="apple-mobile-web-app-title" content="Rummikub">
     <meta name="description" content="Play the classic tile-laying game with Jillian and have her yell at you when you win!">
     
+        <!-- Critical CSS inlined for immediate rendering -->
+    <style data-critical>
+        /* Critical responsive styles inlined for performance */
+        * { box-sizing: border-box; }
+        html { font-size: 16px; line-height: 1.5; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; font-size: 16px; line-height: 1.5; color: #333; background-color: #fff; touch-action: manipulation; }
+        .screen { display: none; min-height: 100vh; width: 100%; }
+        .screen.active { display: block; }
+        .responsive-design-mode { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 12px 16px; border: none; border-radius: 8px; font-weight: 500; font-size: 14px; text-decoration: none; cursor: pointer; transition: 150ms ease-out; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .btn:focus { outline: 2px solid #667eea; outline-offset: 2px; }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        input[type="text"], input[type="password"], select { width: 100%; min-height: 44px; padding: 12px 16px; font-size: 16px; border: 2px solid #e1e5e9; border-radius: 8px; background: white; transition: 150ms ease-out; }
+        input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .hidden { display: none !important; }
+        .loading-spinner { font-size: 32px; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media screen and (max-width: 768px) {
+            body { font-size: 14px; }
+            .welcome-container { padding: 10px; max-width: 100%; }
+            .game-header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+            .profile-bubble { position: fixed; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 12px; padding: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); font-size: 12px; }
+            .mode-buttons { flex-direction: column; gap: 12px; }
+            .btn-mode { padding: 16px; text-align: left; }
+            .game-header-bar { flex-direction: column; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 10px 10px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+            .player-hand-section { padding: 10px 10px max(10px, env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+            .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .action-buttons .btn { padding: 10px 8px; font-size: 12px; white-space: nowrap; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, .btn:active { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transform: none; } }
+        @media (prefers-color-scheme: dark) { body { background-color: #1a1a1a; color: #ffffff; } .profile-bubble, .game-header-bar, .player-hand-section { background: rgba(0, 0, 0, 0.9); color: white; } input[type="text"], input[type="password"], select { background: #2a2a2a; color: white; border-color: #4a4a4a; } }
+    </style>
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Non-critical CSS loaded asynchronously -->
+    <noscript>
+        <!-- Fallback for users with JavaScript disabled -->
+        <link rel="stylesheet" href="css/critical-responsive.css?v=1">
+        <link rel="stylesheet" href="css/responsive-optimized.css?v=1">
         <link rel="stylesheet" href="styles.css?v=51">
-    <link rel="stylesheet" href="connection-status.css?v=1">
-    
-    <!-- Mobile UI CSS Files -->
-    <link rel="stylesheet" href="css/mobile-foundation.css?v=1">
-    <link rel="stylesheet" href="css/mobile-design-system.css?v=1">
-    <link rel="stylesheet" href="css/responsive-design-system.css?v=1">
-    <link rel="stylesheet" href="css/mobile-login.css?v=1">
-    <link rel="stylesheet" href="css/mobile-lobby.css?v=1">
-    <link rel="stylesheet" href="css/mobile-game-creation.css?v=1">
-    <link rel="stylesheet" href="css/mobile-game.css?v=1">
-    <link rel="stylesheet" href="css/mobile-game-board.css?v=1">
-    <link rel="stylesheet" href="css/hand-drawer.css?v=1">
-    <link rel="stylesheet" href="css/mobile-navigation-transitions.css?v=1">
-    <link rel="stylesheet" href="css/mobile-optimizations.css?v=1">
-    <link rel="stylesheet" href="css/mobile-design-integration.css?v=1">
-    <link rel="stylesheet" href="css/mobile-typography-states.css?v=1">
-    <link rel="stylesheet" href="css/mobile-iconography.css?v=1">
-    
-    <!-- Responsive Mobile Adaptation CSS - Simple responsive design instead of complex mobile system -->
-    <link rel="stylesheet" href="css/responsive-mobile-adaptation.css?v=1">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <link rel="stylesheet" href="connection-status.css?v=1">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    </noscript>
 </head>
 <body>
     <!-- Welcome Screen -->
@@ -517,6 +546,12 @@
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     
+    <!-- CSS Loading Optimization -->
+    <script src="js/css-loader.js?v=1"></script>
+    
+    <!-- Performance Monitoring -->
+    <script src="js/performance-monitor.js?v=1"></script>
+    
     <!-- Responsive Mobile Fix - Load early to prevent mobile interface activation -->
     <script src="js/responsive-mobile-fix.js?v=1"></script>
     
@@ -536,8 +571,6 @@
     <script src="js/mobile-ui/MobileInteractionRouter.js?v=1"></script>
     <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script>
     <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script>
-    <script src="mobile-interface-fix.js?v=1"></script>
-    <script src="mobile-ui-emergency-fix.js?v=1"></script>
     <script src="js/mobileTouch.js?v=1"></script>
     <script src="js/mobileOptimizations.js?v=1"></script>
     
