@@ -982,8 +982,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isMobile) {
         window.mobileUISystem = new MobileUISystem();
         console.log('Mobile UI System auto-initialized');
+        
+        // Enhance existing desktop buttons for mobile
+        enhanceDesktopButtonsForMobile();
     }
 });
+
+// Function to enhance desktop buttons for mobile touch
+function enhanceDesktopButtonsForMobile() {
+    // Wait for the main game to initialize
+    setTimeout(() => {
+        const buttonsToEnhance = [
+            'playWithFriendsBtn',
+            'playWithBotBtn',
+            'createGameBtn',
+            'joinGameBtn',
+            'startBotGameBtn'
+        ];
+        
+        buttonsToEnhance.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                // Just ensure mobile-friendly styling - touch events handled by safe-events.js
+                button.style.touchAction = 'manipulation';
+                button.style.webkitTouchCallout = 'none';
+                button.style.webkitUserSelect = 'none';
+                button.style.userSelect = 'none';
+                button.style.webkitTapHighlightColor = 'transparent';
+                
+                console.log(`Enhanced ${buttonId} for mobile touch`);
+            }
+        });
+        
+    }, 1000); // Wait 1 second for the main game to initialize
+}
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

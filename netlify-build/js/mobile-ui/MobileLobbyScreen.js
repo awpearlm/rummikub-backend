@@ -1271,6 +1271,8 @@ class MobileLobbyScreen {
             }, 300);
         }, 2000);
     }
+
+    showToast(message, type = 'info') {
         // Create toast notification
         const toast = document.createElement('div');
         toast.className = `mobile-toast ${type}`;
