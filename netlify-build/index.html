@@ -509,45 +509,41 @@
                 window.location.href = 'login.html';
             }
         });
-
-        // Mobile Interface Activator DISABLED - User requested desktop UI with responsive design only
+    </script>
+    
+    <!-- Simple Desktop UI Enforcer -->
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('Mobile Interface Activator DISABLED by user request - using responsive desktop UI');
+            console.log('🎮 Ensuring desktop UI is visible');
             
-            // Remove any force mobile flags that might be set
-            localStorage.removeItem('force_mobile_interface');
+            // Ensure welcome screen is visible and active
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            const gamePauseOverlay = document.getElementById('gamePauseOverlay');
             
-            // Ensure desktop UI is visible
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'block';
+                welcomeScreen.classList.add('active');
+                console.log('✅ Welcome screen is visible');
+            }
+            
+            if (gameScreen) {
+                gameScreen.classList.remove('active');
+            }
+            
+            if (gamePauseOverlay) {
+                gamePauseOverlay.style.display = 'none';
+                console.log('✅ Game pause overlay hidden');
+            }
+            
+            // Remove any mobile classes
             document.body.classList.remove('mobile-interface-active', 'mobile-device', 'mobile-optimized');
-            document.documentElement.classList.remove('mobile-interface');
-            
-            // Add responsive design class instead
             document.body.classList.add('responsive-design-mode');
             
-            // Expose debug methods for troubleshooting (but don't activate mobile interface)
-            window.debugMobileInterface = () => {
-                return {
-                    status: 'DISABLED',
-                    reason: 'User requested desktop UI with responsive design only',
-                    mobileInterfaceActivator: false,
-                    responsiveMode: true
-                };
-            };
-            
-            window.forceMobileInterface = () => {
-                console.warn('Mobile interface activation disabled by user request');
-                console.log('User wants desktop UI to adapt based on screen size instead');
-            };
-            
-            window.disableForceMobile = () => {
-                console.log('Mobile interface already disabled');
-            };
+            console.log('✅ Desktop UI enforced - welcome screen should be visible');
         });
     </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    
-    <!-- PRODUCTION HOTFIX: Load FIRST to disable mobile UI system -->
-    <script src="mobile-ui-disable-hotfix.js?v=1"></script>
     
     <!-- CSS Loading Optimization -->
     <script src="js/css-loader.js?v=1"></script>
@@ -555,83 +551,8 @@
     <!-- Performance Monitoring -->
     <script src="js/performance-monitor.js?v=1"></script>
     
-    <!-- Responsive Mobile Fix - Load early to prevent mobile interface activation -->
-    <script src="js/responsive-mobile-fix.js?v=1"></script>
-    
     <script src="safe-events.js?v=1"></script>
     <script src="js/connectionRecovery.js?v=1"></script>
-    <!-- MOBILE UI SCRIPTS DISABLED - Using responsive desktop UI instead -->
-    <!-- <script src="js/mobile-ui/OrientationManager.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/TouchManager.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/GestureRecognizer.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/SafeAreaHandler.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/PlayerAvatarSystem.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileUISystem.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileLoginScreen.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileLobbyScreen.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileGameCreationScreen.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileGameScreen.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileNavigationController.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileInteractionRouter.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileInterfaceToggle.js?v=1"></script> -->
-    <!-- <script src="js/mobile-ui/MobileInterfaceActivator.js?v=1"></script> -->
-    <!-- <script src="js/mobileTouch.js?v=1"></script> -->
-    <!-- <script src="js/mobileOptimizations.js?v=1"></script> -->
-    
-    <!-- MOBILE INTERFACE HELPERS DISABLED - Using responsive desktop UI instead -->
-    <!--
-    <script>
-        // Global helper functions for mobile interface debugging and control
-        window.forceMobileInterface = function() {
-            console.log('🔧 Forcing mobile interface activation...');
-            localStorage.setItem('force_mobile_interface', 'true');
-            if (window.mobileInterfaceActivator) {
-                window.mobileInterfaceActivator.forceMobileActivation();
-            } else {
-                window.location.reload();
-            }
-        };
-        
-        window.disableForceMobile = function() {
-            console.log('🔧 Disabling force mobile mode...');
-            localStorage.removeItem('force_mobile_interface');
-            window.location.reload();
-        };
-        
-        window.debugMobileInterface = function() {
-            if (window.mobileInterfaceActivator && window.mobileInterfaceActivator.debugMobileInterface) {
-                return window.mobileInterfaceActivator.debugMobileInterface();
-            } else {
-                console.log('Mobile interface activator not available');
-                return null;
-            }
-        };
-        
-        window.testMobileInterface = function() {
-            window.open('mobile-interface-test.html', '_blank');
-        };
-        
-        // Auto-expose mobile lobby screen for debugging
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if (window.mobileUISystem) {
-                    const lobbyScreen = window.mobileUISystem.getComponent('mobileLobbyScreen');
-                    if (lobbyScreen) {
-                        window.mobileLobbyScreen = lobbyScreen;
-                        console.log('📱 Mobile lobby screen exposed as window.mobileLobbyScreen');
-                    }
-                }
-            }, 3000);
-        });
-        
-        console.log('📱 Mobile Interface Helpers loaded:');
-        console.log('  - forceMobileInterface() - Force mobile interface activation');
-        console.log('  - disableForceMobile() - Disable force mobile mode');
-        console.log('  - debugMobileInterface() - Show debug information');
-        console.log('  - testMobileInterface() - Open mobile interface test page');
-        console.log('  - fixMobileInterface() - Run comprehensive fix');
-    </script>
-    -->
             <script src="game.js"></script>
 </body>
 </html>

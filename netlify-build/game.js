@@ -4209,6 +4209,19 @@ class RummikubClient {
     showGamePauseOverlay(pauseData) {
         const overlay = document.getElementById('gamePauseOverlay');
         if (!overlay) return;
+        
+        // Don't show game pause overlay if we're not actually in a game
+        const currentGameId = document.getElementById('currentGameId');
+        const gameScreen = document.getElementById('gameScreen');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        
+        // If we're on the welcome screen or don't have a game ID, don't show pause overlay
+        if (!currentGameId || !currentGameId.textContent.trim() || 
+            !gameScreen || !gameScreen.classList.contains('active') ||
+            (welcomeScreen && welcomeScreen.classList.contains('active'))) {
+            console.log('🚫 Ignoring game pause - not in an active game');
+            return;
+        }
 
         // Update pause information
         const pauseTitle = document.getElementById('pauseTitle');
