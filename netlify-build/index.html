@@ -483,6 +483,24 @@
             if (typeof MobileInterfaceActivator !== 'undefined') {
                 window.mobileInterfaceActivator = new MobileInterfaceActivator();
                 console.log('Mobile Interface Activator initialized');
+                
+                // Expose force activation method globally for debugging
+                window.forceMobileInterface = () => {
+                    if (window.mobileInterfaceActivator) {
+                        window.mobileInterfaceActivator.forceMobileActivation();
+                    } else {
+                        console.error('Mobile Interface Activator not available');
+                    }
+                };
+                
+                window.disableForceMobile = () => {
+                    if (window.mobileInterfaceActivator) {
+                        window.mobileInterfaceActivator.disableForceMobile();
+                    } else {
+                        console.error('Mobile Interface Activator not available');
+                    }
+                };
+                
             } else {
                 console.warn('MobileInterfaceActivator not available');
             }

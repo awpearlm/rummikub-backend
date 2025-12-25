@@ -21,11 +21,19 @@ class MobileInterfaceActivator {
         // Detect mobile device
         this.isMobile = this.detectMobileDevice();
         
+        // Check for manual override
+        const forceMode = localStorage.getItem('force_mobile_interface');
+        if (forceMode === 'true') {
+            console.log('🔧 Force mobile interface enabled via localStorage');
+            this.isMobile = true;
+        }
+        
         console.log('Mobile Interface Activator initialized:', {
             isMobile: this.isMobile,
             userAgent: navigator.userAgent,
             touchSupport: 'ontouchstart' in window,
-            maxTouchPoints: navigator.maxTouchPoints
+            maxTouchPoints: navigator.maxTouchPoints,
+            forceMode: forceMode
         });
         
         if (this.isMobile) {
@@ -73,7 +81,9 @@ class MobileInterfaceActivator {
         ];
         
         const mobileScore = mobileIndicators.filter(Boolean).length;
-        const isMobile = mobileScore >= 2; // Require at least 2 indicators
+        
+        // Make detection more lenient - require only 1 indicator OR touch support
+        const isMobile = mobileScore >= 1 || hasTouchSupport;
         
         console.log('Mobile detection analysis:', {
             userAgentMatch,
@@ -134,6 +144,39 @@ class MobileInterfaceActivator {
             console.error('Failed to activate mobile interface:', error);
             this.handleActivationFailure(error);
         }
+    }
+
+    /**
+     * Force mobile interface activation (for debugging/manual override)
+     */
+    forceMobileActivation() {
+        console.log('🔧 Forcing mobile interface activation...');
+        
+        // Set force flag
+        localStorage.setItem('force_mobile_interface', 'true');
+        
+        // Override mobile detection
+        this.isMobile = true;
+        
+        // Activate mobile interface
+        if (!this.isActivated) {
+            this.activateMobileInterface();
+        } else {
+            console.log('Mobile interface already activated');
+        }
+    }
+
+    /**
+     * Disable force mobile mode and switch back to auto-detection
+     */
+    disableForceMobile() {
+        console.log('🔧 Disabling force mobile mode...');
+        
+        // Remove force flag
+        localStorage.removeItem('force_mobile_interface');
+        
+        // Reload page to reset
+        window.location.reload();
     }
 
     /**
