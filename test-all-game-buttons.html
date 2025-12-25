@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test All Game Start Buttons</title>
+    <link rel="stylesheet" href="netlify-build/styles.css">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        #console { 
+            background: #000; color: #0f0; padding: 10px; border-radius: 4px; 
+            font-family: monospace; font-size: 12px; height: 400px; overflow-y: auto;
+            margin-top: 20px;
+        }
+        .status { padding: 5px 10px; border-radius: 4px; margin: 5px 0; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <h1>Test All Game Start Buttons</h1>
+    
+    <div class="test-section">
+        <h3>1. Setup & Authentication</h3>
+        <button onclick="setupAuth()" class="btn btn-success">Setup Mock Auth</button>
+        <button onclick="clearAuth()" class="btn">Clear Auth</button>
+        <div id="authStatus" class="status">Not authenticated</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Bot Game Test</h3>
+        <button onclick="testBotGameFlow()" class="btn btn-warning">Test Bot Game Flow</button>
+        <button onclick="testBotGameDirectly()" class="btn btn-warning">Test Bot Button Directly</button>
+        <div id="botStatus" class="status">Ready to test</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Multiplayer Game Test</h3>
+        <button onclick="testMultiplayerGameFlow()" class="btn btn-primary">Test Multiplayer Flow</button>
+        <button onclick="testMultiplayerButtonDirectly()" class="btn btn-primary">Test Multiplayer Button Directly</button>
+        <div id="multiplayerStatus" class="status">Ready to test</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Manual Test Interface</h3>
+        <p>Use the actual game interface below:</p>
+        
+        <!-- Game Mode Selection -->
+        <div class="game-mode-selection">
+            <div class="mode-buttons">
+                <button id="playWithBotBtn" class="btn btn-mode btn-bot">
+                    <i class="fas fa-robot"></i>
+                    <div class="mode-info">
+                        <strong>Play vs Computer</strong>
+                        <span>Practice against AI opponent</span>
+                    </div>
+                </button>
+                <button id="playWithFriendsBtn" class="btn btn-mode btn-friends">
+                    <i class="fas fa-users"></i>
+                    <div class="mode-info">
+                        <strong>Play with Friends</strong>
+                        <span>Create or join multiplayer games</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Bot Game Options -->
+        <div id="botGameOptions" class="bot-options hidden">
+            <div class="difficulty-selection">
+                <label for="botDifficulty">Bot Difficulty</label>
+                <select id="botDifficulty" class="difficulty-select">
+                    <option value="easy">Easy - Friendly Bot</option>
+                    <option value="medium" selected>Medium - Challenging Bot</option>
+                    <option value="hard">Hard - Expert Bot</option>
+                    <option value="debug">🔧 Debug Mode - Custom Hand</option>
+                    <option value="lastTile">🧪 Last Tile Test - 4 Tile Hand</option>
+                </select>
+            </div>
+            <div class="difficulty-selection">
+                <label for="botCount">Number of Bots</label>
+                <select id="botCount" class="difficulty-select">
+                    <option value="1" selected>1 Bot (2 players total)</option>
+                    <option value="2">2 Bots (3 players total)</option>
+                    <option value="3">3 Bots (4 players total)</option>
+                </select>
+            </div>
+            <button id="startBotGameBtn" class="btn btn-success">
+                <i class="fas fa-play"></i> Start Game vs Bot
+            </button>
+        </div>
+        
+        <!-- Multiplayer Options -->
+        <div id="multiplayerOptions" class="multiplayer-options hidden">
+            <div class="game-lobby-section">
+                <div class="lobby-actions">
+                    <button id="createGameBtn" class="btn btn-refresh">
+                        <i class="fas fa-plus"></i> Create New Game
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Settings Modal -->
+    <div id="gameSettingsModal" class="game-settings-modal">
+        <div class="modal-scrim"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Game Settings</h3>
+                <button id="closeSettingsBtn" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-container">
+                    <div class="setting-option">
+                        <label class="setting-label">
+                            <input type="checkbox" id="settingsEnableTimer" checked>
+                            <span class="setting-text"><i class="fas fa-clock"></i> Enable Turn Timer (2 mins)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+                <button id="createGameWithSettingsBtn" class="btn btn-primary">Go to my game</button>
+                <button id="createBotGameWithSettingsBtn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-robot"></i> Start Bot Game
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="console"></div>
+
+    <!-- Load actual game scripts -->
+    <script src="netlify-build/safe-events.js"></script>
+    <script>
+        // Console capture
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToConsole(message, type = 'log') {
+            const div = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            div.innerHTML = `<span style="color: #666">[${timestamp}]</span> ${message}`;
+            if (type === 'error') div.style.color = '#f00';
+            if (type === 'warn') div.style.color = '#fa0';
+            consoleDiv.appendChild(div);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        // Mock RummikubClient with all the debugging
+        class TestRummikubClient {
+            constructor() {
+                this.token = localStorage.getItem('auth_token');
+                this.username = localStorage.getItem('username');
+                this.playerName = '';
+                this.gameMode = null;
+                this.botDifficulty = 'medium';
+                this.botCount = 1;
+                this.timerEnabled = false;
+                
+                console.log('🔧 TestRummikubClient initialized');
+                console.log(`  - token: ${this.token ? 'present' : 'missing'}`);
+                console.log(`  - username: ${this.username || 'not set'}`);
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                console.log('🔧 Setting up event listeners...');
+                
+                // Game mode selection
+                addSafeEventListener('playWithBotBtn', 'click', () => this.selectGameMode('bot'));
+                addSafeEventListener('playWithFriendsBtn', 'click', () => this.selectGameMode('multiplayer'));
+                
+                // Game creation
+                addSafeEventListener('startBotGameBtn', 'click', () => this.startBotGame());
+                addSafeEventListener('createGameBtn', 'click', () => this.createGame());
+                
+                // Settings modal
+                addSafeEventListener('createGameWithSettingsBtn', 'click', () => this.createGameWithSettings());
+                addSafeEventListener('createBotGameWithSettingsBtn', 'click', () => this.createBotGameWithSettings());
+                addSafeEventListener('cancelSettingsBtn', 'click', () => this.closeSettingsModal());
+                addSafeEventListener('closeSettingsBtn', 'click', () => this.closeSettingsModal());
+            }
+            
+            selectGameMode(mode) {
+                console.log(`🎮 selectGameMode(${mode})`);
+                this.gameMode = mode;
+                
+                // Hide both option panels initially
+                document.getElementById('multiplayerOptions').classList.add('hidden');
+                document.getElementById('botGameOptions').classList.add('hidden');
+                
+                if (mode === 'bot') {
+                    document.getElementById('botGameOptions').classList.remove('hidden');
+                    updateStatus('botStatus', 'Bot mode selected', 'success');
+                } else if (mode === 'multiplayer') {
+                    document.getElementById('multiplayerOptions').classList.remove('hidden');
+                    updateStatus('multiplayerStatus', 'Multiplayer mode selected', 'success');
+                }
+            }
+            
+            startBotGame() {
+                console.log('🎯 startBotGame() called');
+                const playerName = this.username;
+                console.log('👤 Player name:', playerName);
+                
+                if (!playerName) {
+                    console.error('❌ No username found for bot game');
+                    updateStatus('botStatus', 'ERROR: No username found', 'error');
+                    return;
+                }
+                
+                this.playerName = playerName;
+                this.botDifficulty = document.getElementById('botDifficulty').value;
+                this.botCount = parseInt(document.getElementById('botCount').value);
+                
+                console.log('🤖 Bot settings:', {
+                    difficulty: this.botDifficulty,
+                    count: this.botCount
+                });
+                
+                this.openBotSettingsModal();
+                updateStatus('botStatus', 'Bot settings modal should be open', 'success');
+            }
+            
+            createGame() {
+                console.log('🎮 createGame called');
+                const playerName = this.username;
+                
+                if (!playerName) {
+                    console.error('❌ No username found');
+                    updateStatus('multiplayerStatus', 'ERROR: No username found', 'error');
+                    return;
+                }
+                
+                this.playerName = playerName;
+                console.log(`✅ playerName set to: "${this.playerName}"`);
+                
+                this.openSettingsModal();
+                updateStatus('multiplayerStatus', 'Settings modal should be open', 'success');
+            }
+            
+            openSettingsModal() {
+                console.log('🎮 openSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.add('show');
+                    
+                    // Show regular game button
+                    document.getElementById('createGameWithSettingsBtn').style.display = 'inline-block';
+                    document.getElementById('createBotGameWithSettingsBtn').style.display = 'none';
+                    
+                    console.log('✅ Regular settings modal opened');
+                } else {
+                    console.error('❌ Modal element not found');
+                }
+            }
+            
+            openBotSettingsModal() {
+                console.log('🤖 openBotSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.add('show');
+                    
+                    // Show bot game button
+                    document.getElementById('createGameWithSettingsBtn').style.display = 'none';
+                    document.getElementById('createBotGameWithSettingsBtn').style.display = 'inline-block';
+                    
+                    console.log('✅ Bot settings modal opened');
+                } else {
+                    console.error('❌ Modal element not found');
+                }
+            }
+            
+            closeSettingsModal() {
+                console.log('🎮 closeSettingsModal called');
+                const modal = document.getElementById('gameSettingsModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    console.log('✅ Modal closed');
+                }
+            }
+            
+            createGameWithSettings() {
+                console.log('🎮 createGameWithSettings called');
+                if (!this.playerName) {
+                    console.error('❌ No player name set');
+                    updateStatus('multiplayerStatus', 'ERROR: No player name set', 'error');
+                    return;
+                }
+                
+                const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                console.log(`✅ Multiplayer settings: timer=${timerEnabled}`);
+                
+                this.closeSettingsModal();
+                console.log('🎉 SUCCESS: Multiplayer game creation working!');
+                updateStatus('multiplayerStatus', 'SUCCESS: Multiplayer game creation working!', 'success');
+            }
+            
+            createBotGameWithSettings() {
+                console.log('🤖 createBotGameWithSettings called');
+                if (!this.playerName) {
+                    console.error('❌ No player name set');
+                    updateStatus('botStatus', 'ERROR: No player name set', 'error');
+                    return;
+                }
+                
+                const timerEnabled = document.getElementById('settingsEnableTimer').checked;
+                console.log(`✅ Bot game settings: timer=${timerEnabled}, difficulty=${this.botDifficulty}, count=${this.botCount}`);
+                
+                this.closeSettingsModal();
+                console.log('🎉 SUCCESS: Bot game creation working!');
+                updateStatus('botStatus', 'SUCCESS: Bot game creation working!', 'success');
+            }
+        }
+        
+        let testClient;
+        
+        function setupAuth() {
+            localStorage.setItem('auth_token', 'test_token_123');
+            localStorage.setItem('username', 'TestUser');
+            console.log('✅ Mock auth data set');
+            updateAuthStatus();
+            
+            // Recreate client
+            testClient = new TestRummikubClient();
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('username');
+            console.log('🗑️ Auth data cleared');
+            updateAuthStatus();
+        }
+        
+        function updateAuthStatus() {
+            const status = document.getElementById('authStatus');
+            const token = localStorage.getItem('auth_token');
+            const username = localStorage.getItem('username');
+            
+            if (token && username) {
+                status.innerHTML = `✅ Authenticated as: ${username}`;
+                status.className = 'status success';
+            } else {
+                status.innerHTML = '❌ Not authenticated';
+                status.className = 'status error';
+            }
+        }
+        
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `status ${type}`;
+        }
+        
+        function testBotGameFlow() {
+            if (!testClient) {
+                console.error('❌ Client not initialized');
+                updateStatus('botStatus', 'ERROR: Client not initialized', 'error');
+                return;
+            }
+            
+            console.log('🧪 Testing complete bot game flow...');
+            testClient.selectGameMode('bot');
+            setTimeout(() => {
+                testClient.startBotGame();
+            }, 500);
+        }
+        
+        function testBotGameDirectly() {
+            console.log('🧪 Testing bot game button directly...');
+            const button = document.getElementById('createBotGameWithSettingsBtn');
+            if (button) {
+                console.log('✅ Bot button found, clicking...');
+                button.click();
+            } else {
+                console.error('❌ Bot button not found');
+                updateStatus('botStatus', 'ERROR: Bot button not found', 'error');
+            }
+        }
+        
+        function testMultiplayerGameFlow() {
+            if (!testClient) {
+                console.error('❌ Client not initialized');
+                updateStatus('multiplayerStatus', 'ERROR: Client not initialized', 'error');
+                return;
+            }
+            
+            console.log('🧪 Testing complete multiplayer game flow...');
+            testClient.selectGameMode('multiplayer');
+            setTimeout(() => {
+                testClient.createGame();
+            }, 500);
+        }
+        
+        function testMultiplayerButtonDirectly() {
+            console.log('🧪 Testing multiplayer button directly...');
+            const button = document.getElementById('createGameWithSettingsBtn');
+            if (button) {
+                console.log('✅ Multiplayer button found, clicking...');
+                button.click();
+            } else {
+                console.error('❌ Multiplayer button not found');
+                updateStatus('multiplayerStatus', 'ERROR: Multiplayer button not found', 'error');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM loaded, initializing test...');
+            updateAuthStatus();
+            testClient = new TestRummikubClient();
+        });
+    </script>
+</body>
+</html>
