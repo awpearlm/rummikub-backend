@@ -330,11 +330,67 @@ This implementation plan converts the mobile UI system design into discrete codi
     - Document that mobile UI fixes can proceed without database resolution
     - _Requirements: Backend team responsibility_
 
+- [ ] 19. Fix mobile UI production API integration and styling
+  - [ ] 19.1 Fix production API error handling
+    - Detect when server returns HTML error pages instead of JSON responses
+    - Show proper error states instead of JavaScript console errors
+    - Add retry mechanisms for failed API calls
+    - _Requirements: 17.1, 17.2, 17.3_
+  
+  - [ ] 19.2 Ensure mobile UI styling works in production
+    - Verify all mobile CSS files are loading correctly in production
+    - Fix any styling issues preventing professional appearance
+    - Ensure mobile interface displays properly regardless of API status
+    - _Requirements: 17.5, 14.1, 14.2, 14.3_
+  
+  - [ ] 19.3 Add production-ready error states
+    - Create professional error messages for API failures
+    - Add loading states and connection status indicators
+    - Provide clear user feedback about data availability
+    - _Requirements: 17.4, 17.6_
+
+- [ ] 20. Eliminate debug mode interference completely
+  - [ ] 20.1 Remove all debug mode functionality that interferes with mobile UI
+    - Completely disable debug console spam and overlays
+    - Ensure mobile interface is visible without debug interference
+    - Provide clean, professional console experience
+    - _Requirements: 18.1, 18.2, 18.3_
+  
+  - [ ] 20.2 Implement optional diagnostic tools
+    - Create helper functions for debugging that don't interfere with normal operation
+    - Add diagnostic tools accessible through browser console when needed
+    - Ensure diagnostic tools are professional and non-intrusive
+    - _Requirements: 18.4, 18.5, 18.6_
+
+- [ ] 21. Validate mobile UI production deployment
+  - [ ] 21.1 Test mobile interface in production environment
+    - Verify mobile UI works when backend APIs return HTML error pages
+    - Test that error states display professionally
+    - Ensure graceful degradation when APIs are not available
+    - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6_
+  
+  - [ ] 21.2 Verify production styling and functionality
+    - Test that mobile interface is visible and styled properly in production
+    - Verify console is clean without JavaScript errors
+    - Test that all mobile CSS and JS files load correctly
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6_
+  
+  - [ ] 21.3 Complete production mobile UI validation
+    - Test complete mobile user journey in production environment
+    - Verify professional appearance and error handling
+    - Ensure mobile interface provides good user experience in production
+    - _Requirements: All mobile UI requirements_
+
 ## Notes
 
 - Tasks 16-17 are critical production fixes for mobile functionality
 - Task 16 addresses the callback execution issue preventing button interactions
 - Task 17 ensures mobile users see the mobile interface instead of desktop
 - Task 18 documents the database issue for backend team resolution
-- These tasks should be completed in order: 16 → 17 → 18
-- Tasks 16 and 17 can be deployed independently of the database fix
+- **Tasks 19-21 are CRITICAL PRODUCTION FIXES for current mobile UI issues**
+- Task 19 addresses API error handling and styling issues in production environment
+- Task 20 eliminates debug mode interference that was blocking user's view of mobile interface
+- Task 21 validates that mobile UI works reliably in production deployment
+- These tasks should be completed in order: 16 → 17 → 18 → **19 → 20 → 21**
+- Tasks 16, 17, 19, 20, and 21 focus on production deployment issues
+- **CRITICAL**: The mobile UI must work properly in production environment with real backend APIs or graceful error handling when APIs are not available

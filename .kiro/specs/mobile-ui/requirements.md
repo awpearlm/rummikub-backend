@@ -224,3 +224,29 @@ The J_kube mobile UI feature transforms the complete desktop Rummikub experience
 3. THE Mobile_UI_System SHALL provide sufficient color contrast for visual elements
 4. WHEN using assistive technologies, THE Mobile_UI_System SHALL provide meaningful element descriptions
 5. THE Mobile_UI_System SHALL support alternative input methods where applicable
+
+### Requirement 17: Production API Integration
+
+**User Story:** As a mobile player in production, I want the mobile interface to work with the actual backend APIs or gracefully handle when they're not available, so that I can use the mobile UI without errors.
+
+#### Acceptance Criteria
+
+1. WHEN backend API endpoints exist and return JSON, THE Mobile_UI_System SHALL display real data from the production backend
+2. WHEN backend API endpoints return HTML error pages (404/500), THE Mobile_UI_System SHALL detect this and show appropriate error states
+3. WHEN API calls fail, THE Mobile_UI_System SHALL show clear error messages with retry options instead of JavaScript errors
+4. THE Mobile_UI_System SHALL not break or show console errors when production APIs are not configured
+5. WHEN the mobile interface loads, THE Mobile_UI_System SHALL display professional styling regardless of API status
+6. THE Mobile_UI_System SHALL provide clear feedback to users about connection status and data availability
+
+### Requirement 18: Debug Mode Management
+
+**User Story:** As a mobile player, I want a clean, professional interface without debug noise overwhelming the console, so that I can focus on using the mobile UI without distractions.
+
+#### Acceptance Criteria
+
+1. THE Mobile_UI_System SHALL operate without debug mode interference by default
+2. WHEN debug functionality is disabled, THE Mobile_UI_System SHALL provide a clean console experience
+3. THE Mobile_UI_System SHALL allow users to see the mobile interface without debug overlays blocking the view
+4. WHEN diagnostic information is needed, THE Mobile_UI_System SHALL provide it through dedicated helper functions
+5. THE Mobile_UI_System SHALL maintain professional appearance without debug noise
+6. THE Mobile_UI_System SHALL provide optional diagnostic tools that don't interfere with normal operation
